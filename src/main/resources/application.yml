@@ -1,0 +1,28 @@
+spring:
+  application:
+    name: gunpla-decal
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:local-h2}
+    group:
+      local-h2: "local"
+      local-mariadb: "local"
+  servlet:
+    multipart:
+      max-file-size: 50MB
+      max-request-size: 50MB
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+  flyway:
+    enabled: true
+
+app:
+  openapi-key: ${OPENAPI_KEY:none}
+  upload-dir: ${UPLOAD_DIR:./uploads}
+
+logging:
+  level:
+    root: info
+    com.example.gunpladecal: debug

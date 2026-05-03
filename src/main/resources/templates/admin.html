@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>건담 메뉴얼 – 관리자</title>
+  <link rel="stylesheet" th:href="@{/vendor/fontawesome/css/all.min.css}">
+  <script th:src="@{/vendor/tailwind/tailwind.min.js}"></script>
+  <script th:src="@{/vendor/pdfjs/pdf.min.js}"></script>
+  <link rel="stylesheet" th:href="@{/css/common.css}">
+</head>
+<body class="page-admin flex bg-gray-900">
+
+<!-- ── 왼쪽 사이드바 ── -->
+<aside id="sidebar" class="flex-shrink-0 bg-gray-900 text-white flex flex-col" style="width:220px;">
+
+  <!-- 헤더 -->
+  <div id="sb-header" class="flex items-center gap-2 px-2 bg-gray-800 border-b border-gray-700 flex-shrink-0" style="height:48px;">
+    <button id="sb-toggle"
+      class="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded hover:bg-gray-700 text-gray-400 hover:text-white"
+      title="접기">
+      <i id="sb-toggle-icon" class="fas fa-angles-left text-sm"></i>
+    </button>
+    <span id="sb-title" class="font-bold text-sm whitespace-nowrap flex-1 truncate">건담 메뉴얼</span>
+    <button id="sb-refresh"
+      class="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded hover:bg-gray-700 text-gray-400 hover:text-white"
+      title="새로고침">
+      <i class="fas fa-rotate-right text-xs"></i>
+    </button>
+  </div>
+
+  <!-- 펼쳤을 때: 본문 -->
+  <div id="sb-content" class="flex flex-col flex-1 min-h-0">
+    <div class="p-2 border-b border-gray-700 flex-shrink-0">
+      <button id="btn-upload"
+        class="w-full py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs rounded font-medium flex items-center justify-center gap-1.5">
+        <i class="fas fa-plus"></i> 메뉴얼 등록
+      </button>
+    </div>
+    <div id="manual-list" class="flex-1 overflow-y-auto p-1.5">
+      <p class="text-gray-500 text-xs p-2">불러오는 중…</p>
+    </div>
+  </div>
+
+  <!-- 접었을 때: 아이콘 목록 -->
+  <div id="sb-icons" class="flex-1 flex-col items-center gap-0.5 overflow-y-auto" style="display:none;">
+    <button id="btn-upload-icon"
+      class="w-8 h-8 flex items-center justify-center rounded bg-blue-600 hover:bg-blue-700 text-white flex-shrink-0 my-1"
+      title="메뉴얼 등록">
+      <i class="fas fa-plus text-xs"></i>
+    </button>
+  </div>
+</aside>
+
+<!-- 메인 -->
+<div class="flex-1 flex flex-col min-w-0">
+
+  <!-- 썸네일 스트립 -->
+  <div id="thumb-strip" class="flex-shrink-0 bg-gray-800 overflow-x-auto" style="height:90px;">
+    <div class="strip-inner">
+      <span class="text-gray-500 text-xs select-none">메뉴얼을 선택하세요</span>
+    </div>
+  </div>
+
+  <!-- PDF 뷰어 -->
+  <div id="pdf-container" class="flex-1 relative overflow-hidden bg-gray-500">
+    <div id="no-pdf" class="absolute inset-0 flex items-center justify-center text-gray-300 select-none">
+      <div class="text-center">
+        <i class="fas fa-file-pdf text-5xl mb-3 opacity-50"></i>
+        <p class="text-sm">메뉴얼을 선택하거나 등록하세요</p>
+      </div>
+    </div>
+    <div id="ch-h"></div>
+    <div id="ch-v"></div>
+    <div id="pdf-scroll" style="display:none;">
+      <div id="pdf-sizer">
+        <canvas id="pdf-canvas"></canvas>
+        <div id="decal-overlay"></div>
+      </div>
+    </div>
+    <div id="zoom-overlay">
+      <span id="zoom-label"></span>
+      <div class="zoom-divider"></div>
+      <input id="zoom-slider" type="range" min="100" max="400" step="1" value="150" aria-label="확대/축소">
+    </div>
+    <div id="marker-tooltip">
+      <button id="tt-edit"   title="번호 수정"><i class="fas fa-pen"></i></button>
+      <button id="tt-delete" title="데칼 삭제"><i class="fas fa-trash"></i></button>
+    </div>
+  </div>
+</div>
+
+<!-- 메뉴얼 등록 모달 -->
+<div id="upload-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+  <div class="bg-white rounded-lg shadow-xl w-96 p-6">
+    <div class="flex items-center gap-2 mb-4">
+      <i class="fas fa-upload text-blue-600"></i>
+      <h2 class="text-base font-bold">메뉴얼 등록</h2>
+    </div>
+    <form id="upload-form" class="space-y-3">
+      <!-- 등급 + 형식번호 한 줄 -->
+      <div class="flex gap-2 items-start">
+        <div class="flex-shrink-0" style="width:88px;">
+          <label for="inp-grade" class="block text-xs font-medium text-gray-700 mb-1">등급 *</label>
+          <select id="inp-grade" required
+            class="w-full border border-gray-300 rounded px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white">
+            <option value="HG">HG</option>
+            <option value="RG" selected>RG</option>
+            <option value="MG">MG</option>
+            <option value="PG">PG</option>
+            <option value="ETC">기타</option>
+          </select>
+        </div>
+        <div class="flex-1 min-w-0">
+          <label for="inp-model" class="block text-xs font-medium text-gray-700 mb-1">형식번호</label>
+          <input type="text" id="inp-model" autocomplete="off" aria-label="형식번호"
+            class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+            placeholder="예) RX-78-2">
+        </div>
+      </div>
+      <!-- 제품명 -->
+      <div>
+        <label for="inp-name" class="block text-xs font-medium text-gray-700 mb-1">제품명 *</label>
+        <input type="text" id="inp-name" required autocomplete="off"
+          class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+          placeholder="예) 1/144 RX-78-2 건담">
+      </div>
+      <!-- PDF 파일 -->
+      <div>
+        <label for="file-input" class="block text-xs font-medium text-gray-700 mb-1">PDF 파일 *</label>
+        <div id="drop-zone"
+          class="rounded-lg border-2 border-dashed border-gray-300 bg-gray-50 transition-colors cursor-pointer">
+          <input type="file" id="file-input" accept=".pdf" class="hidden">
+          <!-- 기본 상태 -->
+          <div id="drop-placeholder" class="flex flex-col items-center justify-center py-5 px-4 text-center">
+            <i class="fas fa-cloud-upload-alt text-2xl text-gray-300 mb-1.5"></i>
+            <p class="text-xs text-gray-400">PDF 파일을 드래그하거나 클릭하세요</p>
+          </div>
+          <!-- 파일 선택됨 -->
+          <div id="drop-file-info" class="hidden items-center gap-2 px-3 py-3">
+            <i class="fas fa-file-pdf text-red-500 flex-shrink-0"></i>
+            <span id="drop-filename" class="text-xs text-gray-700 flex-1 truncate min-w-0"></span>
+            <span id="drop-filesize" class="text-xs text-gray-400 flex-shrink-0"></span>
+            <button type="button" id="drop-remove"
+              class="flex-shrink-0 w-5 h-5 flex items-center justify-center text-gray-400 hover:text-red-500 rounded">
+              <i class="fas fa-xmark text-xs"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+      <!-- 버튼 -->
+      <div class="flex justify-end gap-2 pt-1">
+        <button type="button" id="btn-upload-cancel"
+          class="px-4 py-2 text-sm border border-gray-300 rounded hover:bg-gray-50 flex items-center gap-1.5">
+          <i class="fas fa-xmark text-xs"></i> 취소
+        </button>
+        <button type="submit" id="btn-submit"
+          class="px-4 py-2 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 flex items-center gap-1.5 min-w-20 justify-center">
+          <i class="fas fa-upload text-xs"></i> 등록
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- 데칼 번호 입력 팝업 (클릭 위치 근처에 표시) -->
+<div id="decal-modal" class="hidden" style="position:fixed; z-index:50;">
+  <div class="bg-white rounded-lg border border-gray-200" style="width:204px; padding:12px; box-shadow:0 8px 24px rgba(0,0,0,0.18);">
+    <div class="flex items-center gap-1.5 mb-2.5">
+      <i class="fas fa-circle-dot text-blue-500 text-xs"></i>
+      <h2 class="text-xs font-bold text-gray-700">데칼 번호 입력</h2>
+    </div>
+    <!-- 배경색 선택 -->
+    <div class="flex gap-3 mb-2.5">
+      <label class="flex items-center gap-1.5 cursor-pointer">
+        <input type="radio" name="decal-color" id="inp-decal-color-white" value="WHITE" checked>
+        <span class="w-5 h-5 rounded-full bg-white border-2 border-gray-400 flex items-center justify-center text-gray-900 font-bold" style="font-size:7px; flex-shrink:0;">A</span>
+        <span class="text-xs text-gray-600">흰색</span>
+      </label>
+      <label class="flex items-center gap-1.5 cursor-pointer">
+        <input type="radio" name="decal-color" id="inp-decal-color-black" value="BLACK">
+        <span class="w-5 h-5 rounded-full bg-gray-900 border-2 border-gray-600 flex items-center justify-center text-white font-bold" style="font-size:7px; flex-shrink:0;">A</span>
+        <span class="text-xs text-gray-600">검정</span>
+      </label>
+    </div>
+    <input type="text" id="inp-decal-num" placeholder="예) 1, A, ア" autocomplete="off" aria-label="데칼 번호"
+      class="w-full border border-gray-300 rounded px-2 py-1.5 text-sm mb-2.5 focus:outline-none focus:ring-2 focus:ring-blue-400">
+    <div class="flex justify-end gap-1.5">
+      <button id="btn-decal-cancel" class="px-2.5 py-1 text-xs border border-gray-300 rounded hover:bg-gray-50 flex items-center gap-1">
+        <i class="fas fa-xmark text-xs"></i> 취소
+      </button>
+      <button id="btn-decal-ok" class="px-2.5 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 flex items-center gap-1">
+        <i class="fas fa-check text-xs"></i> 저장
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- 데칼 번호 수정 팝업 (클릭 위치 근처에 표시) -->
+<div id="edit-modal" class="hidden" style="position:fixed; z-index:50;">
+  <div class="bg-white rounded-lg border border-gray-200" style="width:204px; padding:12px; box-shadow:0 8px 24px rgba(0,0,0,0.18);">
+    <div class="flex items-center gap-1.5 mb-2.5">
+      <i class="fas fa-pen text-blue-500 text-xs"></i>
+      <h2 class="text-xs font-bold text-gray-700">데칼 번호 수정</h2>
+    </div>
+    <!-- 배경색 선택 -->
+    <div class="flex gap-3 mb-2.5">
+      <label class="flex items-center gap-1.5 cursor-pointer">
+        <input type="radio" name="edit-color" id="inp-edit-color-white" value="WHITE" checked>
+        <span class="w-5 h-5 rounded-full bg-white border-2 border-gray-400 flex items-center justify-center text-gray-900 font-bold" style="font-size:7px; flex-shrink:0;">A</span>
+        <span class="text-xs text-gray-600">흰색</span>
+      </label>
+      <label class="flex items-center gap-1.5 cursor-pointer">
+        <input type="radio" name="edit-color" id="inp-edit-color-black" value="BLACK">
+        <span class="w-5 h-5 rounded-full bg-gray-900 border-2 border-gray-600 flex items-center justify-center text-white font-bold" style="font-size:7px; flex-shrink:0;">A</span>
+        <span class="text-xs text-gray-600">검정</span>
+      </label>
+    </div>
+    <input type="text" id="inp-edit-num" autocomplete="off" placeholder="예) 1, A, ア" aria-label="데칼 번호"
+      class="w-full border border-gray-300 rounded px-2 py-1.5 text-sm mb-2.5 focus:outline-none focus:ring-2 focus:ring-blue-400">
+    <div class="flex justify-end gap-1.5">
+      <button id="btn-edit-cancel" class="px-2.5 py-1 text-xs border border-gray-300 rounded hover:bg-gray-50 flex items-center gap-1">
+        <i class="fas fa-xmark text-xs"></i> 취소
+      </button>
+      <button id="btn-edit-ok" class="px-2.5 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 flex items-center gap-1">
+        <i class="fas fa-check text-xs"></i> 저장
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- 메뉴얼 수정 모달 -->
+<div id="manual-edit-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+  <div class="bg-white rounded-lg shadow-xl w-96 p-6">
+    <div class="flex items-center gap-2 mb-4">
+      <i class="fas fa-pen text-blue-600"></i>
+      <h2 class="text-base font-bold">메뉴얼 수정</h2>
+    </div>
+    <form id="manual-edit-form" class="space-y-3">
+      <!-- 등급 + 형식번호 한 줄 -->
+      <div class="flex gap-2 items-start">
+        <div class="flex-shrink-0" style="width:88px;">
+          <label for="edit-inp-grade" class="block text-xs font-medium text-gray-700 mb-1">등급 *</label>
+          <select id="edit-inp-grade" required
+            class="w-full border border-gray-300 rounded px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white">
+            <option value="HG">HG</option>
+            <option value="RG">RG</option>
+            <option value="MG">MG</option>
+            <option value="PG">PG</option>
+            <option value="ETC">기타</option>
+          </select>
+        </div>
+        <div class="flex-1 min-w-0">
+          <label for="edit-inp-model" class="block text-xs font-medium text-gray-700 mb-1">형식번호</label>
+          <input type="text" id="edit-inp-model" autocomplete="off" aria-label="형식번호"
+            class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+            placeholder="예) RX-78-2">
+        </div>
+      </div>
+      <!-- 제품명 -->
+      <div>
+        <label for="edit-inp-name" class="block text-xs font-medium text-gray-700 mb-1">제품명 *</label>
+        <input type="text" id="edit-inp-name" required autocomplete="off"
+          class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+          placeholder="예) 1/144 RX-78-2 건담">
+      </div>
+      <!-- 버튼 -->
+      <div class="flex justify-end gap-2 pt-1">
+        <button type="button" id="btn-manual-edit-cancel"
+          class="px-4 py-2 text-sm border border-gray-300 rounded hover:bg-gray-50 flex items-center gap-1.5">
+          <i class="fas fa-xmark text-xs"></i> 취소
+        </button>
+        <button type="submit" id="btn-manual-edit-submit"
+          class="px-4 py-2 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 flex items-center gap-1.5 min-w-20 justify-center">
+          <i class="fas fa-check text-xs"></i> 저장
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script th:src="@{/js/common.js}"></script>
+<script th:src="@{/js/admin.js}"></script>
+</body>
+</html>

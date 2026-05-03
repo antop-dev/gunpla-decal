@@ -1,0 +1,143 @@
+/* ── 레이아웃 기본 ── */
+body { height: 100vh; overflow: hidden; }
+
+/* 왼쪽 사이드바 접기/펼치기 너비 트랜지션 */
+#sidebar { transition: width 0.2s ease; overflow: hidden; border-right: 1px solid #374151; }
+
+/* 사용자 페이지 오른쪽 사이드바 트랜지션 */
+#right-sidebar { transition: width 0.2s ease; overflow: hidden; border-left: 1px solid #d1d5db; }
+
+/* 데칼 마커 절대 위치 기준 오버레이 */
+#decal-overlay { position: absolute; inset: 0; pointer-events: none; }
+
+/* PDF 스크롤 영역 */
+#pdf-scroll { width: 100%; height: 100%; overflow: auto; }
+
+/* PDF 캔버스 wrapper: 캔버스와 데칼 오버레이를 함께 감쌈 */
+#pdf-sizer { position: relative; display: inline-block; line-height: 0; }
+
+/* ── 줌 오버레이 패널 ── */
+/* display:none 이 초기값이며 JS에서 display:flex 로 변경 */
+#zoom-overlay {
+  position: absolute; top: 8px; left: 8px; z-index: 20;
+  display: none; align-items: center; gap: 8px;
+  background: rgba(0,0,0,0.6); padding: 5px 10px;
+  border-radius: 8px; user-select: none;
+}
+/* 줌 비율 텍스트 */
+#zoom-label { color: #fff; font-size: 12px; font-weight: 700; min-width: 36px; text-align: right; }
+/* 줌 레이블·슬라이더 사이 구분선 */
+.zoom-divider { width: 1px; height: 14px; background: rgba(255,255,255,0.3); flex-shrink: 0; }
+
+/* ── 줌 슬라이더 ── */
+#zoom-slider { -webkit-appearance: none; width: 100px; height: 3px; border-radius: 2px; background: rgba(255,255,255,0.3); outline: none; cursor: pointer; }
+#zoom-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 13px; height: 13px; border-radius: 50%; background: #fff; cursor: pointer; }
+#zoom-slider::-moz-range-thumb { width: 13px; height: 13px; border-radius: 50%; background: #fff; border: none; cursor: pointer; }
+
+/* ── PDF 컨테이너 커서 ── */
+/* body에 page-viewer 또는 page-admin 클래스로 페이지 구분 */
+.page-viewer #pdf-container { cursor: grab; }
+.page-admin  #pdf-container { cursor: crosshair; }
+#pdf-container.dragging { cursor: grabbing; }
+
+/* ── 데칼 마커 (오버레이 위 원형 핀) ── */
+.decal-marker {
+  position: absolute;
+  border-radius: 50%;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.4);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 9px; font-weight: 700;
+  cursor: pointer; pointer-events: auto;
+  user-select: none; transform-origin: 50% 50%;
+}
+/* 사용자 페이지: 26×26 */
+.page-viewer .decal-marker { width: 26px; height: 26px; }
+/* 관리자 페이지: 29×29, 호버 시 반투명 */
+.page-admin .decal-marker { width: 29px; height: 29px; }
+.page-admin .decal-marker:hover { opacity: 0.85; }
+
+/* 사용자 페이지: 클릭 선택된 데칼 강조 펄스 애니메이션 */
+.decal-marker.highlight { animation: pop 0.7s ease-in-out infinite; }
+@keyframes pop {
+  0%,100% { box-shadow: 0 1px 4px rgba(0,0,0,0.4); }
+  50%      { box-shadow: 0 0 0 10px rgba(239,68,68,0.35); }
+}
+
+/* ── 썸네일 스트립 ── */
+.thumb-item {
+  flex-shrink: 0; cursor: pointer;
+  border: 2px solid transparent; border-radius: 3px;
+  overflow: hidden; position: relative;
+}
+.thumb-item.active { border-color: #3b82f6; }
+.thumb-item canvas { display: block; }
+/* 페이지 번호 레이블 */
+.thumb-label {
+  position: absolute; bottom: 0; left: 0; right: 0;
+  background: rgba(0,0,0,0.55); color: #fff;
+  font-size: 9px; text-align: center; padding: 1px 0;
+}
+.strip-inner { display: flex; align-items: center; gap: 4px; height: 100%; padding: 0 8px; }
+
+/* ── 왼쪽 사이드바: 아이콘 모드 툴팁 (오른쪽으로 표시) ── */
+.sb-icon-tip { position: relative; }
+.sb-icon-tip:hover::after {
+  content: attr(data-tip);
+  position: absolute; left: calc(100% + 8px); top: 50%;
+  transform: translateY(-50%);
+  background: rgba(17,24,39,0.95); color: #fff;
+  font-size: 11px; white-space: pre; padding: 4px 8px;
+  border-radius: 4px; pointer-events: none; z-index: 100;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+}
+
+/* ── 사용자 페이지: 오른쪽 사이드바 아이콘 모드 툴팁 (왼쪽으로 표시) ── */
+.rs-icon-tip { position: relative; }
+.rs-icon-tip:hover::after {
+  content: attr(data-tip);
+  position: absolute; right: calc(100% + 8px); left: auto; top: 50%;
+  transform: translateY(-50%);
+  background: rgba(17,24,39,0.92); color: #fff;
+  font-size: 11px; white-space: pre; padding: 4px 8px;
+  border-radius: 4px; pointer-events: none; z-index: 100;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+}
+
+/* ── 등급 뱃지 ── */
+.grade-badge {
+  font-size: 9px; font-weight: 700; padding: 1px 4px;
+  border-radius: 3px; flex-shrink: 0; letter-spacing: 0.02em;
+}
+.grade-HG  { background: #e5e7eb; color: #374151; }
+.grade-RG  { background: #dcfce7; color: #15803d; }
+.grade-MG  { background: #dbeafe; color: #1d4ed8; }
+.grade-PG  { background: #f3e8ff; color: #7e22ce; }
+.grade-ETC { background: #fef3c7; color: #92400e; }
+
+/* ── 관리자 페이지: 십자선 가이드 (클릭 위치 가이드) ── */
+#ch-h { position: absolute; left: 0; right: 0; height: 1px; background: rgba(40,40,40,0.4); pointer-events: none; z-index: 15; display: none; }
+#ch-v { position: absolute; top: 0; bottom: 0; width: 1px; background: rgba(40,40,40,0.4); pointer-events: none; z-index: 15; display: none; }
+
+/* ── 관리자 페이지: 마커 툴팁 (편집/삭제 액션 버튼) ── */
+#marker-tooltip {
+  position: absolute; z-index: 50;
+  background: white;
+  border: 1px solid #e5e7eb; border-radius: 8px;
+  padding: 4px; display: none;
+  gap: 2px; align-items: center;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.18);
+}
+#marker-tooltip button {
+  width: 30px; height: 30px;
+  border-radius: 6px; border: none;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; font-size: 13px; outline: none;
+}
+#tt-edit         { background: #eff6ff; color: #2563eb; }
+#tt-edit:hover   { background: #dbeafe; }
+#tt-delete       { background: #fff1f2; color: #dc2626; }
+#tt-delete:hover { background: #fee2e2; }
+
+/* ── 관리자 페이지: 파일 드롭존 상태 ── */
+#drop-zone.drag-over { border-color: #3b82f6; background: #eff6ff; }
+#drop-zone.disabled  { pointer-events: none; opacity: 0.5; }
