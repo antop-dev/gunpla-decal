@@ -1,4 +1,4 @@
-package com.example.gunpladecal
+package com.example.gunpladecal.config
 
 import org.springframework.boot.context.properties.ConfigurationProperties
 

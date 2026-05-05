@@ -8,7 +8,7 @@ let mouseDownOnContainer = false;
 let wasDragging = false;
 let lastMX = 0, lastMY = 0;
 
-// 데칼 클릭 시 같은 번호+색상 그룹 내 순환 인덱스: "decalNumber|color" → 다음 인덱스
+// 데칼 클릭 시 같은 번호+색상+도형 그룹 내 순환 인덱스: "decalNumber|color|shape" → 다음 인덱스
 const decalCycleIndex = {};
 
 /* ──────────── 드래그 패닝 ──────────── */
@@ -128,7 +128,7 @@ async function selectManual(id) {
 function renderOverlay() {
   overlay.innerHTML = allDecals.filter(d => d.page === currentPage).map(d => `
     <div class="decal-marker" data-id="${d.id}"
-         style="left:${d.x}%;top:${d.y}%;transform:translate(-50%,-50%);${decalMarkerStyle(d.color)}"
+         style="left:${d.x}%;top:${d.y}%;transform:translate(-50%,-50%);${decalMarkerStyle(d.color, d.shape)}"
          title="${esc(d.decalNumber)}">
       ${esc(d.decalNumber.slice(0, 3))}
     </div>`).join('');
@@ -136,7 +136,7 @@ function renderOverlay() {
     m.addEventListener('click', e => {
       e.stopPropagation();
       const decal = allDecals.find(d => d.id === +m.dataset.id);
-      if (decal) navigateToDecalByKey(`${decal.decalNumber}|${decal.color ?? 'WHITE'}`);
+      if (decal) navigateToDecalByKey(`${decal.decalNumber}|${decal.color ?? 'WHITE'}|${decal.shape ?? 'CIRCLE'}`);
     }));
 }
 
@@ -150,8 +150,9 @@ function sortDecalNumber(a, b) {
   return a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
 }
 
-// 데칼 쌍 정렬: 흰색 배경 → 검은색 배경, 같은 색상 내에서는 번호 오름차순
+// 데칼 쌍 정렬: 동그라미 → 네모, 같은 도형 내에서는 흰색 → 검은색, 같은 색상 내에서는 번호 오름차순
 function sortDecalPairs(a, b) {
+  if (a.shape !== b.shape) return a.shape === 'CIRCLE' ? -1 : 1;
   if (a.color !== b.color) return a.color === 'WHITE' ? -1 : 1;
   return sortDecalNumber(a.num, b.num);
 }
@@ -177,8 +178,8 @@ function renderDecalList() {
   const seen = new Set();
   const pairs = [];
   allDecals.forEach(d => {
-    const key = `${d.decalNumber}|${d.color ?? 'WHITE'}`;
-    if (!seen.has(key)) { seen.add(key); pairs.push({ key, num: d.decalNumber, color: d.color ?? 'WHITE' }); }
+    const key = `${d.decalNumber}|${d.color ?? 'WHITE'}|${d.shape ?? 'CIRCLE'}`;
+    if (!seen.has(key)) { seen.add(key); pairs.push({ key, num: d.decalNumber, color: d.color ?? 'WHITE', shape: d.shape ?? 'CIRCLE' }); }
   });
   pairs.sort(sortDecalPairs);
   const filtered = kw ? pairs.filter(p => p.num.toLowerCase().includes(kw)) : pairs;
@@ -195,32 +196,38 @@ function renderDecalList() {
   }
 
   // 5열 그리드, 같은 번호가 여러 위치에 있으면 우하단에 개수 표시
+  // 개수 뱃지는 div wrapper에 배치 (버튼의 overflow:hidden + border-radius:50% 에 잘리지 않도록)
   list.innerHTML = `<div class="grid gap-1" style="grid-template-columns:repeat(5,minmax(0,1fr));">
-    ${filtered.map(({ key, num, color }) => {
-      const cnt = allDecals.filter(d => d.decalNumber === num && (d.color ?? 'WHITE') === color).length;
+    ${filtered.map(({ key, num, color, shape }) => {
+      const cnt = allDecals.filter(d => d.decalNumber === num && (d.color ?? 'WHITE') === color && (d.shape ?? 'CIRCLE') === shape).length;
       const isBlack = color === 'BLACK';
       const cls = isBlack
         ? 'bg-gray-900 text-white border-gray-700 hover:bg-gray-700'
         : 'bg-white text-gray-900 border-gray-300 hover:bg-gray-100';
+      const borderRadius = shape === 'SQUARE' ? '' : 'border-radius:50%;';
       return `
-      <button class="decal-btn h-8 flex items-center justify-center rounded text-xs font-medium
-                     ${cls} border truncate px-0.5 relative"
-              data-key="${esc(key)}" title="${esc(num)}">
-        ${esc(num)}${cnt > 1 ? `<span style="position:absolute;bottom:1px;right:2px;font-size:8px;font-weight:700;color:inherit;opacity:0.7;line-height:1;">${cnt}</span>` : ''}
-      </button>`;
+      <div class="relative">
+        <button class="decal-btn w-full h-8 flex items-center justify-center text-xs font-medium
+                       ${cls} border truncate px-0.5"
+                style="${borderRadius}" data-key="${esc(key)}" title="${esc(num)}">
+          ${esc(num)}
+        </button>
+        ${cnt > 1 ? `<span class="pointer-events-none" style="position:absolute;bottom:1px;right:2px;font-size:8px;font-weight:700;line-height:1;color:${isBlack ? '#fff' : '#111'};opacity:0.75;">${cnt}</span>` : ''}
+      </div>`;
     }).join('')}
   </div>`;
 
   // 접힌 사이드바용 아이콘 버튼 목록
-  iconEl.innerHTML = pairs.map(({ key, num, color }) => {
+  iconEl.innerHTML = pairs.map(({ key, num, color, shape }) => {
     const isBlack = color === 'BLACK';
     const cls = isBlack
       ? 'bg-gray-900 text-white hover:bg-gray-700 border border-gray-700'
       : 'text-gray-900 hover:bg-gray-100 border border-gray-300';
+    const borderRadius = shape === 'SQUARE' ? '' : 'border-radius:50%;';
     return `
-    <button class="decal-icon-btn rs-icon-tip w-8 h-8 flex items-center justify-center rounded
+    <button class="decal-icon-btn rs-icon-tip w-8 h-8 flex items-center justify-center
                    ${cls} text-xs font-bold flex-shrink-0"
-            data-key="${esc(key)}" data-tip="${esc(num)}">
+            style="${borderRadius}" data-key="${esc(key)}" data-tip="${esc(num)}">
       ${esc(num.slice(0, 3))}
     </button>`;
   }).join('');
@@ -231,12 +238,12 @@ function renderDecalList() {
     btn.addEventListener('click', () => navigateToDecalByKey(btn.dataset.key)));
 }
 
-// 데칼 버튼 클릭 시 해당 번호+색상 그룹을 위치 순으로 순환하며 이동·하이라이트
-// key = "decalNumber|color" 형태
+// 데칼 버튼 클릭 시 해당 번호+색상+도형 그룹을 위치 순으로 순환하며 이동·하이라이트
+// key = "decalNumber|color|shape" 형태
 async function navigateToDecalByKey(key) {
-  const [decalNumber, color] = key.split('|');
+  const [decalNumber, color, shape] = key.split('|');
   const group = sortDecalsByPosition(
-    allDecals.filter(d => d.decalNumber === decalNumber && (d.color ?? 'WHITE') === color)
+    allDecals.filter(d => d.decalNumber === decalNumber && (d.color ?? 'WHITE') === color && (d.shape ?? 'CIRCLE') === shape)
   );
   if (!group.length) return;
 

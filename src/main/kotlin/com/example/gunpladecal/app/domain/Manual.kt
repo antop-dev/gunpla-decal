@@ -1,4 +1,4 @@
-package com.example.gunpladecal.domain
+package com.example.gunpladecal.app.domain
 
 import jakarta.persistence.Column
 import jakarta.persistence.Entity

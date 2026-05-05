@@ -1,17 +1,17 @@
-package com.example.gunpladecal.service
+package com.example.gunpladecal.app.service
 
-import com.example.gunpladecal.AppProperties
-import com.example.gunpladecal.domain.Decal
-import com.example.gunpladecal.domain.Grade
-import com.example.gunpladecal.domain.Manual
-import com.example.gunpladecal.dto.DecalCreateRequest
-import com.example.gunpladecal.dto.DecalResponse
-import com.example.gunpladecal.dto.DecalUpdateRequest
-import com.example.gunpladecal.dto.ManualDetail
-import com.example.gunpladecal.dto.ManualSummary
-import com.example.gunpladecal.dto.ManualUpdateRequest
-import com.example.gunpladecal.repository.DecalRepository
-import com.example.gunpladecal.repository.ManualRepository
+import com.example.gunpladecal.app.domain.Decal
+import com.example.gunpladecal.app.domain.Grade
+import com.example.gunpladecal.app.domain.Manual
+import com.example.gunpladecal.app.dto.DecalCreateRequest
+import com.example.gunpladecal.app.dto.DecalResponse
+import com.example.gunpladecal.app.dto.DecalUpdateRequest
+import com.example.gunpladecal.app.dto.ManualDetail
+import com.example.gunpladecal.app.dto.ManualSummary
+import com.example.gunpladecal.app.dto.ManualUpdateRequest
+import com.example.gunpladecal.app.repository.DecalRepository
+import com.example.gunpladecal.app.repository.ManualRepository
+import com.example.gunpladecal.config.AppProperties
 import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.annotation.PostConstruct
 import org.springframework.core.io.FileSystemResource
@@ -130,6 +130,7 @@ class ManualService(
                 x = request.x,
                 y = request.y,
                 color = request.color,
+                shape = request.shape,
             )
         return decalRepository.save(decal).toResponse()
     }
@@ -147,6 +148,7 @@ class ManualService(
         request.x?.let { decal.x = it }
         request.y?.let { decal.y = it }
         request.color?.let { decal.color = it }
+        request.shape?.let { decal.shape = it }
         return decalRepository.save(decal).toResponse()
     }
 
@@ -182,5 +184,5 @@ class ManualService(
 
     private fun Manual.toDetail(decals: List<DecalResponse>) = ManualDetail(id, grade, modelNumber, productName, decals)
 
-    private fun Decal.toResponse() = DecalResponse(id, pageNumber, decalNumber, x, y, color)
+    private fun Decal.toResponse() = DecalResponse(id, pageNumber, decalNumber, x, y, color, shape)
 }

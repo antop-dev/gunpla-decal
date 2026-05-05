@@ -40,20 +40,18 @@ body { height: 100vh; overflow: hidden; }
 .page-admin  #pdf-container { cursor: crosshair; }
 #pdf-container.dragging { cursor: grabbing; }
 
-/* ── 데칼 마커 (오버레이 위 원형 핀) ── */
+/* ── 데칼 마커 (오버레이 위 핀, 원/네모는 인라인 스타일로 결정) ── */
 .decal-marker {
   position: absolute;
-  border-radius: 50%;
   box-shadow: 0 1px 4px rgba(0,0,0,0.4);
   display: flex; align-items: center; justify-content: center;
-  font-size: 9px; font-weight: 700;
+  font-size: 11px; font-weight: 700;
   cursor: pointer; pointer-events: auto;
   user-select: none; transform-origin: 50% 50%;
 }
-/* 사용자 페이지: 26×26 */
-.page-viewer .decal-marker { width: 26px; height: 26px; }
-/* 관리자 페이지: 29×29, 호버 시 반투명 */
-.page-admin .decal-marker { width: 29px; height: 29px; }
+/* 사용자/관리자 페이지 공통: 21×21 (23 × 0.9) */
+.page-viewer .decal-marker,
+.page-admin  .decal-marker { width: 21px; height: 21px; }
 .page-admin .decal-marker:hover { opacity: 0.85; }
 
 /* 사용자 페이지: 클릭 선택된 데칼 강조 펄스 애니메이션 */

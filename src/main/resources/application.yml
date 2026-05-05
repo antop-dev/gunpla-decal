@@ -19,7 +19,7 @@ spring:
     enabled: true
 
 app:
-  openapi-key: ${OPENAPI_KEY:none}
+  openapi-key: ${OPENAI_KEY:none}
   upload-dir: ${UPLOAD_DIR:./uploads}
 
 logging:

@@ -11,3 +11,15 @@ spring:
   thymeleaf:
     cache: false
     prefix: file:src/main/resources/templates/
+
+decorator:
+  datasource:
+    p6spy:
+      enable-logging: true
+      logging: slf4j
+      multiline: true
+      log-format: "%(executionTime) ms | %(sql)"
+
+logging:
+  level:
+    p6spy: debug

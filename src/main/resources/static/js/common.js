@@ -134,11 +134,13 @@ function updateActiveThumbnail() {
 
 /* ──────────── 데칼 마커 스타일 ──────────── */
 
-// 데칼 배경색(WHITE/BLACK)에 따른 마커 인라인 스타일 반환
-function decalMarkerStyle(color) {
-  return color === 'BLACK'
+// 데칼 배경색(WHITE/BLACK)과 도형(CIRCLE/SQUARE)에 따른 마커 인라인 스타일 반환
+function decalMarkerStyle(color, shape) {
+  const colorStyle = color === 'BLACK'
     ? 'background:rgba(17,17,17,0.92);color:#fff;border:2px solid rgba(160,160,160,0.8);'
     : 'background:rgba(255,255,255,0.92);color:#111;border:2px solid rgba(80,80,80,0.7);';
+  const shapeStyle = shape !== 'SQUARE' ? 'border-radius:50%;' : '';
+  return colorStyle + shapeStyle;
 }
 
 /* ──────────── 왼쪽 사이드바 토글 ──────────── */

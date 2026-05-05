@@ -1,10 +1,12 @@
-package com.example.gunpladecal.controller
+package com.example.gunpladecal.app.controller
 
-import com.example.gunpladecal.domain.Grade
-import com.example.gunpladecal.dto.DecalCreateRequest
-import com.example.gunpladecal.dto.DecalUpdateRequest
-import com.example.gunpladecal.dto.ManualUpdateRequest
-import com.example.gunpladecal.service.ManualService
+import com.example.gunpladecal.app.domain.Grade
+import com.example.gunpladecal.app.dto.AiDetectRequest
+import com.example.gunpladecal.app.dto.DecalCreateRequest
+import com.example.gunpladecal.app.dto.DecalUpdateRequest
+import com.example.gunpladecal.app.dto.ManualUpdateRequest
+import com.example.gunpladecal.app.service.ManualService
+import com.example.gunpladecal.openai.AiDecalService
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
@@ -22,10 +24,13 @@ import org.springframework.web.multipart.MultipartFile
 
 private val log = KotlinLogging.logger {}
 
-/** 관리자 페이지 전용 CRUD API (메뉴얼·데칼 등록/수정/삭제) */
+/** 관리자 페이지 전용 CRUD API (메뉴얼·데칼 등록/수정/삭제, AI 탐지) */
 @RestController
 @RequestMapping("/api/admin/manuals")
-class AdminController(private val manualService: ManualService) {
+class AdminController(
+    private val manualService: ManualService,
+    private val aiDecalService: AiDecalService,
+) {
     /** 메뉴얼 전체 목록 반환 (검색 없음) */
     @GetMapping
     fun list(): Any {
@@ -97,5 +102,17 @@ class AdminController(private val manualService: ManualService) {
     ) {
         log.debug { "DELETE /api/admin/manuals/$manualId/decals/$decalId" }
         manualService.deleteDecal(manualId, decalId)
+    }
+
+    /** 현재 페이지 이미지를 AI(GPT-4o Vision)로 분석하여 데칼을 자동 탐지하고 DB에 저장 */
+    @PostMapping("/{manualId}/pages/{pageNumber}/ai-detect")
+    @ResponseStatus(HttpStatus.CREATED)
+    fun aiDetect(
+        @PathVariable manualId: Long,
+        @PathVariable pageNumber: Int,
+        @RequestBody request: AiDetectRequest,
+    ): Any {
+        log.debug { "POST /api/admin/manuals/$manualId/pages/$pageNumber/ai-detect" }
+        return aiDecalService.detectAndSave(manualId, pageNumber, request.imageBase64)
     }
 }

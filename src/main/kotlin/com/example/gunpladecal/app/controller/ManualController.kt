@@ -1,6 +1,6 @@
-package com.example.gunpladecal.controller
+package com.example.gunpladecal.app.controller
 
-import com.example.gunpladecal.service.ManualService
+import com.example.gunpladecal.app.service.ManualService
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.core.io.Resource
 import org.springframework.http.MediaType

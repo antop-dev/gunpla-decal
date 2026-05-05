@@ -1,13 +1,14 @@
-package com.example.gunpladecal.dto
+package com.example.gunpladecal.app.dto
 
-import com.example.gunpladecal.domain.DecalColor
-import com.example.gunpladecal.domain.Grade
+import com.example.gunpladecal.app.domain.DecalColor
+import com.example.gunpladecal.app.domain.DecalShape
+import com.example.gunpladecal.app.domain.Grade
 
 /** 메뉴얼 목록 조회 응답 (목록 표시에 필요한 최소 필드만 포함) */
 data class ManualSummary(
     val id: Long,
     val grade: Grade,
-    /** 형식번호 (영문자·숫자·하이픈만 허용) */
+    /** 형식번호 (영문자·숫자·하이픈·슬래시 허용) */
     val modelNumber: String,
     val productName: String,
 )
@@ -16,7 +17,7 @@ data class ManualSummary(
 data class ManualDetail(
     val id: Long,
     val grade: Grade,
-    /** 형식번호 (영문자·숫자·하이픈만 허용) */
+    /** 형식번호 (영문자·숫자·하이픈·슬래시 허용) */
     val modelNumber: String,
     val productName: String,
     val decals: List<DecalResponse>,
@@ -41,6 +42,8 @@ data class DecalResponse(
     /** PDF 캔버스 기준 세로 위치 (0~100 %) */
     val y: Double,
     val color: DecalColor,
+    /** 데칼 도형 타입 (CIRCLE: 동그라미, SQUARE: 네모) */
+    val shape: DecalShape,
 )
 
 /** 데칼 등록 요청 */
@@ -53,6 +56,8 @@ data class DecalCreateRequest(
     /** PDF 캔버스 기준 세로 위치 (0~100 %) */
     val y: Double,
     val color: DecalColor = DecalColor.WHITE,
+    /** 데칼 도형 타입 (CIRCLE: 동그라미, SQUARE: 네모) */
+    val shape: DecalShape = DecalShape.CIRCLE,
 )
 
 /** 데칼 수정 요청 (null 필드는 변경하지 않음) */
@@ -62,4 +67,12 @@ data class DecalUpdateRequest(
     val x: Double?,
     val y: Double?,
     val color: DecalColor?,
+    /** 데칼 도형 타입 (null이면 변경하지 않음) */
+    val shape: DecalShape?,
+)
+
+/** AI 데칼 탐지 요청: 현재 페이지를 canvas.toDataURL()로 캡처한 이미지 */
+data class AiDetectRequest(
+    /** canvas.toDataURL()로 생성한 이미지 (data:image/...;base64,...) */
+    val imageBase64: String,
 )

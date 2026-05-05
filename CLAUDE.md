@@ -1,55 +1,57 @@
 # CLAUDE.md
 
-이 파일은 Claude Code가 이 저장소에서 작업할 때 참고하는 가이드입니다.
+Behavioral guidelines to reduce common LLM coding mistakes. Merge with project-specific instructions as needed.
 
-## 커뮤니케이션
+Tradeoff: These guidelines bias toward caution over speed. For trivial tasks, use judgment.
 
-- 대화는 한글로 합니다.
+1. Think Before Coding
+   Don't assume. Don't hide confusion. Surface tradeoffs.
 
-## 클로드의 권한
+Before implementing:
 
-이 디렉터리에서 작업을 수행할 때는 개발자에게 묻지 않습니다.
-  - 파일(디렉터리) 생성/수정/삭제
-  - 외부 사이트 접근
-  - CLI 명령
-    - `./gradlew`
+State your assumptions explicitly. If uncertain, ask.
+If multiple interpretations exist, present them - don't pick silently.
+If a simpler approach exists, say so. Push back when warranted.
+If something is unclear, stop. Name what's confusing. Ask.
 
-## 구현
+2. Simplicity First
+   Minimum code that solves the problem. Nothing speculative.
 
-- 소스코드에 개발자가 유지보수할 수 있도록 주석을 명시합니다.
-- 테이블 생성시 주석을 명시합니다.
-- 외부 라이브러를 사용할 때는 안정화된(STABLE) 최신 버전을 사용합니다.
-- 상용 라이브러리는 사용하지 않습니다.
+No features beyond what was asked.
+No abstractions for single-use code.
+No "flexibility" or "configurability" that wasn't requested.
+No error handling for impossible scenarios.
+If you write 200 lines and it could be 50, rewrite it.
+Ask yourself: "Would a senior engineer say this is overcomplicated?" If yes, simplify.
 
-## 실행 및 테스트
+3. Surgical Changes
+   Touch only what you must. Clean up only your own mess.
 
-실제 서버를 실행시키고 테스트는 개발자가 수동으로 합니다.
+When editing existing code:
 
-백엔드 파일이 수정된 경우
-- gradle + ktlint 조합으로 코드 컨벤션을 지켜서 수정할 수 있도록 합니다. `.editorconfig` 파일은 내가 직접 수정해서 룰을 정합니다.
-- `./gradle clean build` 명령어로 빌드가 정상적으로 빌드 되는지만 테스트 합니다.
+Don't "improve" adjacent code, comments, or formatting.
+Don't refactor things that aren't broken.
+Match existing style, even if you'd do it differently.
+If you notice unrelated dead code, mention it - don't delete it.
+When your changes create orphans:
 
-### 백엔드 
+Remove imports/variables/functions that YOUR changes made unused.
+Don't remove pre-existing dead code unless asked.
+The test: Every changed line should trace directly to the user's request.
 
-백엔드를 구현할 때 사용할 지침서입니다.
+4. Goal-Driven Execution
+   Define success criteria. Loop until verified.
 
-- 사용 언어/라이브러리 버전
-  - Java 17
-  - Kotlin 1.9.25
-  - Spring Boot 3.5.14
-- Spring 프로파일
-  - `local-h2`: H2 Embedded Database
-  - `local-mariadb`: MariaDB 로컬 데이터베이스를 사용 (데이터베이스는 개발자가 직접 구성함)
-  - `prd`: MySql (운영 환경은 개발자가 직접 구성할 예정)
-- 서드파티 라이브러리 (버전은 가능한 한 최신 버전 사용할 것)
-  - Flyway : 데이터베이스 마이그레이션
+Transform tasks into verifiable goals:
 
-### 프론트엔드
+"Add validation" → "Write tests for invalid inputs, then make them pass"
+"Fix the bug" → "Write a test that reproduces it, then make it pass"
+"Refactor X" → "Ensure tests pass before and after"
+For multi-step tasks, state a brief plan:
 
-프론트엔드를 구현할 때 사용할 지침서입니다.
+1. [Step] → verify: [check]
+2. [Step] → verify: [check]
+3. [Step] → verify: [check]
+   Strong success criteria let you loop independently. Weak criteria ("make it work") require constant clarification.
 
-- Single Page Application (SPA)
-- Spring Boot Thymeleaf
-- Tailwind CSS
-- 최신 (오픈소스) JavaScript 라이브러리 사용 가능
-- 가능한한 HTML, JS 에서 스타일을 직접만들지 않고 `css` 파일을 사용하도록 합니다.
+These guidelines are working if: fewer unnecessary changes in diffs, fewer rewrites due to overcomplication, and clarifying questions come before implementation rather than after mistakes.

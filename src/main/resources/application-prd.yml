@@ -6,3 +6,7 @@ spring:
     driver-class-name: org.mariadb.jdbc.Driver
   jpa:
     database-platform: org.hibernate.dialect.MariaDBDialect
+
+decorator:
+  datasource:
+    enabled: false  # 운영 환경에서 SQL 로깅 비활성화

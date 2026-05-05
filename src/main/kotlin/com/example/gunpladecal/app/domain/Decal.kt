@@ -1,4 +1,4 @@
-package com.example.gunpladecal.domain
+package com.example.gunpladecal.app.domain
 
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
@@ -37,6 +37,10 @@ class Decal(
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 10)
     var color: DecalColor = DecalColor.WHITE,
+    /** 데칼 도형 타입 (CIRCLE: 동그라미, SQUARE: 네모) */
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 10)
+    var shape: DecalShape = DecalShape.CIRCLE,
     /** 레코드 생성 일시 (변경 불가) */
     @Column(nullable = false, updatable = false)
     val createdAt: LocalDateTime = LocalDateTime.now(),

@@ -1,0 +1,2 @@
+ALTER TABLE decal
+    ADD COLUMN shape VARCHAR(10) NOT NULL DEFAULT 'CIRCLE' COMMENT '데칼 도형 타입 (CIRCLE: 동그라미, SQUARE: 네모)';

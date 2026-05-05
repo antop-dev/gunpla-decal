@@ -22,10 +22,11 @@ const tooltip = document.getElementById('marker-tooltip');
 
 /* ──────────── 드래그 패닝 & 데칼 등록 클릭 ──────────── */
 
-// mousedown: 마커·툴팁·모달 영역 외에서만 드래그/클릭 시작
+// mousedown: 마커·툴팁·모달·줌·AI 오버레이 영역 외에서만 드래그/클릭 시작
 container.addEventListener('mousedown', e => {
   if (e.button !== 0) return;
   if (e.target.closest('.decal-marker') || e.target.closest('#marker-tooltip')) return;
+  if (e.target.closest('#zoom-overlay') || e.target.closest('#ai-overlay')) return;
   if (!document.getElementById('decal-modal').classList.contains('hidden')) return;
   if (!document.getElementById('edit-modal').classList.contains('hidden')) return;
   mouseDown = true;
@@ -57,7 +58,9 @@ window.addEventListener('mouseup', e => {
   container.classList.remove('dragging');
   if (!wasDragging && pdfDoc
       && !e.target.closest('.decal-marker')
-      && !e.target.closest('#marker-tooltip')) {
+      && !e.target.closest('#marker-tooltip')
+      && !e.target.closest('#zoom-overlay')
+      && !e.target.closest('#ai-overlay')) {
     // 클릭 좌표를 PDF 캔버스 기준 백분율(%)로 변환
     const rect = pdfScroll.getBoundingClientRect();
     const contentX = e.clientX - rect.left + pdfScroll.scrollLeft;
@@ -158,6 +161,7 @@ async function selectManual(id) {
   noPdf.style.display = 'none';
   pdfScroll.style.display = '';
   document.getElementById('zoom-overlay').style.display = 'flex';
+  document.getElementById('ai-overlay')?.style.setProperty('display', 'block');
   pdfDoc = await pdfjsLib.getDocument(`/api/manuals/${id}/pdf`).promise;
   currentPage = 1;
   await renderPage(currentPage, true);
@@ -171,7 +175,7 @@ async function selectManual(id) {
 function renderOverlay() {
   overlay.innerHTML = allDecals.filter(d => d.page === currentPage).map(d => `
     <div class="decal-marker" data-id="${d.id}"
-         style="left:${d.x}%;top:${d.y}%;transform:translate(-50%,-50%);${decalMarkerStyle(d.color)}"
+         style="left:${d.x}%;top:${d.y}%;transform:translate(-50%,-50%);${decalMarkerStyle(d.color, d.shape)}"
          title="${esc(d.decalNumber)}">
       ${esc(d.decalNumber.slice(0, 4))}
     </div>`).join('');
@@ -232,6 +236,8 @@ document.getElementById('tt-edit').addEventListener('click', e => {
   document.getElementById('inp-edit-num').value = d.decalNumber;
   const colorRadio = document.querySelector(`input[name="edit-color"][value="${d.color ?? 'WHITE'}"]`);
   if (colorRadio) colorRadio.checked = true;
+  const shapeRadio = document.querySelector(`input[name="edit-shape"][value="${d.shape ?? 'CIRCLE'}"]`);
+  if (shapeRadio) shapeRadio.checked = true;
   hideTooltip();
   openEditModal(e.clientX, e.clientY);
 });
@@ -275,6 +281,7 @@ function openDecalModal(x, y, clientX, clientY) {
   pendingPos = { x, y, page: currentPage };
   document.getElementById('inp-decal-num').value = '';
   document.getElementById('inp-decal-color-white').checked = true;
+  document.getElementById('inp-decal-shape-circle').checked = true;
   const modal = document.getElementById('decal-modal');
   modal.classList.remove('hidden');
   const W = 230, H = 170;
@@ -310,10 +317,11 @@ async function saveNewDecal() {
   const num = document.getElementById('inp-decal-num').value.trim();
   if (!num || !pendingPos) return;
   const color = document.querySelector('input[name="decal-color"]:checked')?.value ?? 'WHITE';
+  const shape = document.querySelector('input[name="decal-shape"]:checked')?.value ?? 'CIRCLE';
   const res = await fetch(`/api/admin/manuals/${currentManual.id}/decals`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ page: pendingPos.page, decalNumber: num, x: pendingPos.x, y: pendingPos.y, color }),
+    body: JSON.stringify({ page: pendingPos.page, decalNumber: num, x: pendingPos.x, y: pendingPos.y, color, shape }),
   });
   if (res.ok) {
     allDecals.push(await res.json());
@@ -369,10 +377,11 @@ async function saveEditDecal() {
   const num = document.getElementById('inp-edit-num').value.trim();
   if (!num || !editingDecalId) return;
   const color = document.querySelector('input[name="edit-color"]:checked')?.value ?? 'WHITE';
+  const shape = document.querySelector('input[name="edit-shape"]:checked')?.value ?? 'CIRCLE';
   const res = await fetch(`/api/admin/manuals/${currentManual.id}/decals/${editingDecalId}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ decalNumber: num, color }),
+    body: JSON.stringify({ decalNumber: num, color, shape }),
   });
   if (res.ok) {
     const updated = await res.json();
@@ -593,14 +602,53 @@ document.getElementById('upload-form').addEventListener('submit', async e => {
   }
 });
 
+/* ──────────── AI 데칼 탐지 ──────────── */
+
+document.getElementById('btn-ai-detect').addEventListener('click', async () => {
+  if (!currentManual || !pdfDoc) return;
+
+  const btn = document.getElementById('btn-ai-detect');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 분석 중…';
+
+  try {
+    // 현재 페이지 캔버스를 JPEG 이미지로 캡처 (base64 data URL)
+    const imageBase64 = canvas.toDataURL('image/jpeg', 0.85);
+
+    const res = await fetch(`/api/admin/manuals/${currentManual.id}/pages/${currentPage}/ai-detect`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ imageBase64 }),
+    });
+
+    if (res.ok) {
+      const newDecals = await res.json();
+      allDecals.push(...newDecals);
+      renderOverlay();
+      if (newDecals.length === 0) {
+        alert('이미 등록된 마커와 겹치지 않는 새로운 데칼을 찾지 못했습니다.');
+      } else {
+        alert(`${newDecals.length}개의 데칼을 찾아 저장했습니다.`);
+      }
+    } else {
+      alert('AI 분석에 실패했습니다.');
+    }
+  } catch {
+    alert('AI 분석 중 오류가 발생했습니다.');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-robot"></i> AI로 찾기';
+  }
+});
+
 /* ──────────── 새로고침 ──────────── */
 document.getElementById('sb-refresh').addEventListener('click', loadManuals);
 
 /* ──────────── 형식번호 유효성 검사 ──────────── */
 
-// 영문자·숫자·하이픈만 허용하도록 실시간 정제
+// 영문자·숫자·하이픈·슬래시만 허용하도록 실시간 정제
 function sanitizeModelNumber(val) {
-  return val.replace(/[^A-Za-z0-9-]/g, '');
+  return val.replace(/[^A-Za-z0-9\-/]/g, '');
 }
 
 // 형식번호 입력 필드에 유효성 검사 연결
