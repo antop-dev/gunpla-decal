@@ -1,7 +1,9 @@
 /* ── 상태 (사용자 페이지 전용) ── */
-let currentManual = null; // 현재 선택된 메뉴얼 객체
-let allDecals     = [];   // 현재 메뉴얼의 전체 데칼 목록
-let allManuals    = [];   // 서버에서 로드한 메뉴얼 목록 (검색 결과 포함)
+let currentManual  = null;  // 현재 선택된 메뉴얼 객체
+let allDecals      = [];    // 현재 메뉴얼의 전체 데칼 목록
+let allManuals     = [];    // 서버에서 로드한 메뉴얼 목록 (검색 결과 포함)
+let manualLoading  = false; // PDF 로드 중 중복 선택 방지 플래그
+minZoomMult = 0.5;          // 사용자 페이지: fitScale의 50%까지 축소 허용
 
 // 드래그 상태 추적 (pdfScroll 패닝용)
 let mouseDownOnContainer = false;
@@ -55,18 +57,58 @@ async function loadManuals(q = '') {
       : '<p class="text-gray-500 text-xs p-2">등록된 메뉴얼이 없습니다</p>';
   } else {
     el.innerHTML = allManuals.map(m => `
-      <div class="manual-item px-2 py-1.5 rounded cursor-pointer hover:bg-gray-700 transition-colors" data-id="${m.id}">
+      <div class="manual-item group px-2 py-1.5 rounded cursor-pointer hover:bg-gray-700 transition-colors" data-id="${m.b62id}">
         <div class="flex items-center gap-1 mb-0.5">
           <span class="grade-badge grade-${esc(m.grade)}">${esc(m.grade)}</span>
-          <span class="text-xs font-medium text-gray-200 leading-snug truncate">${esc(m.modelNumber)}</span>
+          <span class="text-xs font-medium text-gray-200 leading-snug truncate flex-1">${esc(m.modelNumber)}</span>
+          ${m.link ? `<a class="manual-link-btn opacity-0 group-hover:opacity-100 flex-shrink-0 text-gray-500 hover:text-white w-5 h-5 flex items-center justify-center"
+                  href="${esc(m.link)}" target="_blank" rel="noopener noreferrer" title="링크 열기">
+            <i class="fas fa-link text-xs"></i>
+          </a>` : ''}
+          <button class="pdf-dl-btn opacity-0 group-hover:opacity-100 flex-shrink-0 text-gray-500 hover:text-white w-5 h-5 flex items-center justify-center"
+                  data-id="${m.b62id}"
+                  data-filename="${esc(m.grade)}_${esc(m.modelNumber)}_${esc(m.productName)}.pdf"
+                  title="PDF 다운로드">
+            <i class="fas fa-download text-xs"></i>
+          </button>
         </div>
-        <div class="text-xs text-gray-400 leading-snug truncate">${esc(m.productName)}</div>
+        <div class="manual-product-name text-xs text-gray-400 leading-snug truncate">${esc(m.productName)}</div>
       </div>`).join('');
     el.querySelectorAll('.manual-item').forEach(item =>
-      item.addEventListener('click', () => selectManual(+item.dataset.id)));
+      item.addEventListener('click', e => {
+        if (e.target.closest('.manual-link-btn') || e.target.closest('.pdf-dl-btn')) return;
+        selectManual(item.dataset.id);
+      }));
+
+    const tip = document.getElementById('manual-item-tip');
+    el.querySelectorAll('.manual-product-name').forEach(nameEl => {
+      nameEl.addEventListener('mouseenter', () => {
+        if (nameEl.scrollWidth <= nameEl.clientWidth) return;
+        const r = nameEl.getBoundingClientRect();
+        tip.textContent = nameEl.textContent;
+        tip.style.left = (r.left + 4) + 'px';
+        tip.style.top = (r.bottom + 4) + 'px';
+        tip.style.transform = '';
+        tip.style.display = 'block';
+      });
+      nameEl.addEventListener('mouseleave', () => { tip.style.display = 'none'; });
+    });
+
+    el.querySelectorAll('.pdf-dl-btn').forEach(btn =>
+      btn.addEventListener('click', async e => {
+        e.stopPropagation();
+        const res = await fetch(`/api/manuals/b/${btn.dataset.id}/pdf`);
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = btn.dataset.filename;
+        a.click();
+        URL.revokeObjectURL(url);
+      }));
     // 검색/새로고침 후에도 이전 선택 상태 유지
     if (currentManual) {
-      el.querySelector(`.manual-item[data-id="${currentManual.id}"]`)?.classList.add('bg-gray-600');
+      el.querySelector(`.manual-item[data-id="${currentManual.b62id}"]`)?.classList.add('bg-gray-600');
     }
   }
 
@@ -74,52 +116,115 @@ async function loadManuals(q = '') {
   const iconEl = document.getElementById('sb-icons');
   iconEl.innerHTML = allManuals.map(m => `
     <button class="manual-icon-item sb-icon-tip w-8 h-8 flex items-center justify-center rounded hover:bg-gray-700 text-gray-400 hover:text-white"
-            data-id="${m.id}"
+            data-id="${m.b62id}"
             data-tip="[${esc(m.grade)}] ${esc(m.modelNumber)} ${esc(m.productName)}">
       <i class="fas fa-file-pdf text-sm"></i>
     </button>`).join('');
   iconEl.querySelectorAll('.manual-icon-item').forEach(icon =>
-    icon.addEventListener('click', () => selectManual(+icon.dataset.id)));
+    icon.addEventListener('click', () => selectManual(icon.dataset.id)));
+
+  // 아이콘 툴팁: sidebar overflow:hidden 회피를 위해 position:fixed 기반 JS 툴팁 사용
+  const iconTip = document.getElementById('manual-item-tip');
+  iconEl.querySelectorAll('.manual-icon-item').forEach(icon => {
+    icon.addEventListener('mouseenter', () => {
+      const r = icon.getBoundingClientRect();
+      iconTip.textContent = icon.dataset.tip;
+      iconTip.style.left = (r.right + 8) + 'px';
+      iconTip.style.top = (r.top + r.height / 2) + 'px';
+      iconTip.style.transform = 'translateY(-50%)';
+      iconTip.style.display = 'block';
+    });
+    icon.addEventListener('mouseleave', () => { iconTip.style.display = 'none'; });
+  });
+
   // 아이콘 목록에도 현재 선택 상태 반영
   if (currentManual) {
-    const activeIcon = iconEl.querySelector(`.manual-icon-item[data-id="${currentManual.id}"]`);
+    const activeIcon = iconEl.querySelector(`.manual-icon-item[data-id="${currentManual.b62id}"]`);
     if (activeIcon) {
       activeIcon.classList.add('bg-gray-600');
       activeIcon.querySelector('i').className = 'fas fa-file-pdf text-sm text-white';
     }
   }
+  window.dispatchEvent(new Event('resize'));
 }
 
-// 메뉴얼 선택: 목록 하이라이트 업데이트 후 PDF·데칼 로드
-async function selectManual(id) {
-  document.querySelectorAll('.manual-item').forEach(e => e.classList.remove('bg-gray-600'));
-  document.querySelector(`.manual-item[data-id="${id}"]`)?.classList.add('bg-gray-600');
+// 메뉴얼 선택: 목록 하이라이트 업데이트 후 PDF·데칼 로드.
+// push=false이면 history.pushState를 호출하지 않음 (popstate/초기 진입 시).
+async function selectManual(b62id, push = true) {
+  if (manualLoading) return;
+  manualLoading = true;
+  try {
+    document.querySelectorAll('.manual-item').forEach(e => e.classList.remove('bg-gray-600'));
+    document.querySelector(`.manual-item[data-id="${b62id}"]`)?.classList.add('bg-gray-600');
 
-  document.querySelectorAll('.manual-icon-item').forEach(e => {
-    e.classList.remove('bg-gray-600');
-    e.querySelector('i').className = 'fas fa-file-pdf text-sm';
-  });
-  const activeIcon = document.querySelector(`.manual-icon-item[data-id="${id}"]`);
-  if (activeIcon) {
-    activeIcon.classList.add('bg-gray-600');
-    activeIcon.querySelector('i').className = 'fas fa-file-pdf text-sm text-white';
+    document.querySelectorAll('.manual-icon-item').forEach(e => {
+      e.classList.remove('bg-gray-600');
+      e.querySelector('i').className = 'fas fa-file-pdf text-sm';
+    });
+    const activeIcon = document.querySelector(`.manual-icon-item[data-id="${b62id}"]`);
+    if (activeIcon) {
+      activeIcon.classList.add('bg-gray-600');
+      activeIcon.querySelector('i').className = 'fas fa-file-pdf text-sm text-white';
+    }
+
+    if (push) history.pushState({ b62id }, '', `/${b62id}`);
+
+    // PDF 스켈레톤 표시 (pdfScroll은 visible — fitToContainer 치수 계산에 필요)
+    noPdf.style.display = 'none';
+    pdfScroll.style.display = '';
+    document.getElementById('zoom-overlay').style.display = 'none';
+    document.getElementById('pdf-loading').style.display = 'flex';
+    thumbStrip.innerHTML = '<div class="strip-inner"><span class="text-gray-500 text-xs select-none">로딩 중…</span></div>';
+
+    // 데칼 사이드바 스켈레톤 표시
+    document.getElementById('right-sidebar').style.display = 'flex';
+    document.getElementById('decal-list').innerHTML =
+      `<div class="grid gap-1" style="grid-template-columns:repeat(5,minmax(0,1fr));">${
+        Array(20).fill('<div class="decal-skel" style="height:32px;"></div>').join('')
+      }</div>`;
+    document.getElementById('rs-icons').innerHTML =
+      Array(10).fill('<div class="decal-skel flex-shrink-0 mx-auto" style="width:32px;height:32px;"></div>').join('');
+    window.dispatchEvent(new Event('resize'));
+
+    const data = await (await fetch(`/api/manuals/b/${b62id}`)).json();
+    currentManual = data;
+    allDecals = data.decals;
+    // 순환 인덱스 초기화 (이전 메뉴얼의 상태 잔류 방지)
+    Object.keys(decalCycleIndex).forEach(k => delete decalCycleIndex[k]);
+    // 데칼 없으면 사이드바 숨김 (resize로 pdfScroll 폭 재계산)
+    if (!allDecals.length) {
+      document.getElementById('right-sidebar').style.display = 'none';
+      window.dispatchEvent(new Event('resize'));
+    }
+
+    pdfDoc = await pdfjsLib.getDocument(`/api/manuals/b/${b62id}/pdf`).promise;
+
+    // 데칼이 가장 많은 페이지로 이동
+    if (allDecals.length) {
+      const cnt = {};
+      allDecals.forEach(d => { cnt[d.page] = (cnt[d.page] || 0) + 1; });
+      currentPage = +Object.keys(cnt).reduce((a, b) => cnt[+a] >= cnt[+b] ? a : b);
+    } else {
+      currentPage = 1;
+    }
+
+    await renderPage(currentPage, true);
+
+    // 초기 줌을 fitScale (컨테이너 한 방향에 꽉 차는 배율)로 재설정
+    scale = fitScale;
+    applyTransform();
+    pdfScroll.scrollLeft = Math.max(0, (basePdfWidth  * scale - pdfScroll.clientWidth)  / 2);
+    pdfScroll.scrollTop  = Math.max(0, (basePdfHeight * scale - pdfScroll.clientHeight) / 2);
+
+    // 스켈레톤 숨기고 PDF 공개
+    document.getElementById('pdf-loading').style.display = '';
+    document.getElementById('zoom-overlay').style.display = 'flex';
+
+    renderThumbnails();
+    renderDecalList();
+  } finally {
+    manualLoading = false;
   }
-
-  const data = await (await fetch(`/api/manuals/${id}`)).json();
-  currentManual = data;
-  allDecals = data.decals;
-  // 순환 인덱스 초기화 (이전 메뉴얼의 상태 잔류 방지)
-  Object.keys(decalCycleIndex).forEach(k => delete decalCycleIndex[k]);
-  noPdf.style.display = 'none';
-  pdfScroll.style.display = '';
-  document.getElementById('zoom-overlay').style.display = 'flex';
-  // 데칼이 있을 때만 오른쪽 사이드바 표시
-  document.getElementById('right-sidebar').style.display = allDecals.length > 0 ? 'flex' : 'none';
-  pdfDoc = await pdfjsLib.getDocument(`/api/manuals/${id}/pdf`).promise;
-  currentPage = 1;
-  await renderPage(currentPage, true);
-  renderThumbnails();
-  renderDecalList();
 }
 
 /* ──────────── 데칼 오버레이 ──────────── */
@@ -196,40 +301,35 @@ function renderDecalList() {
   }
 
   // 5열 그리드, 같은 번호가 여러 위치에 있으면 우하단에 개수 표시
-  // 개수 뱃지는 div wrapper에 배치 (버튼의 overflow:hidden + border-radius:50% 에 잘리지 않도록)
   list.innerHTML = `<div class="grid gap-1" style="grid-template-columns:repeat(5,minmax(0,1fr));">
     ${filtered.map(({ key, num, color, shape }) => {
       const cnt = allDecals.filter(d => d.decalNumber === num && (d.color ?? 'WHITE') === color && (d.shape ?? 'CIRCLE') === shape).length;
-      const isBlack = color === 'BLACK';
-      const cls = isBlack
-        ? 'bg-gray-900 text-white border-gray-700 hover:bg-gray-700'
-        : 'bg-white text-gray-900 border-gray-300 hover:bg-gray-100';
-      const borderRadius = shape === 'SQUARE' ? '' : 'border-radius:50%;';
+      const shapeIcon = shape === 'CIRCLE' ? (color === 'BLACK' ? '●' : '○') : (color === 'BLACK' ? '■' : '□');
       return `
       <div class="relative">
         <button class="decal-btn w-full h-8 flex items-center justify-center text-xs font-medium
-                       ${cls} border truncate px-0.5"
-                style="${borderRadius}" data-key="${esc(key)}" title="${esc(num)}">
+                       bg-white text-gray-900 border border-gray-300 hover:bg-gray-100 truncate px-0.5"
+                data-key="${esc(key)}" title="${esc(num)}">
           ${esc(num)}
         </button>
-        ${cnt > 1 ? `<span class="pointer-events-none" style="position:absolute;bottom:1px;right:2px;font-size:8px;font-weight:700;line-height:1;color:${isBlack ? '#fff' : '#111'};opacity:0.75;">${cnt}</span>` : ''}
+        <span class="pointer-events-none" style="position:absolute;top:1px;left:2px;font-size:8px;line-height:1;color:#333;opacity:0.8;z-index:1;">${shapeIcon}</span>
+        ${cnt > 1 ? `<span class="pointer-events-none" style="position:absolute;bottom:1px;right:2px;font-size:8px;font-weight:700;line-height:1;color:#111;opacity:0.75;">${cnt}</span>` : ''}
       </div>`;
     }).join('')}
   </div>`;
 
   // 접힌 사이드바용 아이콘 버튼 목록
   iconEl.innerHTML = pairs.map(({ key, num, color, shape }) => {
-    const isBlack = color === 'BLACK';
-    const cls = isBlack
-      ? 'bg-gray-900 text-white hover:bg-gray-700 border border-gray-700'
-      : 'text-gray-900 hover:bg-gray-100 border border-gray-300';
-    const borderRadius = shape === 'SQUARE' ? '' : 'border-radius:50%;';
+    const shapeIcon = shape === 'CIRCLE' ? (color === 'BLACK' ? '●' : '○') : (color === 'BLACK' ? '■' : '□');
     return `
-    <button class="decal-icon-btn rs-icon-tip w-8 h-8 flex items-center justify-center
-                   ${cls} text-xs font-bold flex-shrink-0"
-            style="${borderRadius}" data-key="${esc(key)}" data-tip="${esc(num)}">
-      ${esc(num.slice(0, 3))}
-    </button>`;
+    <div class="relative flex-shrink-0">
+      <button class="decal-icon-btn rs-icon-tip w-8 h-8 flex items-center justify-center
+                     bg-white text-gray-900 border border-gray-300 hover:bg-gray-100 text-xs font-bold"
+              data-key="${esc(key)}" data-tip="${esc(num)}">
+        ${esc(num.slice(0, 3))}
+      </button>
+      <span class="pointer-events-none" style="position:absolute;top:1px;left:2px;font-size:8px;line-height:1;color:#333;opacity:0.8;z-index:1;">${shapeIcon}</span>
+    </div>`;
   }).join('');
 
   list.querySelectorAll('.decal-btn').forEach(btn =>
@@ -257,8 +357,8 @@ async function navigateToDecalByKey(key) {
     overlay.querySelectorAll('.decal-marker').forEach(m => m.classList.remove('highlight'));
     marker.classList.add('highlight');
     // 마커가 뷰포트 중앙에 오도록 스크롤
-    const targetX = canvas.width  * (decal.x / 100) * scale;
-    const targetY = canvas.height * (decal.y / 100) * scale;
+    const targetX = basePdfWidth  * (decal.x / 100) * scale;
+    const targetY = basePdfHeight * (decal.y / 100) * scale;
     pdfScroll.scrollLeft = targetX - pdfScroll.clientWidth  / 2;
     pdfScroll.scrollTop  = targetY - pdfScroll.clientHeight / 2;
   }
@@ -281,6 +381,7 @@ function toggleRightSidebar() {
   h.style.paddingLeft    = rsOpen ? '' : '0';
   h.style.paddingRight   = rsOpen ? '' : '0';
   h.style.gap            = rsOpen ? '' : '0';
+  setTimeout(() => window.dispatchEvent(new Event('resize')), 220);
 }
 document.getElementById('rs-toggle').addEventListener('click', toggleRightSidebar);
 
@@ -309,4 +410,18 @@ document.getElementById('manual-search').addEventListener('input', e => {
 document.getElementById('decal-search').addEventListener('input', renderDecalList);
 
 /* ──────────── 초기화 ── */
-loadManuals();
+const DARK_SCROLL  = { barWidth: 6, barColor: 'rgba(156,163,175,0.5)', right: 2, autoHide: true };
+const LIGHT_SCROLL = { barWidth: 6, barColor: 'rgba(107,114,128,0.5)', right: 2, autoHide: true };
+PrettyScroll('#manual-list', DARK_SCROLL);
+PrettyScroll('#decal-list',  LIGHT_SCROLL);
+
+(async () => {
+  const initB62 = location.pathname.slice(1);
+  await loadManuals();
+  if (initB62) selectManual(initB62, false);
+})();
+
+window.addEventListener('popstate', e => {
+  const b62id = e.state?.b62id ?? location.pathname.slice(1);
+  if (b62id) selectManual(b62id, false);
+});

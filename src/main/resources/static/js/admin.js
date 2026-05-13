@@ -1,8 +1,20 @@
+/* ── fetch 인터셉터: 403 응답 시 로그인 페이지로 이동 ── */
+const _fetch = window.fetch.bind(window);
+window.fetch = async (...args) => {
+  const res = await _fetch(...args);
+  if (res.status === 403) {
+    window.location.replace('/login');
+    return new Promise(() => {});
+  }
+  return res;
+};
+
 /* ── 상태 (관리자 페이지 전용) ── */
-let currentManual  = null; // 현재 선택된 메뉴얼 객체
-let allDecals      = [];   // 현재 메뉴얼의 전체 데칼 목록
-let manualList     = [];   // 로드된 메뉴얼 목록 캐시 (삭제 confirm에 사용)
-let editingManualId = null; // 수정 중인 메뉴얼 ID
+let currentManual   = null;  // 현재 선택된 메뉴얼 객체 { id, grade, modelNumber, productName, ... }
+let allDecals       = [];    // 현재 메뉴얼의 전체 데칼 목록
+let manualList      = [];    // 로드된 메뉴얼 목록 캐시 (삭제 confirm에 사용)
+let editingManualId = null;  // 수정 중인 메뉴얼 ID
+let manualLoading   = false; // PDF 로드 중 중복 선택 방지 플래그
 
 // 드래그 상태 추적 (pdfScroll 패닝 + 단순 클릭 구분)
 let mouseDown   = false;
@@ -22,11 +34,11 @@ const tooltip = document.getElementById('marker-tooltip');
 
 /* ──────────── 드래그 패닝 & 데칼 등록 클릭 ──────────── */
 
-// mousedown: 마커·툴팁·모달·줌·AI 오버레이 영역 외에서만 드래그/클릭 시작
+// mousedown: 마커·툴팁·모달·줌 오버레이 영역 외에서만 드래그/클릭 시작
 container.addEventListener('mousedown', e => {
   if (e.button !== 0) return;
   if (e.target.closest('.decal-marker') || e.target.closest('#marker-tooltip')) return;
-  if (e.target.closest('#zoom-overlay') || e.target.closest('#ai-overlay')) return;
+  if (e.target.closest('#zoom-overlay')) return;
   if (!document.getElementById('decal-modal').classList.contains('hidden')) return;
   if (!document.getElementById('edit-modal').classList.contains('hidden')) return;
   mouseDown = true;
@@ -59,14 +71,13 @@ window.addEventListener('mouseup', e => {
   if (!wasDragging && pdfDoc
       && !e.target.closest('.decal-marker')
       && !e.target.closest('#marker-tooltip')
-      && !e.target.closest('#zoom-overlay')
-      && !e.target.closest('#ai-overlay')) {
+      && !e.target.closest('#zoom-overlay')) {
     // 클릭 좌표를 PDF 캔버스 기준 백분율(%)로 변환
     const rect = pdfScroll.getBoundingClientRect();
     const contentX = e.clientX - rect.left + pdfScroll.scrollLeft;
     const contentY = e.clientY - rect.top  + pdfScroll.scrollTop;
-    const x = parseFloat((contentX / scale / canvas.width  * 100).toFixed(2));
-    const y = parseFloat((contentY / scale / canvas.height * 100).toFixed(2));
+    const x = parseFloat((contentX / scale / basePdfWidth  * 100).toFixed(2));
+    const y = parseFloat((contentY / scale / basePdfHeight * 100).toFixed(2));
     if (x >= 0 && x <= 100 && y >= 0 && y <= 100) openDecalModal(x, y, e.clientX, e.clientY);
   }
   wasDragging = false;
@@ -139,33 +150,49 @@ async function loadManuals() {
     btn.addEventListener('click', () => openManualEditModal(+btn.dataset.id)));
   el.querySelectorAll('.btn-del').forEach(btn =>
     btn.addEventListener('click', () => deleteManual(+btn.dataset.id)));
+  window.dispatchEvent(new Event('resize'));
 }
 
 // 메뉴얼 선택: 목록 하이라이트 업데이트 후 PDF 로드
 async function selectManual(id) {
-  document.querySelectorAll('.manual-item').forEach(e => e.classList.remove('bg-gray-600'));
-  document.querySelector(`.manual-item[data-id="${id}"]`)?.classList.add('bg-gray-600');
+  if (manualLoading) return;
+  manualLoading = true;
+  try {
+    document.querySelectorAll('.manual-item').forEach(e => e.classList.remove('bg-gray-600'));
+    document.querySelector(`.manual-item[data-id="${id}"]`)?.classList.add('bg-gray-600');
 
-  document.querySelectorAll('.manual-icon-item').forEach(e => {
-    e.classList.remove('bg-gray-600');
-    e.querySelector('i').className = 'fas fa-file-pdf text-sm';
-  });
-  const activeIcon = document.querySelector(`.manual-icon-item[data-id="${id}"]`);
-  if (activeIcon) {
-    activeIcon.classList.add('bg-gray-600');
-    activeIcon.querySelector('i').className = 'fas fa-file-pdf text-sm text-white';
+    document.querySelectorAll('.manual-icon-item').forEach(e => {
+      e.classList.remove('bg-gray-600');
+      e.querySelector('i').className = 'fas fa-file-pdf text-sm';
+    });
+    const activeIcon = document.querySelector(`.manual-icon-item[data-id="${id}"]`);
+    if (activeIcon) {
+      activeIcon.classList.add('bg-gray-600');
+      activeIcon.querySelector('i').className = 'fas fa-file-pdf text-sm text-white';
+    }
+
+    // 스켈레톤 표시 (pdfScroll은 visible — fitToContainer 치수 계산에 필요)
+    noPdf.style.display = 'none';
+    pdfScroll.style.display = '';
+    document.getElementById('zoom-overlay').style.display = 'none';
+    document.getElementById('pdf-loading').style.display = 'flex';
+    thumbStrip.innerHTML = '<div class="strip-inner"><span class="text-gray-500 text-xs select-none">로딩 중…</span></div>';
+
+    const data = await (await fetch(`/api/manuals/${id}`)).json();
+    currentManual = data; allDecals = data.decals;
+
+    pdfDoc = await pdfjsLib.getDocument(`/api/manuals/${id}/pdf`).promise;
+    currentPage = 1;
+    await renderPage(currentPage, true);
+
+    // 스켈레톤 숨기고 PDF 공개
+    document.getElementById('pdf-loading').style.display = '';
+    document.getElementById('zoom-overlay').style.display = 'flex';
+
+    renderThumbnails();
+  } finally {
+    manualLoading = false;
   }
-
-  const data = await (await fetch(`/api/manuals/${id}`)).json();
-  currentManual = data; allDecals = data.decals;
-  noPdf.style.display = 'none';
-  pdfScroll.style.display = '';
-  document.getElementById('zoom-overlay').style.display = 'flex';
-  document.getElementById('ai-overlay')?.style.setProperty('display', 'block');
-  pdfDoc = await pdfjsLib.getDocument(`/api/manuals/${id}/pdf`).promise;
-  currentPage = 1;
-  await renderPage(currentPage, true);
-  renderThumbnails();
 }
 
 /* ──────────── 데칼 오버레이 ──────────── */
@@ -201,8 +228,8 @@ function repositionTooltip() {
   if (tooltip.style.display === 'none' || !tooltipDecalId) return;
   const d = allDecals.find(x => x.id === tooltipDecalId);
   if (!d) { hideTooltip(); return; }
-  const tx = canvas.width  * (d.x / 100) * scale - pdfScroll.scrollLeft;
-  const ty = canvas.height * (d.y / 100) * scale - pdfScroll.scrollTop;
+  const tx = basePdfWidth  * (d.x / 100) * scale - pdfScroll.scrollLeft;
+  const ty = basePdfHeight * (d.y / 100) * scale - pdfScroll.scrollTop;
   if (tx < 0 || ty < 0 || tx > container.clientWidth || ty > container.clientHeight) {
     hideTooltip();
     return;
@@ -401,6 +428,7 @@ function openManualEditModal(id) {
   document.getElementById('edit-inp-grade').value = m.grade;
   document.getElementById('edit-inp-model').value = m.modelNumber;
   document.getElementById('edit-inp-name').value  = m.productName;
+  document.getElementById('edit-inp-link').value  = m.link ?? '';
   document.getElementById('manual-edit-modal').classList.remove('hidden');
   setTimeout(() => document.getElementById('edit-inp-model').focus(), 50);
 }
@@ -419,20 +447,37 @@ document.getElementById('manual-edit-form').addEventListener('submit', async e =
   const grade       = document.getElementById('edit-inp-grade').value;
   const modelNumber = document.getElementById('edit-inp-model').value.trim();
   const productName = document.getElementById('edit-inp-name').value.trim();
+  const link        = document.getElementById('edit-inp-link').value.trim() || null;
   if (!productName) { alert('제품명을 입력해주세요.'); return; }
+  if (link && !link.startsWith('https://')) { alert('링크는 https://로 시작해야 합니다.'); return; }
 
   const res = await fetch(`/api/admin/manuals/${editingManualId}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ grade, modelNumber, productName }),
+    body: JSON.stringify({ grade, modelNumber, productName, link }),
   });
   if (res.ok) {
-    // 현재 열린 메뉴얼이면 currentManual 정보도 갱신
+    // manualList 캐시 갱신
+    const cached = manualList.find(x => x.id === editingManualId);
+    if (cached) { cached.grade = grade; cached.modelNumber = modelNumber; cached.productName = productName; cached.link = link; }
+    // 현재 선택된 메뉴얼이면 상태도 갱신
     if (currentManual?.id === editingManualId) {
-      currentManual = { ...currentManual, grade, modelNumber, productName };
+      currentManual = { ...currentManual, grade, modelNumber, productName, link };
     }
+    // 목록 아이템 DOM 직접 갱신
+    const item = document.querySelector(`.manual-item[data-id="${editingManualId}"]`);
+    if (item) {
+      const gradeEl = item.querySelector('.grade-badge');
+      if (gradeEl) { gradeEl.className = `grade-badge grade-${grade}`; gradeEl.textContent = grade; }
+      const modelEl = item.querySelector('.text-gray-200.font-medium');
+      if (modelEl) modelEl.textContent = modelNumber;
+      const nameEl = item.querySelector('.text-xs.text-gray-400');
+      if (nameEl) nameEl.textContent = productName;
+    }
+    // 접힌 사이드바 아이콘 툴팁 갱신
+    const icon = document.querySelector(`.manual-icon-item[data-id="${editingManualId}"]`);
+    if (icon) icon.dataset.tip = `[${grade}] ${modelNumber} ${productName}`;
     closeManualEditModal();
-    loadManuals();
   } else {
     alert('수정에 실패했습니다.');
   }
@@ -533,7 +578,7 @@ function fmtSize(b) {
 
 // 업로드 진행 중 폼 입력 비활성화 처리
 function setFormLoading(loading) {
-  ['inp-grade', 'inp-model', 'inp-name', 'btn-upload-cancel', 'file-input'].forEach(id => {
+  ['inp-grade', 'inp-model', 'inp-name', 'inp-link', 'btn-upload-cancel', 'file-input'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.disabled = loading;
   });
@@ -553,6 +598,7 @@ function openUploadModal() {
   document.getElementById('inp-grade').value = 'RG';
   document.getElementById('inp-model').value = '';
   document.getElementById('inp-name').value  = '';
+  document.getElementById('inp-link').value  = '';
   document.getElementById('upload-modal').classList.remove('hidden');
   initDropZone();
   setFormLoading(false);
@@ -576,8 +622,10 @@ document.getElementById('upload-form').addEventListener('submit', async e => {
   const grade       = document.getElementById('inp-grade').value;
   const modelNumber = document.getElementById('inp-model').value.trim();
   const productName = document.getElementById('inp-name').value.trim();
+  const link        = document.getElementById('inp-link').value.trim();
   if (!grade)       { alert('등급을 선택해주세요.'); return; }
   if (!productName) { alert('제품명을 입력해주세요.'); return; }
+  if (link && !link.startsWith('https://')) { alert('링크는 https://로 시작해야 합니다.'); return; }
 
   setFormLoading(true);
   try {
@@ -585,6 +633,7 @@ document.getElementById('upload-form').addEventListener('submit', async e => {
     fd.append('grade', grade);
     fd.append('modelNumber', modelNumber);
     fd.append('productName', productName);
+    if (link) fd.append('link', link);
     fd.append('pdf', selectedFile);
     const res = await fetch('/api/admin/manuals', { method: 'POST', body: fd });
     if (res.ok) {
@@ -602,47 +651,15 @@ document.getElementById('upload-form').addEventListener('submit', async e => {
   }
 });
 
-/* ──────────── AI 데칼 탐지 ──────────── */
-
-document.getElementById('btn-ai-detect').addEventListener('click', async () => {
-  if (!currentManual || !pdfDoc) return;
-
-  const btn = document.getElementById('btn-ai-detect');
-  btn.disabled = true;
-  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 분석 중…';
-
-  try {
-    // 현재 페이지 캔버스를 JPEG 이미지로 캡처 (base64 data URL)
-    const imageBase64 = canvas.toDataURL('image/jpeg', 0.85);
-
-    const res = await fetch(`/api/admin/manuals/${currentManual.id}/pages/${currentPage}/ai-detect`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ imageBase64 }),
-    });
-
-    if (res.ok) {
-      const newDecals = await res.json();
-      allDecals.push(...newDecals);
-      renderOverlay();
-      if (newDecals.length === 0) {
-        alert('이미 등록된 마커와 겹치지 않는 새로운 데칼을 찾지 못했습니다.');
-      } else {
-        alert(`${newDecals.length}개의 데칼을 찾아 저장했습니다.`);
-      }
-    } else {
-      alert('AI 분석에 실패했습니다.');
-    }
-  } catch {
-    alert('AI 분석 중 오류가 발생했습니다.');
-  } finally {
-    btn.disabled = false;
-    btn.innerHTML = '<i class="fas fa-robot"></i> AI로 찾기';
-  }
-});
 
 /* ──────────── 새로고침 ──────────── */
 document.getElementById('sb-refresh').addEventListener('click', loadManuals);
+
+// 사이드바 접을 때: common.js가 sb-refresh를 숨기므로 다시 보이게 하고 로그아웃은 숨김
+document.getElementById('sb-toggle').addEventListener('click', () => {
+  document.getElementById('sb-refresh').style.display = '';
+  document.getElementById('sb-logout').style.display = sbOpen ? '' : 'none';
+});
 
 /* ──────────── 형식번호 유효성 검사 ──────────── */
 
@@ -670,5 +687,7 @@ applyDecalNumValidation(document.getElementById('inp-edit-num'));
 // 형식번호 입력 필드에 유효성 검사 적용
 applyModelNumValidation(document.getElementById('inp-model'));
 applyModelNumValidation(document.getElementById('edit-inp-model'));
+
+PrettyScroll('#manual-list', { barWidth: 6, barColor: 'rgba(156,163,175,0.5)', right: 2, autoHide: true });
 
 loadManuals();

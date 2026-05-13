@@ -1,0 +1,1 @@
+ALTER TABLE manual ADD COLUMN link TEXT NULL;

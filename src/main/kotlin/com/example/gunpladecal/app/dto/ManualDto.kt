@@ -7,20 +7,24 @@ import com.example.gunpladecal.app.domain.Grade
 /** 메뉴얼 목록 조회 응답 (목록 표시에 필요한 최소 필드만 포함) */
 data class ManualSummary(
     val id: Long,
+    val b62id: String,
     val grade: Grade,
     /** 형식번호 (영문자·숫자·하이픈·슬래시 허용) */
     val modelNumber: String,
     val productName: String,
+    val link: String? = null,
 )
 
 /** 메뉴얼 단건 조회 응답 (데칼 목록 포함) */
 data class ManualDetail(
     val id: Long,
+    val b62id: String,
     val grade: Grade,
     /** 형식번호 (영문자·숫자·하이픈·슬래시 허용) */
     val modelNumber: String,
     val productName: String,
     val decals: List<DecalResponse>,
+    val link: String? = null,
 )
 
 /** 메뉴얼 수정 요청 (null 필드는 변경하지 않음) */
@@ -29,6 +33,7 @@ data class ManualUpdateRequest(
     /** 형식번호 (null이면 변경하지 않음) */
     val modelNumber: String?,
     val productName: String?,
+    val link: String? = null,
 )
 
 /** 데칼 조회 응답 */
@@ -71,8 +76,3 @@ data class DecalUpdateRequest(
     val shape: DecalShape?,
 )
 
-/** AI 데칼 탐지 요청: 현재 페이지를 canvas.toDataURL()로 캡처한 이미지 */
-data class AiDetectRequest(
-    /** canvas.toDataURL()로 생성한 이미지 (data:image/...;base64,...) */
-    val imageBase64: String,
-)

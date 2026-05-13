@@ -25,9 +25,12 @@ class Manual(
     /** 제품명 (예: 1/144 RX-78-2 건담) */
     @Column(name = "product_name", nullable = false)
     var productName: String,
-    /** 서버 업로드 디렉터리 내 PDF 파일명 (UUID 기반) */
-    @Column(nullable = false)
-    var pdfFilename: String,
+    /** 업로드된 PDF 파일의 절대 경로 */
+    @Column(name = "pdf_path", nullable = false, columnDefinition = "TEXT")
+    var pdfPath: String,
+    /** 외부 링크 (선택, https://로 시작) */
+    @Column(name = "link", nullable = true, columnDefinition = "TEXT")
+    var link: String? = null,
     /** 레코드 생성 일시 (변경 불가) */
     @Column(nullable = false, updatable = false)
     val createdAt: LocalDateTime = LocalDateTime.now(),

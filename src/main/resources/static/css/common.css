@@ -1,6 +1,10 @@
 /* ── 레이아웃 기본 ── */
 body { height: 100vh; overflow: hidden; }
 
+/* ── pretty-scrollbar 배경 자동 감지용 ── */
+#manual-list { background: #111827; }
+#decal-list  { background: #ffffff; }
+
 /* 왼쪽 사이드바 접기/펼치기 너비 트랜지션 */
 #sidebar { transition: width 0.2s ease; overflow: hidden; border-right: 1px solid #374151; }
 
@@ -49,9 +53,9 @@ body { height: 100vh; overflow: hidden; }
   cursor: pointer; pointer-events: auto;
   user-select: none; transform-origin: 50% 50%;
 }
-/* 사용자/관리자 페이지 공통: 21×21 (23 × 0.9) */
+/* 사용자/관리자 페이지 공통: 23×23 */
 .page-viewer .decal-marker,
-.page-admin  .decal-marker { width: 21px; height: 21px; }
+.page-admin  .decal-marker { width: 28px; height: 28px; }
 .page-admin .decal-marker:hover { opacity: 0.85; }
 
 /* 사용자 페이지: 클릭 선택된 데칼 강조 펄스 애니메이션 */
@@ -101,6 +105,15 @@ body { height: 100vh; overflow: hidden; }
   box-shadow: 0 2px 8px rgba(0,0,0,0.25);
 }
 
+/* ── 메뉴얼 목록 제품명 툴팁 (position: fixed — overflow 컨테이너 클리핑 회피) ── */
+#manual-item-tip {
+  display: none; position: fixed;
+  background: rgba(17,24,39,0.95); color: #fff;
+  font-size: 11px; white-space: pre; padding: 4px 8px;
+  border-radius: 4px; pointer-events: none; z-index: 200;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+}
+
 /* ── 등급 뱃지 ── */
 .grade-badge {
   font-size: 9px; font-weight: 700; padding: 1px 4px;
@@ -139,3 +152,28 @@ body { height: 100vh; overflow: hidden; }
 /* ── 관리자 페이지: 파일 드롭존 상태 ── */
 #drop-zone.drag-over { border-color: #3b82f6; background: #eff6ff; }
 #drop-zone.disabled  { pointer-events: none; opacity: 0.5; }
+
+/* ── 데칼 목록 스켈레톤 ── */
+.decal-skel {
+  background: rgba(107,114,128,0.2);
+  border-radius: 2px;
+  animation: skeleton-pulse 1.2s ease-in-out infinite;
+}
+
+/* ── PDF 로딩 스켈레톤 ── */
+@keyframes skeleton-pulse {
+  0%, 100% { opacity: 0.3; }
+  50%       { opacity: 0.65; }
+}
+#pdf-loading {
+  position: absolute; inset: 0; z-index: 25;
+  display: none; align-items: center; justify-content: center;
+  background: #6b7280;
+}
+#pdf-loading-page {
+  width: 52%; max-width: 460px;
+  aspect-ratio: 210 / 297;
+  background: rgba(255,255,255,0.15);
+  border-radius: 4px;
+  animation: skeleton-pulse 1.2s ease-in-out infinite;
+}

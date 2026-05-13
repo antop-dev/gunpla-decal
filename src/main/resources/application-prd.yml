@@ -1,12 +1,16 @@
+app:
+  db-path: ${DB_PATH}
+
 spring:
-  datasource:
-    url: ${DB_URL}
-    username: ${DB_USERNAME}
-    password: ${DB_PASSWORD}
-    driver-class-name: org.mariadb.jdbc.Driver
-  jpa:
-    database-platform: org.hibernate.dialect.MariaDBDialect
+  cache:
+    type: redis
+    redis:
+      time-to-live: 3600000
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
 
 decorator:
   datasource:
-    enabled: false  # 운영 환경에서 SQL 로깅 비활성화
+    enabled: false

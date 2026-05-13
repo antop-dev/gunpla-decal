@@ -4,10 +4,15 @@ const pdfjsLib = window['pdfjs-dist/build/pdf'];
 pdfjsLib.GlobalWorkerOptions.workerSrc = '/vendor/pdfjs/pdf.worker.min.js';
 
 /* ── 공유 상태 ── */
-let pdfDoc      = null; // 현재 로드된 PDF 문서 객체 (PDFDocumentProxy)
-let currentPage = 1;    // 현재 표시 중인 페이지 번호 (1-based)
-let scale    = 1;       // 현재 확대/축소 배율
-let fitScale = 1;       // 컨테이너에 꽉 차는 기본 배율 (줌 최솟값으로도 사용)
+let pdfDoc         = null; // 현재 로드된 PDF 문서 객체 (PDFDocumentProxy)
+let currentPage    = 1;    // 현재 표시 중인 페이지 번호 (1-based)
+let scale          = 1;    // 현재 확대/축소 배율
+let fitScale       = 1;    // 컨테이너에 꽉 차는 기본 배율
+let minZoomMult    = 1.0;  // 줌 최솟값 배수 (fitScale 대비, 페이지별 재정의 가능)
+let currentPdfPage = null; // 현재 페이지 객체 (줌 변경 시 재렌더링용)
+let basePdfWidth   = 0;    // PDF 원본 너비 — scale=1 기준 CSS 픽셀
+let basePdfHeight  = 0;    // PDF 원본 높이 — scale=1 기준 CSS 픽셀
+let reRenderTimer  = null; // 줌 조작 후 고해상도 재렌더링 디바운스 타이머
 
 /* ── 공유 DOM 요소 ── */
 const container  = document.getElementById('pdf-container');
@@ -19,17 +24,39 @@ const thumbStrip = document.getElementById('thumb-strip');
 
 /* ──────────── 줌 ──────────── */
 
-// canvas 표시 크기에 현재 배율 반영, 줌 레이블·슬라이더 동기화
+// canvas 표시 크기에 현재 배율 반영, 줌 레이블·슬라이더 동기화 (렌더링 없음)
 function applyTransform() {
-  const w = canvas.width  * scale;
-  const h = canvas.height * scale;
-  canvas.style.width  = w + 'px';
-  canvas.style.height = h + 'px';
+  canvas.style.width  = basePdfWidth  * scale + 'px';
+  canvas.style.height = basePdfHeight * scale + 'px';
   const pct = Math.round(scale / fitScale * 100);
   const labelEl = document.getElementById('zoom-label');
   if (labelEl) labelEl.textContent = pct + '%';
   const sliderEl = document.getElementById('zoom-slider');
   if (sliderEl) sliderEl.value = pct;
+}
+
+// 줌 조작 후 150ms 디바운스로 고해상도 재렌더링 예약
+function scheduleRerender() {
+  clearTimeout(reRenderTimer);
+  reRenderTimer = setTimeout(renderAtCurrentScale, 150);
+}
+
+// 현재 scale × devicePixelRatio 해상도로 캔버스를 재렌더링.
+// 오프스크린 캔버스에 먼저 그린 뒤 한 번에 교체해 깜빡임을 방지.
+async function renderAtCurrentScale() {
+  if (!currentPdfPage) return;
+  const dpr = window.devicePixelRatio || 1;
+  const vp = currentPdfPage.getViewport({ scale: scale * dpr });
+  const offscreen = document.createElement('canvas');
+  offscreen.width  = vp.width;
+  offscreen.height = vp.height;
+  await currentPdfPage.render({ canvasContext: offscreen.getContext('2d'), viewport: vp }).promise;
+  canvas.width  = vp.width;
+  canvas.height = vp.height;
+  canvas.style.width  = basePdfWidth  * scale + 'px';
+  canvas.style.height = basePdfHeight * scale + 'px';
+  canvas.getContext('2d').drawImage(offscreen, 0, 0);
+  renderOverlay();
 }
 
 // 마우스 포인터 위치(cx, cy)를 중심으로 factor 배율만큼 확대/축소
@@ -38,29 +65,31 @@ function zoomAt(cx, cy, factor) {
   const mx = cx - rect.left, my = cy - rect.top;
   const canvasX = (pdfScroll.scrollLeft + mx) / scale;
   const canvasY = (pdfScroll.scrollTop  + my) / scale;
-  const ns = Math.max(fitScale, Math.min(fitScale * 4, scale * factor));
+  const ns = Math.max(fitScale * minZoomMult, Math.min(fitScale * 5, scale * factor));
   scale = ns;
   applyTransform();
   pdfScroll.scrollLeft = canvasX * ns - mx;
   pdfScroll.scrollTop  = canvasY * ns - my;
+  scheduleRerender();
 }
 
-// 컨테이너에 페이지가 꽉 차도록 배율 초기화, 초기 줌은 fitScale × 1.5
+// 컨테이너에 페이지가 꽉 차도록 배율 초기화, 초기 줌은 fitScale × 2 (200%)
 function fitToContainer() {
-  fitScale = Math.min(pdfScroll.clientWidth  / canvas.width,
-                      pdfScroll.clientHeight / canvas.height);
-  scale = fitScale * 1.5;
+  fitScale = Math.min(pdfScroll.clientWidth  / basePdfWidth,
+                      pdfScroll.clientHeight / basePdfHeight);
+  scale = fitScale * 2;
   applyTransform();
-  pdfScroll.scrollLeft = (canvas.width  * scale - pdfScroll.clientWidth)  / 2;
-  pdfScroll.scrollTop  = (canvas.height * scale - pdfScroll.clientHeight) / 2;
+  pdfScroll.scrollLeft = (basePdfWidth  * scale - pdfScroll.clientWidth)  / 2;
+  pdfScroll.scrollTop  = (basePdfHeight * scale - pdfScroll.clientHeight) / 2;
 }
 
 // 슬라이더 입력값(100~400)을 백분율로 해석해 배율 적용
 function applyZoomPreset(pct) {
-  scale = Math.max(fitScale, Math.min(fitScale * 4, fitScale * (pct / 100)));
+  scale = Math.max(fitScale * minZoomMult, Math.min(fitScale * 5, fitScale * (pct / 100)));
   applyTransform();
-  pdfScroll.scrollLeft = (canvas.width  * scale - pdfScroll.clientWidth)  / 2;
-  pdfScroll.scrollTop  = (canvas.height * scale - pdfScroll.clientHeight) / 2;
+  pdfScroll.scrollLeft = (basePdfWidth  * scale - pdfScroll.clientWidth)  / 2;
+  pdfScroll.scrollTop  = (basePdfHeight * scale - pdfScroll.clientHeight) / 2;
+  scheduleRerender();
 }
 
 // ctrlKey → 핀치줌, 큰 deltaY(>40 & 수평 없음) → 마우스 휠 줌, 나머지 → 네이티브 스크롤
@@ -81,19 +110,21 @@ pdfScroll.addEventListener('wheel', e => {
 // renderOverlay()는 각 페이지(app.js / admin.js)에서 별도 구현.
 async function renderPage(num, resetZoom = false) {
   const page = await pdfDoc.getPage(num);
-  const vp = page.getViewport({ scale: 1.5 });
-  canvas.width = vp.width; canvas.height = vp.height;
-  await page.render({ canvasContext: canvas.getContext('2d'), viewport: vp }).promise;
+  const raw = page.getViewport({ scale: 1 });
+  basePdfWidth  = raw.width;
+  basePdfHeight = raw.height;
+  currentPdfPage = page;
+  clearTimeout(reRenderTimer);
   if (resetZoom) {
     fitToContainer();
   } else {
-    fitScale = Math.min(pdfScroll.clientWidth / canvas.width, pdfScroll.clientHeight / canvas.height);
-    scale = Math.max(fitScale, Math.min(fitScale * 4, scale));
+    fitScale = Math.min(pdfScroll.clientWidth / basePdfWidth, pdfScroll.clientHeight / basePdfHeight);
+    scale = Math.max(fitScale * minZoomMult, Math.min(fitScale * 5, scale));
     applyTransform();
-    pdfScroll.scrollLeft = (canvas.width  * scale - pdfScroll.clientWidth)  / 2;
-    pdfScroll.scrollTop  = (canvas.height * scale - pdfScroll.clientHeight) / 2;
+    pdfScroll.scrollLeft = (basePdfWidth  * scale - pdfScroll.clientWidth)  / 2;
+    pdfScroll.scrollTop  = (basePdfHeight * scale - pdfScroll.clientHeight) / 2;
   }
-  renderOverlay();
+  await renderAtCurrentScale();
   updateActiveThumbnail();
 }
 
@@ -162,6 +193,8 @@ function toggleSidebar() {
   h.style.paddingLeft    = sbOpen ? '' : '0';
   h.style.paddingRight   = sbOpen ? '' : '0';
   h.style.gap            = sbOpen ? '' : '0';
+  // 트랜지션(200ms) 완료 후 pretty-scrollbar 재배치
+  setTimeout(() => window.dispatchEvent(new Event('resize')), 220);
 }
 document.getElementById('sb-toggle').addEventListener('click', toggleSidebar);
 

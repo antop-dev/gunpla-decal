@@ -11,9 +11,10 @@
 - 데칼 번호 목록 사이드바 (검색 가능)
 
 ### 관리자 (`/admin`)
+- 관리자 계정 로그인 (캡차 인증 포함)
 - PDF 메뉴얼 등록 / 수정 / 삭제
 - PDF 페이지를 클릭하여 데칼 위치 마킹
-- 데칼 번호 및 배경색(흰색/검정) 지정
+- 데칼 번호, 배경색(흰색/검정), 도형(원/사각형) 지정
 - 데칼 마커 수정 / 삭제
 
 ## 실행 방법
@@ -21,21 +22,14 @@
 ### 사전 요구사항
 - JDK 17 이상
 
-### 개발 환경 실행 (H2 인메모리 DB)
+### 개발 환경 실행
 
 ```bash
 ./gradlew bootRun
 ```
 
-기본 프로파일은 `local-h2`입니다. 서버가 시작되면 http://localhost:8080 으로 접속합니다.
-
-### 개발 환경 실행 (MariaDB)
-
-로컬에 MariaDB가 설치되어 있어야 합니다. 데이터베이스와 사용자를 미리 생성하고 `application-local-mariadb.yml`의 접속 정보를 수정한 후 실행합니다.
-
-```bash
-SPRING_PROFILES_ACTIVE=local-mariadb ./gradlew bootRun
-```
+서버가 시작되면 http://localhost:8080 으로 접속합니다.  
+데이터베이스 파일(`gunpla.db`)과 업로드 디렉터리(`uploads/`)는 실행 위치에 자동 생성됩니다.
 
 ### 빌드
 
@@ -49,7 +43,7 @@ SPRING_PROFILES_ACTIVE=local-mariadb ./gradlew bootRun
 
 | 환경변수 | 설명 | 기본값 |
 |---------|------|--------|
-| `SPRING_PROFILES_ACTIVE` | 활성 프로파일 | `local-h2` |
+| `DB_PATH` | SQLite 데이터베이스 파일 경로 | `./gunpla.db` |
 | `UPLOAD_DIR` | PDF 업로드 저장 경로 | `./uploads` |
 
 ## API
@@ -74,26 +68,35 @@ SPRING_PROFILES_ACTIVE=local-mariadb ./gradlew bootRun
 | `PUT` | `/api/admin/manuals/{manualId}/decals/{decalId}` | 데칼 수정 |
 | `DELETE` | `/api/admin/manuals/{manualId}/decals/{decalId}` | 데칼 삭제 |
 
-## 데이터베이스 스키마
+## 데이터베이스
 
-Flyway가 애플리케이션 시작 시 자동으로 마이그레이션을 적용합니다.
+SQLite를 사용하며, Flyway가 애플리케이션 시작 시 자동으로 마이그레이션을 적용합니다.
 
 ```
 manual (메뉴얼)
-├── id           BIGINT PK
-├── grade        VARCHAR(10)   -- HG / RG / MG / PG / ETC
-├── product_name VARCHAR(255)
-├── pdf_filename VARCHAR(255)
+├── id           INTEGER PK AUTOINCREMENT
+├── grade        TEXT              -- HG / RG / MG / PG / ETC
+├── model_number TEXT              -- 형번 (예: RX-78-2)
+├── product_name TEXT
+├── pdf_path     TEXT              -- 업로드된 PDF 파일 경로
+├── link         TEXT NULL         -- 외부 링크 (선택)
 ├── created_at   DATETIME
 └── updated_at   DATETIME
 
 decal (데칼 위치)
-├── id           BIGINT PK
-├── manual_id    BIGINT FK → manual.id
-├── page_number  INT
-├── decal_number VARCHAR(50)   -- 데칼 번호 (예: 1, A, ア)
-├── x            DOUBLE        -- 페이지 내 X 좌표 비율 (0~1)
-├── y            DOUBLE        -- 페이지 내 Y 좌표 비율 (0~1)
-├── color        VARCHAR(10)   -- WHITE / BLACK
+├── id           INTEGER PK AUTOINCREMENT
+├── manual_id    INTEGER FK → manual.id (ON DELETE CASCADE)
+├── page_number  INTEGER
+├── decal_number TEXT              -- 데칼 번호 (예: 1, A, ア)
+├── x            REAL              -- 페이지 내 X 좌표 비율 (0~1)
+├── y            REAL              -- 페이지 내 Y 좌표 비율 (0~1)
+├── color        TEXT              -- WHITE / BLACK
+├── shape        TEXT              -- CIRCLE / RECTANGLE
+└── created_at   DATETIME
+
+admin (관리자 계정)
+├── id           INTEGER PK AUTOINCREMENT
+├── username     TEXT UNIQUE
+├── password     TEXT              -- Spring Security DelegatingPasswordEncoder 형식
 └── created_at   DATETIME
 ```

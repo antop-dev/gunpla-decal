@@ -21,6 +21,8 @@ repositories {
 // extra["jackson-bom.version"] = libs.versions.jackson.get()
 
 dependencies {
+    implementation(libs.spring.boot.starter.security)
+    implementation(libs.easy.captcha)
     implementation(libs.kotlin.reflect)
     implementation(libs.jackson.moudle.kotlin)
     implementation(libs.spring.boot.starter.web)
@@ -29,16 +31,17 @@ dependencies {
     implementation(libs.p6spy)
     implementation(libs.spring.boot.starter.thymeleaf)
     implementation(libs.spring.boot.starter.actuator)
-    implementation(libs.openai.java)
+    implementation(libs.spring.boot.starter.cache)
+    implementation(libs.spring.boot.starter.data.redis)
+    implementation(libs.caffeine)
     implementation(libs.kotlin.logging)
-    runtimeOnly(libs.flyway.mysql)
-    runtimeOnly(libs.h2)
-    runtimeOnly(libs.mariadb.java.client)
-    annotationProcessor(libs.spring.boot.configuration.processor)
+    runtimeOnly(libs.sqlite.jdbc)
+    runtimeOnly(libs.hibernate.community.dialects)
     developmentOnly(libs.spring.boot.devtools)
     testImplementation(libs.spring.boot.starter.test)
     testImplementation(libs.kotlin.test.junit5)
-    testImplementation(libs.junit.platform.launcher)
+    testRuntimeOnly(libs.mariadb.java.client)
+    testRuntimeOnly(libs.junit.platform.launcher)
 }
 
 tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile> {
