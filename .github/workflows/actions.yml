@@ -21,10 +21,18 @@ jobs:
           distribution: 'temurin'
           cache: gradle
 
-      - name: Build JAR
+      # PR: 컴파일 오류만 빠르게 확인
+      - name: Compile check (PR)
+        if: github.event_name == 'pull_request'
+        run: ./gradlew compileKotlin
+
+      # push: 배포용 JAR 빌드
+      - name: Build JAR (push)
+        if: github.event_name == 'push'
         run: ./gradlew bootJar
 
       - name: Rename to app.jar
+        if: github.event_name == 'push'
         run: mv build/libs/gunpla-decal-*.jar build/libs/app.jar
 
       - name: Upload artifact
@@ -35,7 +43,21 @@ jobs:
           path: build/libs/app.jar
           retention-days: 1
 
-      # main 머지 후 빌드 실패 시 알림 (deploy job 은 실행되지 않으므로 여기서 처리)
+      - name: Notify Slack (PR success)
+        if: success() && github.event_name == 'pull_request'
+        run: |
+          curl -s -X POST "${{ secrets.SLACK_WEBHOOK_URL }}" \
+            -H "Content-Type: application/json" \
+            -d '{"text":"✅ PR 빌드 성공"}'
+
+      - name: Notify Slack (PR failure)
+        if: failure() && github.event_name == 'pull_request'
+        run: |
+          curl -s -X POST "${{ secrets.SLACK_WEBHOOK_URL }}" \
+            -H "Content-Type: application/json" \
+            -d '{"text":"❌ PR 빌드 실패"}'
+
+      # deploy job 은 실행되지 않으므로 여기서 처리
       - name: Notify Slack (build failed)
         if: failure() && github.event_name == 'push'
         run: |
@@ -68,15 +90,15 @@ jobs:
       - name: Restart application
         uses: appleboy/ssh-action@v1.2.0
         env:
-          DEPLOY_DIR:     ${{ secrets.SSH_DEPLOY_DIR }}
-          DB_PATH:        ${{ secrets.APP_DB_PATH }}
-          UPLOAD_DIR:     ${{ secrets.APP_UPLOAD_DIR }}
+          DEPLOY_DIR: ${{ secrets.SSH_DEPLOY_DIR }}
+          DB_PATH:    ${{ secrets.APP_DB_PATH }}
+          UPLOAD_DIR: ${{ secrets.APP_UPLOAD_DIR }}
         with:
           host:     ${{ secrets.SSH_HOST }}
           port:     ${{ secrets.SSH_PORT }}
           username: ${{ secrets.SSH_USERNAME }}
           password: ${{ secrets.SSH_PASSWORD }}
-          envs: DEPLOY_DIR,DB_PATH,NGINX_CONF_PATH,THUMBNAILS_DIR,BASE_URL
+          envs: DEPLOY_DIR,DB_PATH,UPLOAD_DIR
           script: |
             PID_FILE="$DEPLOY_DIR/app.pid"
 
