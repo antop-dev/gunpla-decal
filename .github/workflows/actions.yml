@@ -48,14 +48,14 @@ jobs:
         run: |
           curl -s -X POST "${{ secrets.SLACK_WEBHOOK_URL }}" \
             -H "Content-Type: application/json" \
-            -d '{"text":"✅ PR 빌드 성공"}'
+            -d '{"username":"Gunpla Decal","text":"✅ PR 빌드 성공"}'
 
       - name: Notify Slack (PR failure)
         if: failure() && github.event_name == 'pull_request'
         run: |
           curl -s -X POST "${{ secrets.SLACK_WEBHOOK_URL }}" \
             -H "Content-Type: application/json" \
-            -d '{"text":"❌ PR 빌드 실패"}'
+            -d '{"username":"Gunpla Decal","text":"❌ PR 빌드 실패"}'
 
       # deploy job 은 실행되지 않으므로 여기서 처리
       - name: Notify Slack (build failed)
@@ -63,7 +63,7 @@ jobs:
         run: |
           curl -s -X POST "${{ secrets.SLACK_WEBHOOK_URL }}" \
             -H "Content-Type: application/json" \
-            -d '{"text":"❌ 배포 실패 (빌드 오류)"}'
+            -d '{"username":"Gunpla Decal","text":"❌ 배포 실패 (빌드 오류)"}'
 
   deploy:
     name: Deploy
@@ -125,11 +125,11 @@ jobs:
         run: |
           curl -s -X POST "${{ secrets.SLACK_WEBHOOK_URL }}" \
             -H "Content-Type: application/json" \
-            -d '{"text":"✅ 배포 성공"}'
+            -d '{"username":"Gunpla Decal","text":"✅ 배포 성공"}'
 
       - name: Notify Slack (failure)
         if: failure()
         run: |
           curl -s -X POST "${{ secrets.SLACK_WEBHOOK_URL }}" \
             -H "Content-Type: application/json" \
-            -d '{"text":"❌ 배포 실패"}'
+            -d '{"username":"Gunpla Decal","text":"❌ 배포 실패"}'
