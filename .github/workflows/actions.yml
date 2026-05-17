@@ -32,7 +32,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: app-jar
+          name: app.jar
           path: build/libs/app.jar
           retention-days: 1
 
@@ -44,7 +44,7 @@ jobs:
       - name: Download artifact
         uses: actions/download-artifact@v4
         with:
-          name: app-jar
+          name: app.jar
 
       - name: Upload JAR to server
         uses: appleboy/scp-action@master
@@ -52,7 +52,7 @@ jobs:
           host: ${{ secrets.SSH_HOST }}
           port: ${{ secrets.SSH_PORT }}
           username: ${{ secrets.SSH_USERNAME }}
-          key: ${{ secrets.SSH_KEY }}
+          password: ${{ secrets.SSH_PASSWORD }}
           source: app.jar
           target: ${{ secrets.SSH_DEPLOY_DIR }}
           overwrite: true
@@ -67,7 +67,7 @@ jobs:
           host:     ${{ secrets.SSH_HOST }}
           port:     ${{ secrets.SSH_PORT }}
           username: ${{ secrets.SSH_USERNAME }}
-          key: ${{ secrets.SSH_KEY }}
+          password: ${{ secrets.SSH_PASSWORD }}
           envs: DEPLOY_DIR,DB_PATH,UPLOAD_DIR
           script: |
             PID_FILE="$DEPLOY_DIR/app.pid"
