@@ -663,9 +663,9 @@ document.getElementById('sb-toggle').addEventListener('click', () => {
 
 /* ──────────── 형식번호 유효성 검사 ──────────── */
 
-// 영문자·숫자·하이픈·슬래시만 허용하도록 실시간 정제
+// 제어 문자만 제거 (영문자·숫자·특수문자·하이픈·슬래시·+ 등 허용)
 function sanitizeModelNumber(val) {
-  return val.replace(/[^A-Za-z0-9\-/]/g, '');
+  return val.replace(/[\x00-\x1F\x7F]/g, '');
 }
 
 // 형식번호 입력 필드에 유효성 검사 연결
