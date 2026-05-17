@@ -3,7 +3,7 @@ const _fetch = window.fetch.bind(window);
 window.fetch = async (...args) => {
   const res = await _fetch(...args);
   if (res.status === 403) {
-    window.location.replace('/login');
+    window.location.replace(window.contextPath + '/login');
     return new Promise(() => {});
   }
   return res;
@@ -181,7 +181,7 @@ async function selectManual(id) {
     const data = await (await fetch(`/api/manuals/${id}`)).json();
     currentManual = data; allDecals = data.decals;
 
-    pdfDoc = await pdfjsLib.getDocument(`/api/manuals/${id}/pdf`).promise;
+    pdfDoc = await pdfjsLib.getDocument(`${window.contextPath}/api/manuals/${id}/pdf`).promise;
     currentPage = 1;
     await renderPage(currentPage, true);
 

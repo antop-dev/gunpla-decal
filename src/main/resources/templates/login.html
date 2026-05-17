@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="context-path" th:content="@{/}">
   <title>관리자 로그인</title>
   <link rel="stylesheet" th:href="@{/vendor/fontawesome/css/all.min.css}">
   <script th:src="@{/vendor/tailwind/tailwind.min.js}"></script>
@@ -85,13 +86,15 @@
 </div>
 
 <script>
+  const contextPath = (document.head.querySelector('meta[name="context-path"]')?.content ?? '/').replace(/\/$/, '');
+
   const ERROR_MESSAGES = {
     captcha: '캡챠 코드가 올바르지 않습니다.',
     credentials: '아이디 또는 비밀번호가 올바르지 않습니다.',
   };
 
   function refreshCaptcha() {
-    document.getElementById('captcha-img').src = '/captcha?' + Date.now();
+    document.getElementById('captcha-img').src = contextPath + '/captcha?' + Date.now();
     document.getElementById('captcha').value = '';
     document.getElementById('captcha').focus();
   }
@@ -110,13 +113,13 @@
     btn.disabled = true;
 
     try {
-      const response = await fetch('/login', {
+      const response = await fetch(contextPath + '/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: new URLSearchParams(new FormData(this)),
       });
       if (response.ok) {
-        window.location.replace(response.headers.get('Location') || '/admin');
+        window.location.replace(response.headers.get('Location') || contextPath + '/admin');
       } else {
         const data = await response.json();
         showError(data.error);

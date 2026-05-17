@@ -1,7 +1,15 @@
+/* ── context-path: fetch 호출 시 자동 prepend ── */
+window.contextPath = (document.head.querySelector('meta[name="context-path"]')?.content ?? '/').replace(/\/$/, '');
+const _origFetch = window.fetch.bind(window);
+window.fetch = (url, ...args) => {
+  if (typeof url === 'string' && url.startsWith('/')) url = window.contextPath + url;
+  return _origFetch(url, ...args);
+};
+
 /* ── PDF.js 워커 초기화 ── */
 // CDN에서 로드한 pdf.min.js 전역 객체 참조
 const pdfjsLib = window['pdfjs-dist/build/pdf'];
-pdfjsLib.GlobalWorkerOptions.workerSrc = '/vendor/pdfjs/pdf.worker.min.js';
+pdfjsLib.GlobalWorkerOptions.workerSrc = window.contextPath + '/vendor/pdfjs/pdf.worker.min.js';
 
 /* ── 공유 상태 ── */
 let pdfDoc         = null; // 현재 로드된 PDF 문서 객체 (PDFDocumentProxy)

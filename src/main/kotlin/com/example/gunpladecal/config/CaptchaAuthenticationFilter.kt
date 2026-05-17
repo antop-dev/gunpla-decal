@@ -21,9 +21,9 @@ class CaptchaAuthenticationFilter(
         }
         // formLogin() 미사용 시 기본값이 NullSecurityContextRepository여서 세션에 저장되지 않음
         setSecurityContextRepository(HttpSessionSecurityContextRepository())
-        setAuthenticationSuccessHandler { _, response, _ ->
+        setAuthenticationSuccessHandler { request, response, _ ->
             response.status = HttpServletResponse.SC_OK
-            response.setHeader(HttpHeaders.LOCATION, "/admin")
+            response.setHeader(HttpHeaders.LOCATION, "${request.contextPath}/admin")
         }
         setAuthenticationFailureHandler { _, response, exception ->
             response.contentType = MediaType.APPLICATION_JSON_VALUE
