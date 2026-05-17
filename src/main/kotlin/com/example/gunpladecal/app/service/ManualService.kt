@@ -15,9 +15,6 @@ import com.example.gunpladecal.app.util.Base62
 import com.example.gunpladecal.config.AppProperties
 import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.annotation.PostConstruct
-import org.springframework.cache.annotation.CacheEvict
-import org.springframework.cache.annotation.Cacheable
-import org.springframework.cache.annotation.Caching
 import org.springframework.core.io.FileSystemResource
 import org.springframework.core.io.Resource
 import org.springframework.http.HttpStatus
@@ -38,7 +35,6 @@ class ManualService(
     private val manualRepository: ManualRepository,
     private val decalRepository: DecalRepository,
     private val appProperties: AppProperties,
-    private val manualEntityCache: ManualEntityCache,
 ) {
     /** 애플리케이션 시작 시 PDF 업로드 디렉터리가 없으면 생성 */
     @PostConstruct
@@ -67,11 +63,10 @@ class ManualService(
     }
 
     /** 메뉴얼 단건 조회 (데칼 목록 포함) */
-    @Cacheable(cacheNames = ["gunpla-decal-manuals"], key = "#id")
     @Transactional(readOnly = true)
     fun getManual(id: Long): ManualDetail {
         log.debug { "getManual(id=$id)" }
-        val manual = manualEntityCache.findById(id)
+        val manual = findManualById(id)
         val decals = decalRepository.findByManualIdOrderByDecalNumber(id).map { it.toResponse() }
         return manual.toDetail(decals)
     }
@@ -93,17 +88,13 @@ class ManualService(
     }
 
     /** 메뉴얼 정보 수정 (등급·형식번호·제품명, null 필드는 변경하지 않음) */
-    @Caching(evict = [
-        CacheEvict(cacheNames = ["gunpla-decal-manual"], key = "#id"),
-        CacheEvict(cacheNames = ["gunpla-decal-manuals"], key = "#id"),
-    ])
     fun updateManual(
         id: Long,
         request: ManualUpdateRequest,
     ): ManualSummary {
         log.debug { "updateManual(id=$id, request=$request)" }
         validateLink(request.link)
-        val manual = manualEntityCache.findById(id)
+        val manual = findManualById(id)
         request.grade?.let { manual.grade = it }
         request.modelNumber?.let { manual.modelNumber = it }
         request.productName?.let { manual.productName = it }
@@ -112,13 +103,9 @@ class ManualService(
     }
 
     /** 메뉴얼 삭제: DB 레코드와 업로드된 PDF 파일을 함께 제거 */
-    @Caching(evict = [
-        CacheEvict(cacheNames = ["gunpla-decal-manual"], key = "#id"),
-        CacheEvict(cacheNames = ["gunpla-decal-manuals"], key = "#id"),
-    ])
     fun deleteManual(id: Long) {
         log.debug { "deleteManual(id=$id)" }
-        val manual = manualEntityCache.findById(id)
+        val manual = findManualById(id)
         Files.deleteIfExists(Paths.get(manual.pdfPath))
         manualRepository.delete(manual)
     }
@@ -127,20 +114,19 @@ class ManualService(
     @Transactional(readOnly = true)
     fun getPdfResource(id: Long): Resource {
         log.debug { "getPdfResource(id=$id)" }
-        val manual = manualEntityCache.findById(id)
+        val manual = findManualById(id)
         val path = Paths.get(manual.pdfPath)
         if (!Files.exists(path)) throw ResponseStatusException(HttpStatus.NOT_FOUND)
         return FileSystemResource(path)
     }
 
     /** 데칼 등록 */
-    @CacheEvict(cacheNames = ["gunpla-decal-manuals"], key = "#manualId")
     fun addDecal(
         manualId: Long,
         request: DecalCreateRequest,
     ): DecalResponse {
         log.debug { "addDecal(manualId=$manualId, request=$request)" }
-        val manual = manualEntityCache.findById(manualId)
+        val manual = findManualById(manualId)
         val decal =
             Decal(
                 manual = manual,
@@ -155,7 +141,6 @@ class ManualService(
     }
 
     /** 데칼 정보 수정 (null 필드는 변경하지 않음) */
-    @CacheEvict(cacheNames = ["gunpla-decal-manuals"], key = "#manualId")
     fun updateDecal(
         manualId: Long,
         decalId: Long,
@@ -173,7 +158,6 @@ class ManualService(
     }
 
     /** 데칼 삭제 */
-    @CacheEvict(cacheNames = ["gunpla-decal-manuals"], key = "#manualId")
     fun deleteDecal(
         manualId: Long,
         decalId: Long,
@@ -198,6 +182,9 @@ class ManualService(
         if (decal.manual.id != manualId) throw ResponseStatusException(HttpStatus.NOT_FOUND)
         return decal
     }
+
+    private fun findManualById(id: Long): Manual =
+        manualRepository.findById(id).orElseThrow { ResponseStatusException(HttpStatus.NOT_FOUND) }
 
     private fun validateLink(link: String?) {
         if (!link.isNullOrBlank() && !link.startsWith("https://"))
