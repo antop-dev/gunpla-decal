@@ -167,7 +167,7 @@ async function selectManual(b62id, push = true) {
       activeIcon.querySelector('i').className = 'fas fa-file-pdf text-sm text-white';
     }
 
-    if (push) history.pushState({ b62id }, '', `/${b62id}`);
+    if (push) history.pushState({ b62id }, '', `${window.contextPath}/${b62id}`);
 
     // PDF 스켈레톤 표시 (pdfScroll은 visible — fitToContainer 치수 계산에 필요)
     noPdf.style.display = 'none';
@@ -197,7 +197,7 @@ async function selectManual(b62id, push = true) {
       window.dispatchEvent(new Event('resize'));
     }
 
-    pdfDoc = await pdfjsLib.getDocument(`/api/manuals/b/${b62id}/pdf`).promise;
+    pdfDoc = await pdfjsLib.getDocument(`${window.contextPath}/api/manuals/b/${b62id}/pdf`).promise;
 
     // 데칼이 가장 많은 페이지로 이동
     if (allDecals.length) {
@@ -416,12 +416,12 @@ PrettyScroll('#manual-list', DARK_SCROLL);
 PrettyScroll('#decal-list',  LIGHT_SCROLL);
 
 (async () => {
-  const initB62 = location.pathname.slice(1);
+  const initB62 = location.pathname.slice(window.contextPath.length + 1);
   await loadManuals();
   if (initB62) selectManual(initB62, false);
 })();
 
 window.addEventListener('popstate', e => {
-  const b62id = e.state?.b62id ?? location.pathname.slice(1);
+  const b62id = e.state?.b62id ?? location.pathname.slice(window.contextPath.length + 1);
   if (b62id) selectManual(b62id, false);
 });
