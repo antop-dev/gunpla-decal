@@ -85,6 +85,7 @@ jobs:
 
             # 새 프로세스 시작
             nohup java -jar "$DEPLOY_DIR/app.jar" \
+              --spring.profiles.active=prd \
               > "$DEPLOY_DIR/app.log" 2>&1 &
 
             echo $! > "$PID_FILE"
