@@ -27,12 +27,6 @@ spring:
     enabled: true
     baseline-on-migrate: true
 
-  cache:
-    type: none
-    caffeine:
-      spec: maximumSize=200,expireAfterWrite=1h
-
-
 app:
   db-path: ${DB_PATH:./gunpla.db}
   upload-dir: ${UPLOAD_DIR:./uploads}

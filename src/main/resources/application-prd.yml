@@ -7,16 +7,6 @@ app:
   db-path: ${DB_PATH}
 
 
-spring:
-  cache:
-    type: redis
-    redis:
-      time-to-live: 3600000
-  data:
-    redis:
-      host: ${REDIS_HOST:localhost}
-      port: ${REDIS_PORT:6379}
-
 decorator:
   datasource:
     enabled: false
