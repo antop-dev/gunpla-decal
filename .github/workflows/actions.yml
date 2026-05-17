@@ -52,7 +52,7 @@ jobs:
           host: ${{ secrets.SSH_HOST }}
           port: ${{ secrets.SSH_PORT }}
           username: ${{ secrets.SSH_USERNAME }}
-          password: ${{ secrets.SSH_PASSWORD }}
+          key: ${{ secrets.SSH_KEY }}
           source: app.jar
           target: ${{ secrets.SSH_DEPLOY_DIR }}
           overwrite: true
@@ -67,7 +67,7 @@ jobs:
           host:     ${{ secrets.SSH_HOST }}
           port:     ${{ secrets.SSH_PORT }}
           username: ${{ secrets.SSH_USERNAME }}
-          password: ${{ secrets.SSH_PASSWORD }}
+          key: ${{ secrets.SSH_KEY }}
           envs: DEPLOY_DIR,DB_PATH,UPLOAD_DIR
           script: |
             PID_FILE="$DEPLOY_DIR/app.pid"
