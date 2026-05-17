@@ -1,9 +1,7 @@
-name: CI/CD
+name: CD
 
 on:
   push:
-    branches: [ main ]
-  pull_request:
     branches: [ main ]
 
 concurrency:
@@ -25,54 +23,22 @@ jobs:
           distribution: 'temurin'
           cache: gradle
 
-      # PR: 컴파일 오류만 빠르게 확인
-      - name: Compile check (PR)
-        if: github.event_name == 'pull_request'
-        run: ./gradlew compileKotlin
-
-      # push: 배포용 JAR 빌드
-      - name: Build JAR (push)
-        if: github.event_name == 'push'
+      - name: Build JAR
         run: ./gradlew bootJar
 
       - name: Rename to app.jar
-        if: github.event_name == 'push'
         run: mv build/libs/gunpla-decal-*.jar build/libs/app.jar
 
       - name: Upload artifact
-        if: github.event_name == 'push'
         uses: actions/upload-artifact@v4
         with:
           name: app-jar
           path: build/libs/app.jar
           retention-days: 1
 
-      - name: Notify Slack (PR success)
-        if: success() && github.event_name == 'pull_request'
-        run: |
-          curl -s -X POST "${{ secrets.SLACK_WEBHOOK_URL }}" \
-            -H "Content-Type: application/json" \
-            -d '{"username":"Gunpla Decal","text":"✅ PR 빌드 성공"}'
-
-      - name: Notify Slack (PR failure)
-        if: failure() && github.event_name == 'pull_request'
-        run: |
-          curl -s -X POST "${{ secrets.SLACK_WEBHOOK_URL }}" \
-            -H "Content-Type: application/json" \
-            -d '{"username":"Gunpla Decal","text":"❌ PR 빌드 실패"}'
-
-      # deploy job 은 실행되지 않으므로 여기서 처리
-      - name: Notify Slack (build failed)
-        if: failure() && github.event_name == 'push'
-        run: |
-          curl -s -X POST "${{ secrets.SLACK_WEBHOOK_URL }}" \
-            -H "Content-Type: application/json" \
-            -d '{"username":"Gunpla Decal","text":"❌ 배포 실패 (빌드 오류)"}'
-
   deploy:
     name: Deploy
     needs: build
-    if: github.event_name == 'push'
     runs-on: ubuntu-latest
     steps:
       - name: Download artifact
@@ -81,12 +47,15 @@ jobs:
           name: app-jar
 
       - name: Upload JAR to server
-        run: |
-          sshpass -p "${{ secrets.SSH_PASSWORD }}" scp \
-            -P ${{ secrets.SSH_PORT }} \
-            -o StrictHostKeyChecking=no \
-            app.jar \
-            ${{ secrets.SSH_USERNAME }}@${{ secrets.SSH_HOST }}:${{ secrets.SSH_DEPLOY_DIR }}/app.jar
+        uses: appleboy/scp-action@master
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          port: ${{ secrets.SSH_PORT }}
+          username: ${{ secrets.SSH_USERNAME }}
+          password: ${{ secrets.SSH_PASSWORD }}
+          source: app.jar
+          target: ${{ secrets.SSH_DEPLOY_DIR }}
+          overwrite: true
 
       - name: Restart application
         uses: appleboy/ssh-action@v1.2.0
@@ -114,23 +83,18 @@ jobs:
               rm -f "$PID_FILE"
             fi
 
-            # 새 프로세스 시작 (env var 은 nohup 자식 프로세스에 자동 상속됨)
+            # 새 프로세스 시작
             nohup java -jar "$DEPLOY_DIR/app.jar" \
               > "$DEPLOY_DIR/app.log" 2>&1 &
 
             echo $! > "$PID_FILE"
             echo "Started PID $(cat "$PID_FILE")"
 
-      - name: Notify Slack (success)
-        if: success()
-        run: |
-          curl -s -X POST "${{ secrets.SLACK_WEBHOOK_URL }}" \
-            -H "Content-Type: application/json" \
-            -d '{"username":"Gunpla Decal","text":"✅ 배포 성공"}'
-
-      - name: Notify Slack (failure)
-        if: failure()
-        run: |
-          curl -s -X POST "${{ secrets.SLACK_WEBHOOK_URL }}" \
-            -H "Content-Type: application/json" \
-            -d '{"username":"Gunpla Decal","text":"❌ 배포 실패"}'
+      - name: Notify Slack
+        uses: 8398a7/action-slack@v3
+        if: always()
+        with:
+          status: ${{ job.status }}
+          author_name: Gunpla Decal
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
