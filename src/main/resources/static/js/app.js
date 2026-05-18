@@ -186,7 +186,21 @@ async function selectManual(b62id, push = true) {
       Array(10).fill('<div class="decal-skel flex-shrink-0 mx-auto" style="width:32px;height:32px;"></div>').join('');
     window.dispatchEvent(new Event('resize'));
 
-    const data = await (await fetch(`/api/manuals/b/${b62id}`)).json();
+    const res = await fetch(`/api/manuals/b/${b62id}`);
+    if (!res.ok) {
+      document.getElementById('pdf-loading').style.display = '';
+      pdfScroll.style.display = 'none';
+      document.getElementById('zoom-overlay').style.display = 'none';
+      document.getElementById('right-sidebar').style.display = 'none';
+      thumbStrip.innerHTML = '<div class="strip-inner"><span class="text-gray-500 text-xs select-none">메뉴얼을 선택하세요</span></div>';
+      noPdf.innerHTML = `<div class="text-center">
+        <i class="fas fa-file-pdf text-5xl mb-3 opacity-40"></i>
+        <p class="text-sm">메뉴얼을 찾을 수 없습니다</p>
+      </div>`;
+      noPdf.style.display = 'flex';
+      return;
+    }
+    const data = await res.json();
     currentManual = data;
     allDecals = data.decals;
     // 순환 인덱스 초기화 (이전 메뉴얼의 상태 잔류 방지)

@@ -23,6 +23,7 @@ let lastMX = 0, lastMY = 0;
 let clickStartX = 0, clickStartY = 0;
 
 // 마커 툴팁 및 모달 상태
+let markersVisible = true;  // 마커 보이기/숨기기 상태
 let tooltipDecalId = null; // 현재 툴팁이 표시된 데칼 ID
 let pendingPos     = null; // 데칼 등록 모달에서 사용할 클릭 위치 {x, y, page}
 let editingDecalId = null; // 수정 모달에서 편집 중인 데칼 ID
@@ -119,6 +120,9 @@ async function loadManuals() {
       <div class="flex items-center gap-1 mb-0.5">
         <span class="grade-badge grade-${esc(m.grade)}">${esc(m.grade)}</span>
         <span class="text-xs font-medium text-gray-200 leading-snug truncate flex-1">${esc(m.modelNumber)}</span>
+        <button class="btn-pub opacity-0 group-hover:opacity-100 flex-shrink-0 w-5 h-5 flex items-center justify-center" data-id="${m.id}" title="${m.published ? '공개중' : '미공개'}">
+          <i class="fas fa-${m.published ? 'eye text-green-400' : 'eye-slash text-gray-500'} text-xs"></i>
+        </button>
         <button class="btn-edit opacity-0 group-hover:opacity-100 flex-shrink-0 text-gray-500 hover:text-blue-400 w-5 h-5 flex items-center justify-center" data-id="${m.id}" title="수정">
           <i class="fas fa-pen text-xs"></i>
         </button>
@@ -143,8 +147,16 @@ async function loadManuals() {
 
   el.querySelectorAll('.manual-item').forEach(item =>
     item.addEventListener('click', e => {
-      if (e.target.closest('.btn-edit') || e.target.closest('.btn-del')) return;
+      if (e.target.closest('.btn-pub') || e.target.closest('.btn-edit') || e.target.closest('.btn-del')) return;
       selectManual(+item.dataset.id);
+    }));
+  el.querySelectorAll('.btn-pub').forEach(btn =>
+    btn.addEventListener('click', async e => {
+      e.stopPropagation();
+      const updated = await (await fetch(`/api/admin/manuals/${btn.dataset.id}/published`, { method: 'PATCH' })).json();
+      const icon = btn.querySelector('i');
+      icon.className = `fas fa-${updated.published ? 'eye text-green-400' : 'eye-slash text-gray-500'} text-xs`;
+      btn.title = updated.published ? '공개중' : '미공개';
     }));
   el.querySelectorAll('.btn-edit').forEach(btn =>
     btn.addEventListener('click', () => openManualEditModal(+btn.dataset.id)));
@@ -178,10 +190,10 @@ async function selectManual(id) {
     document.getElementById('pdf-loading').style.display = 'flex';
     thumbStrip.innerHTML = '<div class="strip-inner"><span class="text-gray-500 text-xs select-none">로딩 중…</span></div>';
 
-    const data = await (await fetch(`/api/manuals/${id}`)).json();
+    const data = await (await fetch(`/api/admin/manuals/${id}`)).json();
     currentManual = data; allDecals = data.decals;
 
-    pdfDoc = await pdfjsLib.getDocument(`${window.contextPath}/api/manuals/${id}/pdf`).promise;
+    pdfDoc = await pdfjsLib.getDocument(`${window.contextPath}/api/admin/manuals/${id}/pdf`).promise;
     currentPage = 1;
     await renderPage(currentPage, true);
 
@@ -212,6 +224,8 @@ function renderOverlay() {
       e.stopPropagation();
       showTooltip(+m.dataset.id);
     }));
+
+  overlay.style.display = markersVisible ? '' : 'none';
 }
 
 /* ──────────── 마커 툴팁 ──────────── */
@@ -481,6 +495,14 @@ document.getElementById('manual-edit-form').addEventListener('submit', async e =
   } else {
     alert('수정에 실패했습니다.');
   }
+});
+
+/* ──────────── 마커 보이기/숨기기 ──────────── */
+
+document.getElementById('marker-visible').addEventListener('change', e => {
+  markersVisible = e.target.checked;
+  overlay.style.display = markersVisible ? '' : 'none';
+  if (!markersVisible) tooltip.style.display = 'none';
 });
 
 /* ──────────── 메뉴얼 삭제 ──────────── */

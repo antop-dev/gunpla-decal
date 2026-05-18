@@ -13,6 +13,7 @@ data class ManualSummary(
     val modelNumber: String,
     val productName: String,
     val link: String? = null,
+    val published: Boolean = false,
 )
 
 /** 메뉴얼 단건 조회 응답 (데칼 목록 포함) */

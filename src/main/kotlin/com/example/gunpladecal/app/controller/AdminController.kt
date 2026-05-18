@@ -6,10 +6,13 @@ import com.example.gunpladecal.app.dto.DecalUpdateRequest
 import com.example.gunpladecal.app.dto.ManualUpdateRequest
 import com.example.gunpladecal.app.service.ManualService
 import io.github.oshai.kotlinlogging.KotlinLogging
+import org.springframework.core.io.Resource
 import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
+import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
+import org.springframework.web.bind.annotation.PatchMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.PutMapping
@@ -57,6 +60,37 @@ class AdminController(
     ): Any {
         log.debug { "PUT /api/admin/manuals/$id request=$request" }
         return manualService.updateManual(id, request)
+    }
+
+    /** 메뉴얼 단건 조회 (미공개 포함, 관리자 전용) */
+    @GetMapping("/{id}")
+    fun getManual(
+        @PathVariable id: Long,
+    ): Any {
+        log.debug { "GET /api/admin/manuals/$id" }
+        return manualService.getManual(id)
+    }
+
+    /** PDF 스트리밍 (미공개 포함, 관리자 전용) */
+    @GetMapping("/{id}/pdf")
+    fun pdf(
+        @PathVariable id: Long,
+    ): ResponseEntity<Resource> {
+        log.debug { "GET /api/admin/manuals/$id/pdf" }
+        val resource = manualService.getPdfResource(id)
+        return ResponseEntity.ok()
+            .contentType(MediaType.APPLICATION_PDF)
+            .header("Content-Disposition", "inline; filename=\"manual.pdf\"")
+            .body(resource)
+    }
+
+    /** 공개 여부 토글 */
+    @PatchMapping("/{id}/published")
+    fun togglePublished(
+        @PathVariable id: Long,
+    ): Any {
+        log.debug { "PATCH /api/admin/manuals/$id/published" }
+        return manualService.togglePublished(id)
     }
 
     /** 메뉴얼 삭제 (연관 데칼 및 PDF 파일 함께 제거) */

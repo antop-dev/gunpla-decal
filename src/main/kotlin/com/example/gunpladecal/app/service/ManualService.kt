@@ -44,16 +44,18 @@ class ManualService(
 
     /**
      * 메뉴얼 목록 반환. q가 있으면 등급명·형식번호·제품명으로 필터링 (대소문자 무시).
+     * onlyPublished=true이면 공개 메뉴얼만 반환.
      * 서버 사이드 검색이므로 추후 DB 풀텍스트 검색으로 전환 가능.
      */
     @Transactional(readOnly = true)
-    fun getAllManuals(q: String? = null): List<ManualSummary> {
-        log.debug { "getAllManuals(q=$q)" }
+    fun getAllManuals(q: String? = null, onlyPublished: Boolean = false): List<ManualSummary> {
+        log.debug { "getAllManuals(q=$q, onlyPublished=$onlyPublished)" }
         val all = manualRepository.findAllByOrderByIdDesc()
-        if (q.isNullOrBlank()) return all.map { it.toSummary() }
+        val base = if (onlyPublished) all.filter { it.published } else all
+        if (q.isNullOrBlank()) return base.map { it.toSummary() }
         // 등급명·형식번호·제품명에 검색어가 포함된 메뉴얼 반환 (대소문자 무시)
         val lower = q.lowercase()
-        return all
+        return base
             .filter { m ->
                 m.grade.name.lowercase().contains(lower) ||
                     m.modelNumber.lowercase().contains(lower) ||
@@ -62,13 +64,22 @@ class ManualService(
             .map { it.toSummary() }
     }
 
-    /** 메뉴얼 단건 조회 (데칼 목록 포함) */
+    /** 메뉴얼 단건 조회 (데칼 목록 포함). onlyPublished=true이면 미공개 시 404 */
     @Transactional(readOnly = true)
-    fun getManual(id: Long): ManualDetail {
-        log.debug { "getManual(id=$id)" }
+    fun getManual(id: Long, onlyPublished: Boolean = false): ManualDetail {
+        log.debug { "getManual(id=$id, onlyPublished=$onlyPublished)" }
         val manual = findManualById(id)
+        if (onlyPublished && !manual.published) throw ResponseStatusException(HttpStatus.NOT_FOUND)
         val decals = decalRepository.findByManualIdOrderByDecalNumber(id).map { it.toResponse() }
         return manual.toDetail(decals)
+    }
+
+    /** 공개 여부 토글 */
+    fun togglePublished(id: Long): ManualSummary {
+        log.debug { "togglePublished(id=$id)" }
+        val manual = findManualById(id)
+        manual.published = !manual.published
+        return manualRepository.save(manual).toSummary()
     }
 
     /** 메뉴얼 등록: PDF 파일을 UUID 파일명으로 업로드 디렉터리에 저장 */
@@ -110,11 +121,12 @@ class ManualService(
         manualRepository.delete(manual)
     }
 
-    /** PDF 파일 리소스 반환. 파일이 없으면 404 응답 */
+    /** PDF 파일 리소스 반환. 파일이 없거나 onlyPublished=true일 때 미공개이면 404 */
     @Transactional(readOnly = true)
-    fun getPdfResource(id: Long): Resource {
-        log.debug { "getPdfResource(id=$id)" }
+    fun getPdfResource(id: Long, onlyPublished: Boolean = false): Resource {
+        log.debug { "getPdfResource(id=$id, onlyPublished=$onlyPublished)" }
         val manual = findManualById(id)
+        if (onlyPublished && !manual.published) throw ResponseStatusException(HttpStatus.NOT_FOUND)
         val path = Paths.get(manual.pdfPath)
         if (!Files.exists(path)) throw ResponseStatusException(HttpStatus.NOT_FOUND)
         return FileSystemResource(path)
@@ -191,7 +203,7 @@ class ManualService(
             throw ResponseStatusException(HttpStatus.BAD_REQUEST, "링크는 https://로 시작해야 합니다")
     }
 
-    private fun Manual.toSummary() = ManualSummary(id, Base62.encode(id * 23), grade, modelNumber, productName, link)
+    private fun Manual.toSummary() = ManualSummary(id, Base62.encode(id * 23), grade, modelNumber, productName, link, published)
 
     private fun Manual.toDetail(decals: List<DecalResponse>) = ManualDetail(id, Base62.encode(id * 23), grade, modelNumber, productName, decals, link)
 
