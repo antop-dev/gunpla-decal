@@ -38,6 +38,16 @@ body { height: 100vh; overflow: hidden; }
 #zoom-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 13px; height: 13px; border-radius: 50%; background: #fff; cursor: pointer; }
 #zoom-slider::-moz-range-thumb { width: 13px; height: 13px; border-radius: 50%; background: #fff; border: none; cursor: pointer; }
 
+/* ── 마커 보이기/숨기기 토글 ── */
+#marker-toggle { display: flex; align-items: center; gap: 4px; cursor: pointer; }
+#marker-toggle input { display: none; }
+#marker-toggle i,
+#marker-toggle span { font-size: 12px; color: rgba(255,255,255,0.35); transition: color 0.15s; }
+#marker-toggle input:checked ~ i,
+#marker-toggle input:checked ~ span { color: #fff; }
+#marker-toggle:hover i,
+#marker-toggle:hover span { color: #fff; }
+
 /* ── PDF 컨테이너 커서 ── */
 /* body에 page-viewer 또는 page-admin 클래스로 페이지 구분 */
 .page-viewer #pdf-container { cursor: grab; }

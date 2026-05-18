@@ -31,15 +31,18 @@ class Manual(
     /** 외부 링크 (선택, https://로 시작) */
     @Column(name = "link", nullable = true, columnDefinition = "TEXT")
     var link: String? = null,
+    /** 공개 여부 (false: 미공개, true: 공개) */
+    @Column(nullable = false)
+    var published: Boolean = false,
     /** 레코드 생성 일시 (변경 불가) */
     @Column(nullable = false, updatable = false)
-    val createdAt: LocalDateTime = LocalDateTime.now(),
+    var createdAt: LocalDateTime = LocalDateTime.now(),
     /** 레코드 최종 수정 일시 (@PreUpdate 훅으로 자동 갱신) */
     @Column(nullable = false)
     var updatedAt: LocalDateTime = LocalDateTime.now(),
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    val id: Long = 0,
+    var id: Long = 0,
 ) {
     /** 엔티티 수정 시 updatedAt 자동 갱신 */
     @PreUpdate
