@@ -191,10 +191,12 @@ function toggleSidebar() {
   sbOpen = !sbOpen;
   const h = document.getElementById('sb-header');
   document.getElementById('sidebar').style.width = sbOpen ? '220px' : '44px';
-  document.getElementById('sb-content').style.display = sbOpen ? '' : 'none';
-  document.getElementById('sb-icons').style.display   = sbOpen ? 'none' : 'flex';
-  document.getElementById('sb-title').style.display   = sbOpen ? '' : 'none';
-  document.getElementById('sb-refresh').style.display = sbOpen ? '' : 'none';
+  document.getElementById('sb-content').style.display     = sbOpen ? '' : 'none';
+  document.getElementById('sb-icons').style.display       = sbOpen ? 'none' : 'flex';
+  document.getElementById('sb-title').style.display       = sbOpen ? '' : 'none';
+  document.getElementById('sb-refresh').style.display     = sbOpen ? '' : 'none';
+  document.getElementById('sb-github').style.display      = sbOpen ? '' : 'none';
+  document.getElementById('sb-github-icon').style.display = sbOpen ? 'none' : 'flex';
   document.getElementById('sb-toggle-icon').className =
     sbOpen ? 'fas fa-angles-left text-sm' : 'fas fa-angles-right text-sm';
   h.style.justifyContent = sbOpen ? '' : 'center';
