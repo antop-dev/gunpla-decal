@@ -31,25 +31,26 @@ private val log = KotlinLogging.logger {}
 class AdminController(
     private val manualService: ManualService,
 ) {
-    /** 메뉴얼 전체 목록 반환 (검색 없음) */
+    /** 메뉴얼 전체 목록 반환 (q가 있으면 서버 필터링) */
     @GetMapping
-    fun list(): Any {
-        log.debug { "GET /api/admin/manuals" }
-        return manualService.getAllManuals()
+    fun list(@RequestParam(required = false) q: String?): Any {
+        log.debug { "GET /api/admin/manuals q=$q" }
+        return manualService.getAllManuals(q)
     }
 
-    /** 메뉴얼 등록 (등급·형식번호·제품명·PDF 파일 멀티파트 폼) */
+    /** 메뉴얼 등록 (파일 업로드 또는 URL 지정, 멀티파트 폼) */
     @PostMapping(consumes = [MediaType.MULTIPART_FORM_DATA_VALUE])
     @ResponseStatus(HttpStatus.CREATED)
     fun create(
         @RequestParam grade: Grade,
         @RequestParam modelNumber: String,
         @RequestParam productName: String,
-        @RequestParam("pdf") pdf: MultipartFile,
+        @RequestParam("pdf", required = false) pdf: MultipartFile?,
+        @RequestParam("pdfUrl", required = false) pdfUrl: String?,
         @RequestParam(required = false) link: String?,
     ): Any {
         log.debug { "POST /api/admin/manuals grade=$grade modelNumber=$modelNumber productName=$productName" }
-        return manualService.createManual(grade, modelNumber, productName, pdf, link)
+        return manualService.createManual(grade, modelNumber, productName, pdf, pdfUrl, link)
     }
 
     /** 메뉴얼 정보 수정 (등급·제품명) */
