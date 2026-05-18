@@ -103,19 +103,49 @@ container.addEventListener('mouseleave', () => {
 
 /* ──────────── 메뉴얼 목록 ──────────── */
 
-// 관리자 API에서 메뉴얼 목록 로드 (수정·삭제 버튼 포함)
+// 관리자 API에서 메뉴얼 목록 로드 후 현재 검색어로 필터링
 async function loadManuals() {
-  manualList   = await (await fetch('/api/admin/manuals')).json();
-  const el     = document.getElementById('manual-list');
-  const iconEl = document.getElementById('sb-icons');
+  manualList = await (await fetch('/api/admin/manuals')).json();
 
-  if (!manualList.length) {
-    el.innerHTML = '<p class="text-gray-500 text-xs p-2">등록된 메뉴얼이 없습니다</p>';
-    iconEl.querySelectorAll('.manual-icon-item').forEach(e => e.remove());
+  // 아이콘 목록: 전체 표시
+  const iconEl = document.getElementById('sb-icons');
+  iconEl.querySelectorAll('.manual-icon-item').forEach(e => e.remove());
+  manualList.forEach(m => {
+    const btn = document.createElement('button');
+    btn.className = 'manual-icon-item sb-icon-tip w-8 h-8 flex items-center justify-center rounded hover:bg-gray-700 text-gray-400 hover:text-white';
+    btn.dataset.id  = m.id;
+    btn.dataset.tip = `[${m.grade}] ${m.modelNumber} ${m.productName}`;
+    btn.innerHTML   = '<i class="fas fa-file-pdf text-sm"></i>';
+    btn.addEventListener('click', () => selectManual(+btn.dataset.id));
+    iconEl.appendChild(btn);
+  });
+
+  // 텍스트 목록: 현재 검색어 적용 (서버 사이드)
+  await searchManuals();
+
+  window.dispatchEvent(new Event('resize'));
+}
+
+// 현재 검색어로 서버에 요청해 텍스트 목록 렌더링 (manualList 캐시는 변경하지 않음)
+async function searchManuals() {
+  const q = (document.getElementById('manual-search')?.value ?? '').trim();
+  const list = q
+    ? await (await fetch(`/api/admin/manuals?q=${encodeURIComponent(q)}`)).json()
+    : manualList;
+  renderManualItems(list);
+}
+
+// 메뉴얼 목록 DOM 렌더링 및 이벤트 연결
+function renderManualItems(list) {
+  const el = document.getElementById('manual-list');
+  if (!list.length) {
+    const q = (document.getElementById('manual-search')?.value ?? '').trim();
+    el.innerHTML = q
+      ? '<p class="text-gray-500 text-xs p-2">검색 결과 없음</p>'
+      : '<p class="text-gray-500 text-xs p-2">등록된 메뉴얼이 없습니다</p>';
     return;
   }
-
-  el.innerHTML = manualList.map(m => `
+  el.innerHTML = list.map(m => `
     <div class="manual-item group px-2 py-1.5 rounded cursor-pointer hover:bg-gray-700 transition-colors" data-id="${m.id}">
       <div class="flex items-center gap-1 mb-0.5">
         <span class="grade-badge grade-${esc(m.grade)}">${esc(m.grade)}</span>
@@ -133,17 +163,9 @@ async function loadManuals() {
       <div class="text-xs text-gray-400 leading-snug truncate">${esc(m.productName)}</div>
     </div>`).join('');
 
-  // 아이콘 목록: 기존 항목 제거 후 재생성
-  iconEl.querySelectorAll('.manual-icon-item').forEach(e => e.remove());
-  manualList.forEach(m => {
-    const btn = document.createElement('button');
-    btn.className = 'manual-icon-item sb-icon-tip w-8 h-8 flex items-center justify-center rounded hover:bg-gray-700 text-gray-400 hover:text-white';
-    btn.dataset.id  = m.id;
-    btn.dataset.tip = `[${m.grade}] ${m.modelNumber} ${m.productName}`;
-    btn.innerHTML   = '<i class="fas fa-file-pdf text-sm"></i>';
-    btn.addEventListener('click', () => selectManual(+btn.dataset.id));
-    iconEl.appendChild(btn);
-  });
+  if (currentManual) {
+    el.querySelector(`.manual-item[data-id="${currentManual.id}"]`)?.classList.add('bg-gray-600');
+  }
 
   el.querySelectorAll('.manual-item').forEach(item =>
     item.addEventListener('click', e => {
@@ -154,6 +176,8 @@ async function loadManuals() {
     btn.addEventListener('click', async e => {
       e.stopPropagation();
       const updated = await (await fetch(`/api/admin/manuals/${btn.dataset.id}/published`, { method: 'PATCH' })).json();
+      const cached = manualList.find(x => x.id === +btn.dataset.id);
+      if (cached) cached.published = updated.published;
       const icon = btn.querySelector('i');
       icon.className = `fas fa-${updated.published ? 'eye text-green-400' : 'eye-slash text-gray-500'} text-xs`;
       btn.title = updated.published ? '공개중' : '미공개';
@@ -162,7 +186,6 @@ async function loadManuals() {
     btn.addEventListener('click', () => openManualEditModal(+btn.dataset.id)));
   el.querySelectorAll('.btn-del').forEach(btn =>
     btn.addEventListener('click', () => deleteManual(+btn.dataset.id)));
-  window.dispatchEvent(new Event('resize'));
 }
 
 // 메뉴얼 선택: 목록 하이라이트 업데이트 후 PDF 로드
@@ -524,7 +547,20 @@ async function deleteManual(id) {
 
 /* ──────────── 메뉴얼 등록 모달 ──────────── */
 
-let selectedFile = null; // 업로드 대기 중인 PDF 파일
+let selectedFile   = null;   // 업로드 대기 중인 PDF 파일
+let pdfUploadMode  = 'file'; // 'file' | 'url'
+
+function setPdfMode(mode) {
+  pdfUploadMode = mode;
+  const isFile = mode === 'file';
+  document.getElementById('pdf-file-area').classList.toggle('hidden', !isFile);
+  document.getElementById('pdf-url-area').classList.toggle('hidden', isFile);
+  const tabFile = document.getElementById('pdf-tab-file');
+  const tabUrl  = document.getElementById('pdf-tab-url');
+  tabFile.className = `flex-1 py-1.5 font-medium ${isFile  ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-50'}`;
+  tabUrl.className  = `flex-1 py-1.5 font-medium ${!isFile ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-50'}`;
+  if (!isFile) document.getElementById('inp-pdf-url').value = '';
+}
 
 // 드롭존 초기화: 이전 이벤트 리스너 제거를 위해 cloneNode로 DOM 재생성
 function initDropZone() {
@@ -600,7 +636,7 @@ function fmtSize(b) {
 
 // 업로드 진행 중 폼 입력 비활성화 처리
 function setFormLoading(loading) {
-  ['inp-grade', 'inp-model', 'inp-name', 'inp-link', 'btn-upload-cancel', 'file-input'].forEach(id => {
+  ['inp-grade', 'inp-model', 'inp-name', 'inp-link', 'btn-upload-cancel', 'file-input', 'inp-pdf-url', 'pdf-tab-file', 'pdf-tab-url'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.disabled = loading;
   });
@@ -623,24 +659,27 @@ function openUploadModal() {
   document.getElementById('inp-link').value  = '';
   document.getElementById('upload-modal').classList.remove('hidden');
   initDropZone();
+  setPdfMode('file');
   setFormLoading(false);
   setTimeout(() => document.getElementById('inp-grade').focus(), 50);
 }
 
 function closeUploadModal() {
   document.getElementById('upload-modal').classList.add('hidden');
-  selectedFile = null;
+  selectedFile  = null;
+  pdfUploadMode = 'file';
   setFormLoading(false);
 }
 
 document.getElementById('btn-upload').addEventListener('click', openUploadModal);
 document.getElementById('btn-upload-icon').addEventListener('click', openUploadModal);
 document.getElementById('btn-upload-cancel').addEventListener('click', closeUploadModal);
+document.getElementById('pdf-tab-file').addEventListener('click', () => setPdfMode('file'));
+document.getElementById('pdf-tab-url').addEventListener('click',  () => setPdfMode('url'));
 
-// 메뉴얼 등록: multipart/form-data로 PDF + 메타데이터 업로드
+// 메뉴얼 등록: multipart/form-data로 PDF(파일 또는 URL) + 메타데이터 업로드
 document.getElementById('upload-form').addEventListener('submit', async e => {
   e.preventDefault();
-  if (!selectedFile) { alert('PDF 파일을 선택해주세요.'); return; }
   const grade       = document.getElementById('inp-grade').value;
   const modelNumber = document.getElementById('inp-model').value.trim();
   const productName = document.getElementById('inp-name').value.trim();
@@ -649,14 +688,23 @@ document.getElementById('upload-form').addEventListener('submit', async e => {
   if (!productName) { alert('제품명을 입력해주세요.'); return; }
   if (link && !link.startsWith('https://')) { alert('링크는 https://로 시작해야 합니다.'); return; }
 
+  const fd = new FormData();
+  fd.append('grade', grade);
+  fd.append('modelNumber', modelNumber);
+  fd.append('productName', productName);
+  if (link) fd.append('link', link);
+
+  if (pdfUploadMode === 'file') {
+    if (!selectedFile) { alert('PDF 파일을 선택해주세요.'); return; }
+    fd.append('pdf', selectedFile);
+  } else {
+    const pdfUrl = document.getElementById('inp-pdf-url').value.trim();
+    if (!pdfUrl) { alert('PDF URL을 입력해주세요.'); return; }
+    fd.append('pdfUrl', pdfUrl);
+  }
+
   setFormLoading(true);
   try {
-    const fd = new FormData();
-    fd.append('grade', grade);
-    fd.append('modelNumber', modelNumber);
-    fd.append('productName', productName);
-    if (link) fd.append('link', link);
-    fd.append('pdf', selectedFile);
     const res = await fetch('/api/admin/manuals', { method: 'POST', body: fd });
     if (res.ok) {
       const created = await res.json();
@@ -664,7 +712,8 @@ document.getElementById('upload-form').addEventListener('submit', async e => {
       await loadManuals();
       await selectManual(created.id);
     } else {
-      alert('등록에 실패했습니다.');
+      const body = await res.json().catch(() => ({}));
+      alert(body.message || '등록에 실패했습니다.');
       setFormLoading(false);
     }
   } catch {
@@ -677,11 +726,6 @@ document.getElementById('upload-form').addEventListener('submit', async e => {
 /* ──────────── 새로고침 ──────────── */
 document.getElementById('sb-refresh').addEventListener('click', loadManuals);
 
-// 사이드바 접을 때: common.js가 sb-refresh를 숨기므로 다시 보이게 하고 로그아웃은 숨김
-document.getElementById('sb-toggle').addEventListener('click', () => {
-  document.getElementById('sb-refresh').style.display = '';
-  document.getElementById('sb-logout').style.display = sbOpen ? '' : 'none';
-});
 
 /* ──────────── 형식번호 유효성 검사 ──────────── */
 
@@ -711,5 +755,11 @@ applyModelNumValidation(document.getElementById('inp-model'));
 applyModelNumValidation(document.getElementById('edit-inp-model'));
 
 PrettyScroll('#manual-list', { barWidth: 6, barColor: 'rgba(156,163,175,0.5)', right: 2, autoHide: true });
+
+let searchTimer = null;
+document.getElementById('manual-search').addEventListener('input', () => {
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(searchManuals, 150);
+});
 
 loadManuals();

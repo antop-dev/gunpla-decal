@@ -22,7 +22,10 @@ import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import org.springframework.web.multipart.MultipartFile
 import org.springframework.web.server.ResponseStatusException
+import java.net.HttpURLConnection
+import java.net.URL
 import java.nio.file.Files
+import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.UUID
 
@@ -48,7 +51,10 @@ class ManualService(
      * 서버 사이드 검색이므로 추후 DB 풀텍스트 검색으로 전환 가능.
      */
     @Transactional(readOnly = true)
-    fun getAllManuals(q: String? = null, onlyPublished: Boolean = false): List<ManualSummary> {
+    fun getAllManuals(
+        q: String? = null,
+        onlyPublished: Boolean = false,
+    ): List<ManualSummary> {
         log.debug { "getAllManuals(q=$q, onlyPublished=$onlyPublished)" }
         val all = manualRepository.findAllByOrderByIdDesc()
         val base = if (onlyPublished) all.filter { it.published } else all
@@ -57,16 +63,20 @@ class ManualService(
         val lower = q.lowercase()
         return base
             .filter { m ->
-                m.grade.name.lowercase().contains(lower) ||
+                m.grade.name
+                    .lowercase()
+                    .contains(lower) ||
                     m.modelNumber.lowercase().contains(lower) ||
                     m.productName.lowercase().contains(lower)
-            }
-            .map { it.toSummary() }
+            }.map { it.toSummary() }
     }
 
     /** 메뉴얼 단건 조회 (데칼 목록 포함). onlyPublished=true이면 미공개 시 404 */
     @Transactional(readOnly = true)
-    fun getManual(id: Long, onlyPublished: Boolean = false): ManualDetail {
+    fun getManual(
+        id: Long,
+        onlyPublished: Boolean = false,
+    ): ManualDetail {
         log.debug { "getManual(id=$id, onlyPublished=$onlyPublished)" }
         val manual = findManualById(id)
         if (onlyPublished && !manual.published) throw ResponseStatusException(HttpStatus.NOT_FOUND)
@@ -82,20 +92,60 @@ class ManualService(
         return manualRepository.save(manual).toSummary()
     }
 
-    /** 메뉴얼 등록: PDF 파일을 UUID 파일명으로 업로드 디렉터리에 저장 */
+    /** 메뉴얼 등록: PDF 파일 업로드 또는 URL 다운로드로 저장 */
     fun createManual(
         grade: Grade,
         modelNumber: String,
         productName: String,
-        pdfFile: MultipartFile,
+        pdfFile: MultipartFile? = null,
+        pdfUrl: String? = null,
         link: String? = null,
     ): ManualSummary {
-        log.debug { "createManual(grade=$grade, modelNumber=$modelNumber, productName=$productName, filename=${pdfFile.originalFilename})" }
+        log.debug { "createManual(grade=$grade, modelNumber=$modelNumber, productName=$productName)" }
         validateLink(link)
-        val path = Paths.get(appProperties.uploadDir, "${UUID.randomUUID()}.pdf").toAbsolutePath()
-        pdfFile.transferTo(path)
-        val manual = Manual(grade = grade, modelNumber = modelNumber, productName = productName, pdfPath = path.toString(), link = link?.takeIf { it.isNotBlank() })
+        val dest = Paths.get(appProperties.uploadDir, "${UUID.randomUUID()}.pdf").toAbsolutePath()
+        when {
+            pdfFile != null && !pdfFile.isEmpty -> pdfFile.transferTo(dest)
+            !pdfUrl.isNullOrBlank() -> downloadFromUrl(pdfUrl, dest)
+            else -> throw ResponseStatusException(HttpStatus.BAD_REQUEST, "PDF 파일 또는 URL을 입력해주세요")
+        }
+        val manual =
+            Manual(
+                grade = grade,
+                modelNumber = modelNumber,
+                productName = productName,
+                pdfPath = dest.toString(),
+                link =
+                    link?.takeIf {
+                        it.isNotBlank()
+                    },
+            )
         return manualRepository.save(manual).toSummary()
+    }
+
+    private fun downloadFromUrl(
+        url: String,
+        dest: Path,
+    ) {
+        val conn =
+            try {
+                URL(url).openConnection() as HttpURLConnection
+            } catch (_: Exception) {
+                throw ResponseStatusException(HttpStatus.BAD_REQUEST, "유효하지 않은 URL입니다")
+            }
+        try {
+            conn.connect()
+            val code = conn.responseCode
+            if (code == 404) throw ResponseStatusException(HttpStatus.BAD_REQUEST, "PDF URL이 존재하지 않습니다 (404)")
+            if (code !in 200..299) throw ResponseStatusException(HttpStatus.BAD_REQUEST, "PDF 다운로드 실패 (HTTP $code)")
+            conn.inputStream.use { Files.copy(it, dest) }
+        } catch (e: ResponseStatusException) {
+            throw e
+        } catch (_: Exception) {
+            throw ResponseStatusException(HttpStatus.BAD_REQUEST, "PDF 다운로드 중 오류가 발생했습니다")
+        } finally {
+            conn.disconnect()
+        }
     }
 
     /** 메뉴얼 정보 수정 (등급·형식번호·제품명, null 필드는 변경하지 않음) */
@@ -123,7 +173,10 @@ class ManualService(
 
     /** PDF 파일 리소스 반환. 파일이 없거나 onlyPublished=true일 때 미공개이면 404 */
     @Transactional(readOnly = true)
-    fun getPdfResource(id: Long, onlyPublished: Boolean = false): Resource {
+    fun getPdfResource(
+        id: Long,
+        onlyPublished: Boolean = false,
+    ): Resource {
         log.debug { "getPdfResource(id=$id, onlyPublished=$onlyPublished)" }
         val manual = findManualById(id)
         if (onlyPublished && !manual.published) throw ResponseStatusException(HttpStatus.NOT_FOUND)
@@ -189,7 +242,8 @@ class ManualService(
         decalId: Long,
     ): Decal {
         val decal =
-            decalRepository.findById(decalId)
+            decalRepository
+                .findById(decalId)
                 .orElseThrow { ResponseStatusException(HttpStatus.NOT_FOUND) }
         if (decal.manual.id != manualId) throw ResponseStatusException(HttpStatus.NOT_FOUND)
         return decal
@@ -199,13 +253,15 @@ class ManualService(
         manualRepository.findById(id).orElseThrow { ResponseStatusException(HttpStatus.NOT_FOUND) }
 
     private fun validateLink(link: String?) {
-        if (!link.isNullOrBlank() && !link.startsWith("https://"))
+        if (!link.isNullOrBlank() && !link.startsWith("https://")) {
             throw ResponseStatusException(HttpStatus.BAD_REQUEST, "링크는 https://로 시작해야 합니다")
+        }
     }
 
     private fun Manual.toSummary() = ManualSummary(id, Base62.encode(id * 23), grade, modelNumber, productName, link, published)
 
-    private fun Manual.toDetail(decals: List<DecalResponse>) = ManualDetail(id, Base62.encode(id * 23), grade, modelNumber, productName, decals, link)
+    private fun Manual.toDetail(decals: List<DecalResponse>) =
+        ManualDetail(id, Base62.encode(id * 23), grade, modelNumber, productName, decals, link)
 
     private fun Decal.toResponse() = DecalResponse(id, pageNumber, decalNumber, x, y, color, shape)
 }
