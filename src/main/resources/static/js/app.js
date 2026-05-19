@@ -1,9 +1,11 @@
 /* ── 상태 (사용자 페이지 전용) ── */
-let currentManual  = null;  // 현재 선택된 메뉴얼 객체
-let allDecals      = [];    // 현재 메뉴얼의 전체 데칼 목록
-let allManuals     = [];    // 서버에서 로드한 메뉴얼 목록 (검색 결과 포함)
-let manualLoading  = false; // PDF 로드 중 중복 선택 방지 플래그
-minZoomMult = 0.5;          // 사용자 페이지: fitScale의 50%까지 축소 허용
+let currentManual      = null;  // 현재 선택된 메뉴얼 객체
+let allDecals          = [];    // 현재 메뉴얼의 전체 데칼 목록
+let allManuals         = [];    // 서버에서 로드한 메뉴얼 목록 (검색 결과 포함)
+let manualLoading      = false; // PDF 로드 중 중복 선택 방지 플래그
+let markersVisible     = true;  // 마커 보이기/숨기기 상태
+let highlightedDecalId = null;  // 현재 하이라이트된 데칼 ID (줌 후 재적용용)
+minZoomMult = 0.5;              // 사용자 페이지: fitScale의 50%까지 축소 허용
 
 // 드래그 상태 추적 (pdfScroll 패닝용)
 let mouseDownOnContainer = false;
@@ -257,6 +259,10 @@ function renderOverlay() {
       const decal = allDecals.find(d => d.id === +m.dataset.id);
       if (decal) navigateToDecalByKey(`${decal.decalNumber}|${decal.color ?? 'WHITE'}|${decal.shape ?? 'CIRCLE'}`);
     }));
+  if (highlightedDecalId) {
+    overlay.querySelector(`.decal-marker[data-id="${highlightedDecalId}"]`)?.classList.add('highlight');
+  }
+  overlay.style.display = markersVisible ? '' : 'none';
 }
 
 /* ──────────── 데칼 정렬 ──────────── */
@@ -370,6 +376,7 @@ async function navigateToDecalByKey(key) {
   if (marker) {
     overlay.querySelectorAll('.decal-marker').forEach(m => m.classList.remove('highlight'));
     marker.classList.add('highlight');
+    highlightedDecalId = decal.id;
     // 마커가 뷰포트 중앙에 오도록 스크롤
     const targetX = basePdfWidth  * (decal.x / 100) * scale;
     const targetY = basePdfHeight * (decal.y / 100) * scale;
@@ -422,6 +429,11 @@ document.getElementById('manual-search').addEventListener('input', e => {
 
 // 데칼 검색: 입력 즉시 클라이언트 측 필터링
 document.getElementById('decal-search').addEventListener('input', renderDecalList);
+
+document.getElementById('marker-visible').addEventListener('change', e => {
+  markersVisible = e.target.checked;
+  overlay.style.display = markersVisible ? '' : 'none';
+});
 
 /* ──────────── 초기화 ── */
 const DARK_SCROLL  = { barWidth: 6, barColor: 'rgba(156,163,175,0.5)', right: 2, autoHide: true };
