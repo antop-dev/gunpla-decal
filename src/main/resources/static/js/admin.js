@@ -23,10 +23,11 @@ let lastMX = 0, lastMY = 0;
 let clickStartX = 0, clickStartY = 0;
 
 // 마커 툴팁 및 모달 상태
-let markersVisible = true;  // 마커 보이기/숨기기 상태
-let tooltipDecalId = null; // 현재 툴팁이 표시된 데칼 ID
-let pendingPos     = null; // 데칼 등록 모달에서 사용할 클릭 위치 {x, y, page}
-let editingDecalId = null; // 수정 모달에서 편집 중인 데칼 ID
+let markersVisible  = true;  // 마커 보이기/숨기기 상태
+let tooltipDecalId  = null; // 현재 툴팁이 표시된 데칼 ID
+let pendingPos      = null; // 데칼 등록 모달에서 사용할 클릭 위치 {x, y, page}
+let editingDecalId  = null; // 수정 모달에서 편집 중인 데칼 ID
+let lastDecalStyle  = { color: 'WHITE', shape: 'CIRCLE' }; // 마지막으로 사용한 데칼 스타일
 
 /* ── 관리자 전용 DOM 요소 ── */
 const chH     = document.getElementById('ch-h');
@@ -215,6 +216,7 @@ async function selectManual(id) {
 
     const data = await (await fetch(`/api/admin/manuals/${id}`)).json();
     currentManual = data; allDecals = data.decals;
+    lastDecalStyle = { color: 'WHITE', shape: 'CIRCLE' };
 
     pdfDoc = await pdfjsLib.getDocument(`${window.contextPath}/api/admin/manuals/${id}/pdf`).promise;
     currentPage = 1;
@@ -344,8 +346,8 @@ function applyDecalNumValidation(inputEl) {
 function openDecalModal(x, y, clientX, clientY) {
   pendingPos = { x, y, page: currentPage };
   document.getElementById('inp-decal-num').value = '';
-  document.getElementById('inp-decal-color-white').checked = true;
-  document.getElementById('inp-decal-shape-circle').checked = true;
+  document.getElementById(lastDecalStyle.color === 'BLACK' ? 'inp-decal-color-black' : 'inp-decal-color-white').checked = true;
+  document.getElementById(lastDecalStyle.shape === 'SQUARE' ? 'inp-decal-shape-square' : 'inp-decal-shape-circle').checked = true;
   const modal = document.getElementById('decal-modal');
   modal.classList.remove('hidden');
   const W = 230, H = 170;
@@ -389,6 +391,7 @@ async function saveNewDecal() {
   });
   if (res.ok) {
     allDecals.push(await res.json());
+    lastDecalStyle = { color, shape };
     cancelDecalModal();
     renderOverlay();
   }
