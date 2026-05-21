@@ -30,8 +30,9 @@ let editingDecalId  = null; // 수정 모달에서 편집 중인 데칼 ID
 let lastDecalStyle  = { color: '#ffffff', shape: 'CIRCLE' }; // 마지막으로 사용한 데칼 스타일
 
 // 일본어 문자 선택기 상태
-let japaneseCharUsages = []; // [{character, count}, ...] — 초기 로드 후 재사용
-let jpPickerTarget     = null; // 현재 일본어 선택기가 값을 채울 input 요소
+const JP_CHARS = 'あいうえおかきくけこさしすせそたちつてとなにぬねのはひふへほまみむめもやゆよらりるれろわをん' +
+                 'アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヲン';
+let jpPickerTarget = null; // 현재 일본어 선택기가 값을 채울 input 요소
 
 /* ── 관리자 전용 DOM 요소 ── */
 const chH     = document.getElementById('ch-h');
@@ -110,12 +111,8 @@ container.addEventListener('mouseleave', () => {
 
 // 관리자 API에서 메뉴얼 목록 로드 후 현재 검색어로 필터링
 async function loadManuals() {
-  const [manualsRes, jpRes] = await Promise.all([
-    fetch('/api/admin/manuals'),
-    japaneseCharUsages.length === 0 ? fetch('/api/admin/manuals/japanese-chars') : Promise.resolve(null),
-  ]);
+  const manualsRes = await fetch('/api/admin/manuals');
   manualList = await manualsRes.json();
-  if (jpRes) japaneseCharUsages = await jpRes.json();
 
   // 아이콘 목록: 전체 표시
   const iconEl = document.getElementById('sb-icons');
@@ -534,7 +531,7 @@ function openJpPicker(targetInput, anchorEl) {
   jpPickerTarget = targetInput;
   const grid = document.getElementById('jp-grid');
   grid.innerHTML = '';
-  japaneseCharUsages.forEach(({ character }) => {
+  for (const character of JP_CHARS) {
     const btn = document.createElement('button');
     btn.type = 'button';
     btn.textContent = character;
@@ -549,7 +546,7 @@ function openJpPicker(targetInput, anchorEl) {
       if (target) target.focus();
     });
     grid.appendChild(btn);
-  });
+  }
 
   const picker = document.getElementById('jp-picker');
   picker.classList.remove('hidden');
@@ -582,6 +579,89 @@ document.getElementById('btn-jp-edit').addEventListener('click', e => {
 });
 
 document.getElementById('btn-jp-close').addEventListener('click', closeJpPicker);
+
+/* ──────────── AI 인식 ──────────── */
+
+let aiSearching = false;
+let aiTipTimer  = null;
+
+function showAiTip(anchorEl, message, success) {
+  clearTimeout(aiTipTimer);
+  const tip   = document.getElementById('ai-tip');
+  const inner = document.getElementById('ai-tip-inner');
+  inner.textContent = message;
+  inner.className = 'text-xs rounded px-2 py-1.5 border shadow-md ' + (success
+    ? 'bg-green-50 text-green-700 border-green-200'
+    : 'bg-red-50 text-red-600 border-red-200');
+  tip.classList.remove('hidden');
+  const rect = anchorEl.getBoundingClientRect();
+  const W = inner.offsetWidth || 120, H = inner.offsetHeight || 32;
+  const vw = window.innerWidth, vh = window.innerHeight;
+  let left = rect.right + 4;
+  let top  = rect.top + (rect.height - H) / 2;
+  if (left + W > vw) left = rect.left - W - 4;
+  if (left < 4) left = 4;
+  if (top + H > vh) top = vh - H - 4;
+  if (top < 4) top = 4;
+  tip.style.left = left + 'px';
+  tip.style.top  = top  + 'px';
+  aiTipTimer = setTimeout(hideAiTip, 3000);
+  tip.onmouseleave = hideAiTip;
+}
+
+function hideAiTip() {
+  clearTimeout(aiTipTimer);
+  document.getElementById('ai-tip').classList.add('hidden');
+}
+
+async function doAiRecognize(numInputId, btnEl, page, x, y) {
+  if (aiSearching || !currentManual) return;
+  aiSearching = true;
+  hideAiTip();
+  const icon = btnEl.querySelector('i');
+  const origClass = icon.className;
+  icon.className = 'fas fa-spinner fa-spin text-xs';
+  btnEl.disabled = true;
+  try {
+    const res = await fetch('/api/admin/ai/recognize', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ manualId: currentManual.id, page, x, y }),
+    });
+    if (!res.ok) { showAiTip(btnEl, '오류가 발생했습니다', false); return; }
+    const data = await res.json();
+    if (data.found && data.character) {
+      const input = document.getElementById(numInputId);
+      input.value = data.character;
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+      input.focus();
+      showAiTip(btnEl, '"' + data.character + '" 인식됨', true);
+    } else {
+      showAiTip(btnEl, '찾을 수 없습니다', false);
+    }
+  } catch {
+    showAiTip(btnEl, '오류가 발생했습니다', false);
+  } finally {
+    icon.className = origClass;
+    btnEl.disabled = false;
+    aiSearching = false;
+  }
+}
+
+document.getElementById('btn-ai-decal').addEventListener('click', e => {
+  e.stopPropagation();
+  if (!pendingPos) return;
+  doAiRecognize('inp-decal-num', e.currentTarget, pendingPos.page, pendingPos.x, pendingPos.y);
+});
+
+document.getElementById('btn-ai-edit').addEventListener('click', e => {
+  e.stopPropagation();
+  if (!editingDecalId) return;
+  const d = allDecals.find(x => x.id === editingDecalId);
+  if (!d) return;
+  doAiRecognize('inp-edit-num', e.currentTarget, d.page, d.x, d.y);
+});
+
 document.getElementById('btn-decal-close').addEventListener('click', cancelDecalModal);
 document.getElementById('btn-edit-close').addEventListener('click', cancelEditModal);
 
@@ -602,6 +682,10 @@ document.addEventListener('mousedown', e => {
   }
   // jp-picker가 열려 있고 클릭이 그 안이면 모달 닫기 건너뜀
   if (!picker.classList.contains('hidden') && picker.contains(e.target)) return;
+
+  // ai-tip 내부 클릭 시 모달 닫기 건너뜀
+  const aiTipEl = document.getElementById('ai-tip');
+  if (aiTipEl && !aiTipEl.classList.contains('hidden') && aiTipEl.contains(e.target)) return;
 
   const decalModal = document.getElementById('decal-modal');
   if (!decalModal.classList.contains('hidden') && !decalModal.contains(e.target)) cancelDecalModal();
@@ -665,6 +749,7 @@ function cancelDecalModal() {
   pendingPos = null;
   closeJpPicker();
   closeColorPicker();
+  hideAiTip();
   const modal = document.getElementById('decal-modal');
   modal.classList.add('hidden');
   modal.style.left = '';
@@ -693,6 +778,7 @@ function cancelEditModal() {
   editingDecalId = null;
   closeJpPicker();
   closeColorPicker();
+  hideAiTip();
   const modal = document.getElementById('edit-modal');
   modal.classList.add('hidden');
   modal.style.left = '';

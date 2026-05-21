@@ -33,7 +33,9 @@ class AdminController(
 ) {
     /** 메뉴얼 전체 목록 반환 (q가 있으면 서버 필터링) */
     @GetMapping
-    fun list(@RequestParam(required = false) q: String?): Any {
+    fun list(
+        @RequestParam(required = false) q: String?,
+    ): Any {
         log.debug { "GET /api/admin/manuals q=$q" }
         return manualService.getAllManuals(q)
     }
@@ -136,12 +138,4 @@ class AdminController(
         log.debug { "DELETE /api/admin/manuals/$manualId/decals/$decalId" }
         manualService.deleteDecal(manualId, decalId)
     }
-
-    /** 일본어 문자 사용 횟수 목록 (count DESC → 오십음도 순) */
-    @GetMapping("/japanese-chars")
-    fun japaneseChars(): Any {
-        log.debug { "GET /api/admin/manuals/japanese-chars" }
-        return manualService.getJapaneseCharUsages()
-    }
-
 }

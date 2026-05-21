@@ -60,9 +60,10 @@ jobs:
       - name: Restart application
         uses: appleboy/ssh-action@v1.2.0
         env:
-          DEPLOY_DIR: ${{ secrets.SSH_DEPLOY_DIR }}
-          DB_PATH:    ${{ secrets.APP_DB_PATH }}
-          UPLOAD_DIR: ${{ secrets.APP_UPLOAD_DIR }}
+          DEPLOY_DIR:     ${{ secrets.SSH_DEPLOY_DIR }}
+          DB_PATH:        ${{ secrets.APP_DB_PATH }}
+          UPLOAD_DIR:     ${{ secrets.APP_UPLOAD_DIR }}
+          APP_OPENAI_KEY: ${{ secrets.APP_OPENAI_KEY }}
         with:
           host:     ${{ secrets.SSH_HOST }}
           port:     ${{ secrets.SSH_PORT }}
