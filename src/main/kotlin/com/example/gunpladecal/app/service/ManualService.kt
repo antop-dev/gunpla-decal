@@ -2,6 +2,7 @@ package com.example.gunpladecal.app.service
 
 import com.example.gunpladecal.app.domain.Decal
 import com.example.gunpladecal.app.domain.Grade
+import com.example.gunpladecal.app.domain.JapaneseCharUsage
 import com.example.gunpladecal.app.domain.Manual
 import com.example.gunpladecal.app.dto.DecalCreateRequest
 import com.example.gunpladecal.app.dto.DecalResponse
@@ -10,6 +11,7 @@ import com.example.gunpladecal.app.dto.ManualDetail
 import com.example.gunpladecal.app.dto.ManualSummary
 import com.example.gunpladecal.app.dto.ManualUpdateRequest
 import com.example.gunpladecal.app.repository.DecalRepository
+import com.example.gunpladecal.app.repository.JapaneseCharUsageRepository
 import com.example.gunpladecal.app.repository.ManualRepository
 import com.example.gunpladecal.app.util.Base62
 import com.example.gunpladecal.config.AppProperties
@@ -31,12 +33,47 @@ import java.util.UUID
 
 private val log = KotlinLogging.logger {}
 
+/** 히라가나(あ〜ん) → 카타카나(ア〜ン) 오십음도 순서 */
+private val JAPANESE_CANONICAL_ORDER: List<String> = buildList {
+    // 히라가나
+    val hiragana = listOf(
+        'あ', 'い', 'う', 'え', 'お',
+        'か', 'き', 'く', 'け', 'こ',
+        'さ', 'し', 'す', 'せ', 'そ',
+        'た', 'ち', 'つ', 'て', 'と',
+        'な', 'に', 'ぬ', 'ね', 'の',
+        'は', 'ひ', 'ふ', 'へ', 'ほ',
+        'ま', 'み', 'む', 'め', 'も',
+        'や', 'ゆ', 'よ',
+        'ら', 'り', 'る', 'れ', 'ろ',
+        'わ', 'を', 'ん',
+    )
+    // 카타카나
+    val katakana = listOf(
+        'ア', 'イ', 'ウ', 'エ', 'オ',
+        'カ', 'キ', 'ク', 'ケ', 'コ',
+        'サ', 'シ', 'ス', 'セ', 'ソ',
+        'タ', 'チ', 'ツ', 'テ', 'ト',
+        'ナ', 'ニ', 'ヌ', 'ネ', 'ノ',
+        'ハ', 'ヒ', 'フ', 'ヘ', 'ホ',
+        'マ', 'ミ', 'ム', 'メ', 'モ',
+        'ヤ', 'ユ', 'ヨ',
+        'ラ', 'リ', 'ル', 'レ', 'ロ',
+        'ワ', 'ヲ', 'ン',
+    )
+    addAll(hiragana.map { it.toString() })
+    addAll(katakana.map { it.toString() })
+}
+
+private val CANONICAL_INDEX: Map<String, Int> = JAPANESE_CANONICAL_ORDER.withIndex().associate { (i, c) -> c to i }
+
 /** 메뉴얼·데칼 CRUD 비즈니스 로직 */
 @Service
 @Transactional
 class ManualService(
     private val manualRepository: ManualRepository,
     private val decalRepository: DecalRepository,
+    private val japaneseCharUsageRepository: JapaneseCharUsageRepository,
     private val appProperties: AppProperties,
 ) {
     /** 애플리케이션 시작 시 PDF 업로드 디렉터리가 없으면 생성 */
@@ -48,7 +85,6 @@ class ManualService(
     /**
      * 메뉴얼 목록 반환. q가 있으면 등급명·형식번호·제품명으로 필터링 (대소문자 무시).
      * onlyPublished=true이면 공개 메뉴얼만 반환.
-     * 서버 사이드 검색이므로 추후 DB 풀텍스트 검색으로 전환 가능.
      */
     @Transactional(readOnly = true)
     fun getAllManuals(
@@ -59,7 +95,6 @@ class ManualService(
         val all = manualRepository.findAllByOrderByIdDesc()
         val base = if (onlyPublished) all.filter { it.published } else all
         if (q.isNullOrBlank()) return base.map { it.toSummary() }
-        // 등급명·형식번호·제품명에 검색어가 포함된 메뉴얼 반환 (대소문자 무시)
         val lower = q.lowercase()
         return base
             .filter { m ->
@@ -202,6 +237,7 @@ class ManualService(
                 color = request.color,
                 shape = request.shape,
             )
+        trackJapaneseChars(request.decalNumber)
         return decalRepository.save(decal).toResponse()
     }
 
@@ -214,7 +250,10 @@ class ManualService(
         log.debug { "updateDecal(manualId=$manualId, decalId=$decalId, request=$request)" }
         val decal = findDecal(manualId, decalId)
         request.page?.let { decal.pageNumber = it }
-        request.decalNumber?.let { decal.decalNumber = it }
+        request.decalNumber?.let {
+            decal.decalNumber = it
+            trackJapaneseChars(it)
+        }
         request.x?.let { decal.x = it }
         request.y?.let { decal.y = it }
         request.color?.let { decal.color = it }
@@ -234,9 +273,36 @@ class ManualService(
     }
 
     /**
-     * 데칼 조회 + 소유 메뉴얼 검증.
-     * decalId가 해당 manualId 소속이 아니면 404 응답 (타 메뉴얼 데칼 접근 방지)
+     * 일본어 문자 사용 횟수 목록 반환.
+     * count DESC → 오십음도(히라가나→카타카나) 순으로 정렬.
+     * 미등록 문자도 포함해 전체 목록(히라가나 46 + 카타카나 46 = 92자)을 반환.
      */
+    @Transactional(readOnly = true)
+    fun getJapaneseCharUsages(): List<Map<String, Any>> {
+        log.debug { "getJapaneseCharUsages()" }
+        val usageMap = japaneseCharUsageRepository.findAllByOrderByCountDesc()
+            .associate { it.character to it.count }
+        return JAPANESE_CANONICAL_ORDER
+            .map { c -> mapOf("character" to c, "count" to (usageMap[c] ?: 0)) }
+            .sortedWith(compareByDescending<Map<String, Any>> { it["count"] as Int }
+                .thenBy { CANONICAL_INDEX[it["character"] as String] ?: Int.MAX_VALUE })
+    }
+
+    /** decalNumber에 포함된 일본어 문자(히라가나·카타카나)의 사용 횟수를 1씩 증가 */
+    private fun trackJapaneseChars(decalNumber: String) {
+        for (ch in decalNumber) {
+            val s = ch.toString()
+            if (s !in CANONICAL_INDEX) continue
+            val usage = japaneseCharUsageRepository.findByCharacter(s)
+            if (usage != null) {
+                usage.count++
+                japaneseCharUsageRepository.save(usage)
+            } else {
+                japaneseCharUsageRepository.save(JapaneseCharUsage(character = s, count = 1))
+            }
+        }
+    }
+
     private fun findDecal(
         manualId: Long,
         decalId: Long,

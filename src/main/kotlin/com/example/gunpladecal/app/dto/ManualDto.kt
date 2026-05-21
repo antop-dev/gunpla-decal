@@ -1,6 +1,5 @@
 package com.example.gunpladecal.app.dto
 
-import com.example.gunpladecal.app.domain.DecalColor
 import com.example.gunpladecal.app.domain.DecalShape
 import com.example.gunpladecal.app.domain.Grade
 
@@ -47,7 +46,8 @@ data class DecalResponse(
     val x: Double,
     /** PDF 캔버스 기준 세로 위치 (0~100 %) */
     val y: Double,
-    val color: DecalColor,
+    /** 데칼 배경색 (RGB hex, 예: #ffffff) */
+    val color: String,
     /** 데칼 도형 타입 (CIRCLE: 동그라미, SQUARE: 네모) */
     val shape: DecalShape,
 )
@@ -61,7 +61,8 @@ data class DecalCreateRequest(
     val x: Double,
     /** PDF 캔버스 기준 세로 위치 (0~100 %) */
     val y: Double,
-    val color: DecalColor = DecalColor.WHITE,
+    /** 데칼 배경색 (RGB hex, 예: #ffffff) */
+    val color: String = "#ffffff",
     /** 데칼 도형 타입 (CIRCLE: 동그라미, SQUARE: 네모) */
     val shape: DecalShape = DecalShape.CIRCLE,
 )
@@ -72,8 +73,8 @@ data class DecalUpdateRequest(
     val decalNumber: String?,
     val x: Double?,
     val y: Double?,
-    val color: DecalColor?,
+    /** 데칼 배경색 (RGB hex, null이면 변경하지 않음) */
+    val color: String?,
     /** 데칼 도형 타입 (null이면 변경하지 않음) */
     val shape: DecalShape?,
 )
-

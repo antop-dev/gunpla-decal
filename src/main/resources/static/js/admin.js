@@ -27,7 +27,11 @@ let markersVisible  = true;  // 마커 보이기/숨기기 상태
 let tooltipDecalId  = null; // 현재 툴팁이 표시된 데칼 ID
 let pendingPos      = null; // 데칼 등록 모달에서 사용할 클릭 위치 {x, y, page}
 let editingDecalId  = null; // 수정 모달에서 편집 중인 데칼 ID
-let lastDecalStyle  = { color: 'WHITE', shape: 'CIRCLE' }; // 마지막으로 사용한 데칼 스타일
+let lastDecalStyle  = { color: '#ffffff', shape: 'CIRCLE' }; // 마지막으로 사용한 데칼 스타일
+
+// 일본어 문자 선택기 상태
+let japaneseCharUsages = []; // [{character, count}, ...] — 초기 로드 후 재사용
+let jpPickerTarget     = null; // 현재 일본어 선택기가 값을 채울 input 요소
 
 /* ── 관리자 전용 DOM 요소 ── */
 const chH     = document.getElementById('ch-h');
@@ -106,7 +110,12 @@ container.addEventListener('mouseleave', () => {
 
 // 관리자 API에서 메뉴얼 목록 로드 후 현재 검색어로 필터링
 async function loadManuals() {
-  manualList = await (await fetch('/api/admin/manuals')).json();
+  const [manualsRes, jpRes] = await Promise.all([
+    fetch('/api/admin/manuals'),
+    japaneseCharUsages.length === 0 ? fetch('/api/admin/manuals/japanese-chars') : Promise.resolve(null),
+  ]);
+  manualList = await manualsRes.json();
+  if (jpRes) japaneseCharUsages = await jpRes.json();
 
   // 아이콘 목록: 전체 표시
   const iconEl = document.getElementById('sb-icons');
@@ -216,7 +225,7 @@ async function selectManual(id) {
 
     const data = await (await fetch(`/api/admin/manuals/${id}`)).json();
     currentManual = data; allDecals = data.decals;
-    lastDecalStyle = { color: 'WHITE', shape: 'CIRCLE' };
+    lastDecalStyle = { color: '#ffffff', shape: 'CIRCLE' };
 
     pdfDoc = await pdfjsLib.getDocument(`${window.contextPath}/api/admin/manuals/${id}/pdf`).promise;
     currentPage = 1;
@@ -235,7 +244,6 @@ async function selectManual(id) {
 /* ──────────── 데칼 오버레이 ──────────── */
 
 // 현재 페이지의 데칼 마커를 오버레이에 렌더링 (common.js의 renderPage에서 호출)
-// 클릭 시 툴팁(편집·삭제) 표시
 function renderOverlay() {
   overlay.innerHTML = allDecals.filter(d => d.page === currentPage).map(d => `
     <div class="decal-marker" data-id="${d.id}"
@@ -255,14 +263,12 @@ function renderOverlay() {
 
 /* ──────────── 마커 툴팁 ──────────── */
 
-// 마커 클릭 시 편집·삭제 툴팁을 마커 우하단에 표시
 function showTooltip(decalId) {
   tooltipDecalId = decalId;
   tooltip.style.display = 'flex';
   repositionTooltip();
 }
 
-// 스크롤·줌 변경 시 툴팁 위치 재계산. 마커가 화면 밖이면 자동 숨김
 function repositionTooltip() {
   if (tooltip.style.display === 'none' || !tooltipDecalId) return;
   const d = allDecals.find(x => x.id === tooltipDecalId);
@@ -285,10 +291,8 @@ function hideTooltip() {
   tooltipDecalId = null;
 }
 
-// Esc로 툴팁 닫기
 document.addEventListener('keydown', e => { if (e.key === 'Escape') hideTooltip(); });
 
-// 툴팁 내 mousedown/up은 컨테이너 이벤트로 전파 방지 (드래그 오판 방지)
 tooltip.addEventListener('mousedown', e => e.stopPropagation());
 tooltip.addEventListener('mouseup',   e => e.stopPropagation());
 
@@ -299,9 +303,11 @@ document.getElementById('tt-edit').addEventListener('click', e => {
   const d = allDecals.find(x => x.id === tooltipDecalId);
   if (!d) return;
   editingDecalId = tooltipDecalId;
-  document.getElementById('inp-edit-num').value = d.decalNumber;
-  const colorRadio = document.querySelector(`input[name="edit-color"][value="${d.color ?? 'WHITE'}"]`);
-  if (colorRadio) colorRadio.checked = true;
+  document.getElementById('inp-edit-num').value   = d.decalNumber;
+  const ec = d.color ?? '#ffffff';
+  document.getElementById('inp-edit-hex').value   = ec.slice(1).toUpperCase();
+  document.getElementById('inp-edit-color').value = ec;
+  document.getElementById('inp-edit-color').dispatchEvent(new Event('input'));
   const shapeRadio = document.querySelector(`input[name="edit-shape"][value="${d.shape ?? 'CIRCLE'}"]`);
   if (shapeRadio) shapeRadio.checked = true;
   hideTooltip();
@@ -319,20 +325,201 @@ document.getElementById('tt-delete').addEventListener('click', async e => {
   renderOverlay();
 });
 
+/* ──────────── 색상 프리셋 버튼 ──────────── */
+
+document.addEventListener('click', e => {
+  const btn = e.target.closest('.color-preset-btn');
+  if (!btn) return;
+  const hexId   = btn.dataset.hexTarget;
+  const colorId = btn.dataset.colorTarget;
+  const color   = btn.dataset.color;
+  if (hexId)   document.getElementById(hexId).value   = color.slice(1).toUpperCase();
+  if (colorId) {
+    document.getElementById(colorId).value = color;
+    document.getElementById(colorId).dispatchEvent(new Event('input'));
+  }
+});
+
+/* ──────────── 헥스 색상 입력 동기화 ──────────── */
+
+function setupHexColorInput(hexId, colorId, wrapId, iconId) {
+  const hexEl   = document.getElementById(hexId);
+  const colorEl = document.getElementById(colorId);
+
+  function syncPalette(hex) {
+    const wrap = document.getElementById(wrapId);
+    const icon = document.getElementById(iconId);
+    if (!wrap || !icon) return;
+    wrap.style.background = hex;
+    icon.style.color = hexLuminance(hex) > 0.5 ? '#333' : '#fff';
+  }
+
+  hexEl.addEventListener('input', () => {
+    hexEl.value = hexEl.value.replace(/[^0-9a-fA-F]/g, '').toUpperCase().slice(0, 6);
+    if (hexEl.value.length === 6) {
+      const hex = '#' + hexEl.value.toLowerCase();
+      colorEl.value = hex;
+      syncPalette(hex);
+    }
+  });
+  hexEl.addEventListener('paste', e => {
+    e.preventDefault();
+    const text = (e.clipboardData || window.clipboardData).getData('text');
+    hexEl.value = text.replace(/^#/, '').replace(/[^0-9a-fA-F]/g, '').toUpperCase().slice(0, 6);
+    if (hexEl.value.length === 6) {
+      const hex = '#' + hexEl.value.toLowerCase();
+      colorEl.value = hex;
+      syncPalette(hex);
+    }
+  });
+  colorEl.addEventListener('input', () => {
+    hexEl.value = colorEl.value.slice(1).toUpperCase();
+    syncPalette(colorEl.value);
+  });
+}
+setupHexColorInput('inp-decal-hex', 'inp-decal-color', 'wrap-decal-color', 'ico-decal-palette');
+setupHexColorInput('inp-edit-hex',  'inp-edit-color',  'wrap-edit-color',  'ico-edit-palette');
+
+/* ──────────── 커스텀 색상 선택기 ──────────── */
+
+let cpHue = 0, cpSat = 1, cpVal = 1;
+let cpTargetHexId = null, cpTargetColorId = null;
+let cpDragTarget  = null; // 'sv' | 'hue'
+
+const cpPopup  = document.getElementById('cp-popup');
+const cpSvCvs  = document.getElementById('cp-sv');
+const cpHueCvs = document.getElementById('cp-hue');
+const cpSvCtx  = cpSvCvs.getContext('2d');
+const cpHueCtx = cpHueCvs.getContext('2d');
+
+function hsvToRgb(h, s, v) {
+  const f = (n, k = (n + h / 60) % 6) => v - v * s * Math.max(Math.min(k, 4 - k, 1), 0);
+  return [Math.round(f(5) * 255), Math.round(f(3) * 255), Math.round(f(1) * 255)];
+}
+
+function hexToHsv(hex) {
+  const r = parseInt(hex.slice(1, 3), 16) / 255;
+  const g = parseInt(hex.slice(3, 5), 16) / 255;
+  const b = parseInt(hex.slice(5, 7), 16) / 255;
+  const max = Math.max(r, g, b), min = Math.min(r, g, b), d = max - min;
+  let h = 0;
+  if (d) {
+    if (max === r)      h = ((g - b) / d + 6) % 6 * 60;
+    else if (max === g) h = ((b - r) / d + 2) * 60;
+    else                h = ((r - g) / d + 4) * 60;
+  }
+  return [h, max ? d / max : 0, max];
+}
+
+function drawCpHue() {
+  const w = cpHueCvs.width, h = cpHueCvs.height;
+  const g = cpHueCtx.createLinearGradient(0, 0, w, 0);
+  for (let i = 0; i <= 6; i++) g.addColorStop(i / 6, `hsl(${i * 60},100%,50%)`);
+  cpHueCtx.fillStyle = g;
+  cpHueCtx.fillRect(0, 0, w, h);
+  const x = Math.max(6, Math.min(w - 6, Math.round(cpHue / 360 * w)));
+  cpHueCtx.save();
+  cpHueCtx.strokeStyle = '#fff';
+  cpHueCtx.lineWidth = 2;
+  cpHueCtx.beginPath(); cpHueCtx.arc(x, h / 2, 5, 0, Math.PI * 2); cpHueCtx.stroke();
+  cpHueCtx.restore();
+}
+
+function drawCpSV() {
+  const w = cpSvCvs.width, h = cpSvCvs.height;
+  const gS = cpSvCtx.createLinearGradient(0, 0, w, 0);
+  gS.addColorStop(0, '#fff'); gS.addColorStop(1, `hsl(${cpHue},100%,50%)`);
+  cpSvCtx.fillStyle = gS; cpSvCtx.fillRect(0, 0, w, h);
+  const gV = cpSvCtx.createLinearGradient(0, 0, 0, h);
+  gV.addColorStop(0, 'rgba(0,0,0,0)'); gV.addColorStop(1, '#000');
+  cpSvCtx.fillStyle = gV; cpSvCtx.fillRect(0, 0, w, h);
+  const x = Math.max(5, Math.min(w - 5, Math.round(cpSat * w)));
+  const y = Math.max(5, Math.min(h - 5, Math.round((1 - cpVal) * h)));
+  cpSvCtx.save();
+  cpSvCtx.strokeStyle = '#fff'; cpSvCtx.lineWidth = 2;
+  cpSvCtx.beginPath(); cpSvCtx.arc(x, y, 5, 0, Math.PI * 2); cpSvCtx.stroke();
+  cpSvCtx.strokeStyle = 'rgba(0,0,0,0.4)'; cpSvCtx.lineWidth = 1;
+  cpSvCtx.beginPath(); cpSvCtx.arc(x, y, 5, 0, Math.PI * 2); cpSvCtx.stroke();
+  cpSvCtx.restore();
+}
+
+function cpOutput() {
+  const [r, g, b] = hsvToRgb(cpHue, cpSat, cpVal);
+  const hex = '#' + [r, g, b].map(v => v.toString(16).padStart(2, '0')).join('');
+  if (cpTargetColorId) {
+    document.getElementById(cpTargetColorId).value = hex;
+    document.getElementById(cpTargetColorId).dispatchEvent(new Event('input'));
+  }
+}
+
+cpSvCvs.addEventListener('mousedown', e => { e.preventDefault(); cpDragTarget = 'sv'; cpUpdateSV(e); });
+cpHueCvs.addEventListener('mousedown', e => { e.preventDefault(); cpDragTarget = 'hue'; cpUpdateHue(e); });
+
+function cpUpdateSV(e) {
+  const rect = cpSvCvs.getBoundingClientRect();
+  cpSat = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+  cpVal = Math.max(0, Math.min(1, 1 - (e.clientY - rect.top) / rect.height));
+  drawCpSV(); cpOutput();
+}
+function cpUpdateHue(e) {
+  const rect = cpHueCvs.getBoundingClientRect();
+  cpHue = Math.max(0, Math.min(360, (e.clientX - rect.left) / rect.width * 360));
+  drawCpHue(); drawCpSV(); cpOutput();
+}
+
+window.addEventListener('mousemove', e => {
+  if (cpDragTarget === 'sv') cpUpdateSV(e);
+  else if (cpDragTarget === 'hue') cpUpdateHue(e);
+});
+window.addEventListener('mouseup', () => { cpDragTarget = null; });
+
+function openColorPicker(hexInputId, colorInputId, anchorEl) {
+  cpTargetHexId   = hexInputId;
+  cpTargetColorId = colorInputId;
+  const raw = document.getElementById(hexInputId).value;
+  [cpHue, cpSat, cpVal] = hexToHsv(raw.length === 6 ? '#' + raw : '#ffffff');
+  cpPopup.classList.remove('hidden');
+  drawCpHue(); drawCpSV();
+  const rect = anchorEl.getBoundingClientRect();
+  const W = cpPopup.offsetWidth || 190, H = cpPopup.offsetHeight || 180;
+  const vw = window.innerWidth, vh = window.innerHeight;
+  let left = rect.right + 2, top = rect.top;
+  if (left + W > vw) left = rect.left - W - 2;
+  if (left < 4) left = 4;
+  if (top + H > vh) top = vh - H - 4;
+  if (top < 4) top = 4;
+  cpPopup.style.left = left + 'px';
+  cpPopup.style.top  = top  + 'px';
+}
+
+function closeColorPicker() {
+  cpPopup.classList.add('hidden');
+  cpTargetHexId = cpTargetColorId = null;
+}
+
+document.getElementById('wrap-decal-color').addEventListener('click', e => {
+  e.stopPropagation();
+  if (!cpPopup.classList.contains('hidden') && cpTargetHexId === 'inp-decal-hex') closeColorPicker();
+  else openColorPicker('inp-decal-hex', 'inp-decal-color', e.currentTarget);
+});
+document.getElementById('wrap-edit-color').addEventListener('click', e => {
+  e.stopPropagation();
+  if (!cpPopup.classList.contains('hidden') && cpTargetHexId === 'inp-edit-hex') closeColorPicker();
+  else openColorPicker('inp-edit-hex', 'inp-edit-color', e.currentTarget);
+});
+
 /* ──────────── 데칼 번호 입력 유효성 ──────────── */
 
-// 입력값을 규칙에 맞게 정제: 숫자(3자리) / 영문 대문자(1자) / 일본어(1자)
 function sanitizeDecalNum(val) {
   if (!val) return '';
   const first = val[0];
   if (/^\d/.test(first)) return val.replace(/\D/g, '').slice(0, 3);
   if (/^[A-Za-z]/.test(first)) return val.replace(/[^A-Za-z]/g, '').slice(0, 1).toUpperCase();
-  if (/^[\u3040-\u309F\u30A0-\u30FF]/.test(first))
-    return val.replace(/[^\u3040-\u309F\u30A0-\u30FF]/g, '').slice(0, 1);
+  if (/^[぀-ゟ゠-ヿ]/.test(first))
+    return val.replace(/[^぀-ゟ゠-ヿ]/g, '').slice(0, 1);
   return val.slice(0, 1);
 }
 
-// 입력 필드에 데칼 번호 유효성 검사 연결 (IME 조합 중에는 검사 보류)
 function applyDecalNumValidation(inputEl) {
   let composing = false;
   inputEl.addEventListener('compositionstart', () => { composing = true; });
@@ -340,17 +527,101 @@ function applyDecalNumValidation(inputEl) {
   inputEl.addEventListener('input', () => { if (!composing) inputEl.value = sanitizeDecalNum(inputEl.value); });
 }
 
+/* ──────────── 일본어 문자 선택기 ──────────── */
+
+// jp-grid에 문자 버튼 렌더링 후 팝업 위치 지정·표시
+function openJpPicker(targetInput, anchorEl) {
+  jpPickerTarget = targetInput;
+  const grid = document.getElementById('jp-grid');
+  grid.innerHTML = '';
+  japaneseCharUsages.forEach(({ character }) => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.textContent = character;
+    btn.className = 'text-sm rounded hover:bg-blue-100 py-1';
+    btn.style.cssText = 'font-size:14px; line-height:1.4;';
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      const target = jpPickerTarget;
+      if (target) target.value = character;
+      if (target) target.dispatchEvent(new Event('input', { bubbles: true }));
+      closeJpPicker();
+      if (target) target.focus();
+    });
+    grid.appendChild(btn);
+  });
+
+  const picker = document.getElementById('jp-picker');
+  picker.classList.remove('hidden');
+  const rect = anchorEl.getBoundingClientRect();
+  const W = 200, H = picker.offsetHeight || 280;
+  const vw = window.innerWidth, vh = window.innerHeight;
+  let left = rect.right + 4;
+  let top  = rect.top;
+  if (left + W > vw) left = rect.left - W - 4;
+  if (left < 4) left = 4;
+  if (top + H > vh) top = vh - H - 4;
+  if (top < 4) top = 4;
+  picker.style.left = left + 'px';
+  picker.style.top  = top  + 'px';
+}
+
+function closeJpPicker() {
+  document.getElementById('jp-picker').classList.add('hidden');
+  jpPickerTarget = null;
+}
+
+document.getElementById('btn-jp-decal').addEventListener('click', e => {
+  e.stopPropagation();
+  openJpPicker(document.getElementById('inp-decal-num'), e.currentTarget);
+});
+
+document.getElementById('btn-jp-edit').addEventListener('click', e => {
+  e.stopPropagation();
+  openJpPicker(document.getElementById('inp-edit-num'), e.currentTarget);
+});
+
+document.getElementById('btn-jp-close').addEventListener('click', closeJpPicker);
+document.getElementById('btn-decal-close').addEventListener('click', cancelDecalModal);
+document.getElementById('btn-edit-close').addEventListener('click', cancelEditModal);
+
+// 팝업 외부 클릭 시 닫기
+document.addEventListener('mousedown', e => {
+  // 컬러 피커 외부 클릭 시 닫기
+  if (!cpPopup.classList.contains('hidden') && !cpPopup.contains(e.target)
+      && !e.target.closest('#wrap-decal-color') && !e.target.closest('#wrap-edit-color')) {
+    closeColorPicker();
+  }
+  // 컬러 피커 내부 클릭 시 모달 닫기 건너뜀
+  if (!cpPopup.classList.contains('hidden') && cpPopup.contains(e.target)) return;
+
+  const picker = document.getElementById('jp-picker');
+  if (!picker.classList.contains('hidden') && !picker.contains(e.target)
+      && !e.target.closest('#btn-jp-decal') && !e.target.closest('#btn-jp-edit')) {
+    closeJpPicker();
+  }
+  // jp-picker가 열려 있고 클릭이 그 안이면 모달 닫기 건너뜀
+  if (!picker.classList.contains('hidden') && picker.contains(e.target)) return;
+
+  const decalModal = document.getElementById('decal-modal');
+  if (!decalModal.classList.contains('hidden') && !decalModal.contains(e.target)) cancelDecalModal();
+  const editModal = document.getElementById('edit-modal');
+  if (!editModal.classList.contains('hidden') && !editModal.contains(e.target)) cancelEditModal();
+});
+
 /* ──────────── 데칼 등록 모달 ──────────── */
 
-// 클릭 위치 근처에 데칼 번호 입력 팝업 표시 (뷰포트 경계 안으로 클램핑)
 function openDecalModal(x, y, clientX, clientY) {
   pendingPos = { x, y, page: currentPage };
-  document.getElementById('inp-decal-num').value = '';
-  document.getElementById(lastDecalStyle.color === 'BLACK' ? 'inp-decal-color-black' : 'inp-decal-color-white').checked = true;
+  document.getElementById('inp-decal-num').value   = '';
+  const dc = lastDecalStyle.color.startsWith('#') ? lastDecalStyle.color : '#ffffff';
+  document.getElementById('inp-decal-hex').value   = dc.slice(1).toUpperCase();
+  document.getElementById('inp-decal-color').value = dc;
+  document.getElementById('inp-decal-color').dispatchEvent(new Event('input'));
   document.getElementById(lastDecalStyle.shape === 'SQUARE' ? 'inp-decal-shape-square' : 'inp-decal-shape-circle').checked = true;
   const modal = document.getElementById('decal-modal');
   modal.classList.remove('hidden');
-  const W = 230, H = 170;
+  const W = 240, H = 190;
   const vw = window.innerWidth, vh = window.innerHeight;
   let left = clientX + 8;
   let top  = clientY + 8;
@@ -370,19 +641,12 @@ document.getElementById('inp-decal-num').addEventListener('keydown', e => {
 });
 document.getElementById('btn-decal-cancel').addEventListener('click', cancelDecalModal);
 
-// 모달 외부 클릭 시 닫기 (등록·수정 모달 공통)
-document.addEventListener('mousedown', e => {
-  const decalModal = document.getElementById('decal-modal');
-  if (!decalModal.classList.contains('hidden') && !decalModal.contains(e.target)) cancelDecalModal();
-  const editModal = document.getElementById('edit-modal');
-  if (!editModal.classList.contains('hidden') && !editModal.contains(e.target)) cancelEditModal();
-});
-
 // 데칼 등록 서버 요청 후 오버레이에 즉시 반영
 async function saveNewDecal() {
   const num = document.getElementById('inp-decal-num').value.trim();
   if (!num || !pendingPos) return;
-  const color = document.querySelector('input[name="decal-color"]:checked')?.value ?? 'WHITE';
+  const hexVal = document.getElementById('inp-decal-hex').value.replace(/[^0-9a-fA-F]/g, '');
+  const color  = '#' + (hexVal.length === 6 ? hexVal.toLowerCase() : 'ffffff');
   const shape = document.querySelector('input[name="decal-shape"]:checked')?.value ?? 'CIRCLE';
   const res = await fetch(`/api/admin/manuals/${currentManual.id}/decals`, {
     method: 'POST',
@@ -399,6 +663,8 @@ async function saveNewDecal() {
 
 function cancelDecalModal() {
   pendingPos = null;
+  closeJpPicker();
+  closeColorPicker();
   const modal = document.getElementById('decal-modal');
   modal.classList.add('hidden');
   modal.style.left = '';
@@ -407,11 +673,10 @@ function cancelDecalModal() {
 
 /* ──────────── 데칼 수정 모달 ──────────── */
 
-// 클릭 위치 근처에 수정 팝업 표시 (뷰포트 경계 안으로 클램핑)
 function openEditModal(clientX, clientY) {
   const modal = document.getElementById('edit-modal');
   modal.classList.remove('hidden');
-  const W = 230, H = 170;
+  const W = 240, H = 190;
   const vw = window.innerWidth, vh = window.innerHeight;
   let left = clientX + 8;
   let top  = clientY + 8;
@@ -426,6 +691,8 @@ function openEditModal(clientX, clientY) {
 
 function cancelEditModal() {
   editingDecalId = null;
+  closeJpPicker();
+  closeColorPicker();
   const modal = document.getElementById('edit-modal');
   modal.classList.add('hidden');
   modal.style.left = '';
@@ -443,7 +710,8 @@ document.getElementById('btn-edit-cancel').addEventListener('click', cancelEditM
 async function saveEditDecal() {
   const num = document.getElementById('inp-edit-num').value.trim();
   if (!num || !editingDecalId) return;
-  const color = document.querySelector('input[name="edit-color"]:checked')?.value ?? 'WHITE';
+  const hexVal = document.getElementById('inp-edit-hex').value.replace(/[^0-9a-fA-F]/g, '');
+  const color  = '#' + (hexVal.length === 6 ? hexVal.toLowerCase() : 'ffffff');
   const shape = document.querySelector('input[name="edit-shape"]:checked')?.value ?? 'CIRCLE';
   const res = await fetch(`/api/admin/manuals/${currentManual.id}/decals/${editingDecalId}`, {
     method: 'PUT',
@@ -460,7 +728,6 @@ async function saveEditDecal() {
 
 /* ──────────── 메뉴얼 수정 모달 ──────────── */
 
-// 수정 모달 열기: manualList 캐시에서 현재 값을 읽어 폼에 채움
 function openManualEditModal(id) {
   const m = manualList.find(x => x.id === id);
   if (!m) return;
@@ -480,7 +747,6 @@ function closeManualEditModal() {
 
 document.getElementById('btn-manual-edit-cancel').addEventListener('click', closeManualEditModal);
 
-// 수정 폼 제출: PUT /api/admin/manuals/{id} 후 목록 갱신
 document.getElementById('manual-edit-form').addEventListener('submit', async e => {
   e.preventDefault();
   if (!editingManualId) return;
@@ -497,14 +763,11 @@ document.getElementById('manual-edit-form').addEventListener('submit', async e =
     body: JSON.stringify({ grade, modelNumber, productName, link }),
   });
   if (res.ok) {
-    // manualList 캐시 갱신
     const cached = manualList.find(x => x.id === editingManualId);
     if (cached) { cached.grade = grade; cached.modelNumber = modelNumber; cached.productName = productName; cached.link = link; }
-    // 현재 선택된 메뉴얼이면 상태도 갱신
     if (currentManual?.id === editingManualId) {
       currentManual = { ...currentManual, grade, modelNumber, productName, link };
     }
-    // 목록 아이템 DOM 직접 갱신
     const item = document.querySelector(`.manual-item[data-id="${editingManualId}"]`);
     if (item) {
       const gradeEl = item.querySelector('.grade-badge');
@@ -514,7 +777,6 @@ document.getElementById('manual-edit-form').addEventListener('submit', async e =
       const nameEl = item.querySelector('.text-xs.text-gray-400');
       if (nameEl) nameEl.textContent = productName;
     }
-    // 접힌 사이드바 아이콘 툴팁 갱신
     const icon = document.querySelector(`.manual-icon-item[data-id="${editingManualId}"]`);
     if (icon) icon.dataset.tip = `[${grade}] ${modelNumber} ${productName}`;
     closeManualEditModal();
@@ -533,7 +795,6 @@ document.getElementById('marker-visible').addEventListener('change', e => {
 
 /* ──────────── 메뉴얼 삭제 ──────────── */
 
-// 확인 다이얼로그 후 메뉴얼 삭제. 현재 열린 메뉴얼이면 PDF 뷰어 초기화
 async function deleteManual(id) {
   const m = manualList.find(x => x.id === id);
   const label = m ? `[${m.grade}] ${m.modelNumber} ${m.productName}`.trim() : `ID ${id}`;
@@ -565,7 +826,6 @@ function setPdfMode(mode) {
   if (!isFile) document.getElementById('inp-pdf-url').value = '';
 }
 
-// 드롭존 초기화: 이전 이벤트 리스너 제거를 위해 cloneNode로 DOM 재생성
 function initDropZone() {
   selectedFile = null;
   const zone = document.getElementById('drop-zone');
@@ -630,14 +890,12 @@ function initDropZone() {
   });
 }
 
-// 파일 크기를 사람이 읽기 좋은 단위로 포맷
 function fmtSize(b) {
   if (b < 1024) return b + ' B';
   if (b < 1048576) return (b / 1024).toFixed(1) + ' KB';
   return (b / 1048576).toFixed(1) + ' MB';
 }
 
-// 업로드 진행 중 폼 입력 비활성화 처리
 function setFormLoading(loading) {
   ['inp-grade', 'inp-model', 'inp-name', 'inp-link', 'btn-upload-cancel', 'file-input', 'inp-pdf-url', 'pdf-tab-file', 'pdf-tab-url'].forEach(id => {
     const el = document.getElementById(id);
@@ -680,7 +938,6 @@ document.getElementById('btn-upload-cancel').addEventListener('click', closeUplo
 document.getElementById('pdf-tab-file').addEventListener('click', () => setPdfMode('file'));
 document.getElementById('pdf-tab-url').addEventListener('click',  () => setPdfMode('url'));
 
-// 메뉴얼 등록: multipart/form-data로 PDF(파일 또는 URL) + 메타데이터 업로드
 document.getElementById('upload-form').addEventListener('submit', async e => {
   e.preventDefault();
   const grade       = document.getElementById('inp-grade').value;
@@ -732,12 +989,10 @@ document.getElementById('sb-refresh').addEventListener('click', loadManuals);
 
 /* ──────────── 형식번호 유효성 검사 ──────────── */
 
-// 제어 문자만 제거 (영문자·숫자·특수문자·하이픈·슬래시·+ 등 허용)
 function sanitizeModelNumber(val) {
   return val.replace(/[\x00-\x1F\x7F]/g, '');
 }
 
-// 형식번호 입력 필드에 유효성 검사 연결
 function applyModelNumValidation(inputEl) {
   inputEl.addEventListener('input', () => {
     const pos = inputEl.selectionStart;
@@ -750,10 +1005,8 @@ function applyModelNumValidation(inputEl) {
 }
 
 /* ──────────── 초기화 ──────────── */
-// 데칼 번호 입력 필드에 유효성 검사 적용
 applyDecalNumValidation(document.getElementById('inp-decal-num'));
 applyDecalNumValidation(document.getElementById('inp-edit-num'));
-// 형식번호 입력 필드에 유효성 검사 적용
 applyModelNumValidation(document.getElementById('inp-model'));
 applyModelNumValidation(document.getElementById('edit-inp-model'));
 

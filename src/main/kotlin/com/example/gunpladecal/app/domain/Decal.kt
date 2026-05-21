@@ -33,10 +33,9 @@ class Decal(
     /** PDF 캔버스 기준 세로 위치 (0~100 %) */
     @Column(nullable = false)
     var y: Double,
-    /** 데칼 배경색 (WHITE 또는 BLACK) */
-    @Enumerated(EnumType.STRING)
+    /** 데칼 배경색 (RGB hex, 예: #ffffff) */
     @Column(nullable = false, length = 10)
-    var color: DecalColor = DecalColor.WHITE,
+    var color: String = "#ffffff",
     /** 데칼 도형 타입 (CIRCLE: 동그라미, SQUARE: 네모) */
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 10)

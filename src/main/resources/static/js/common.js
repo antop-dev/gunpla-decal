@@ -173,11 +173,19 @@ function updateActiveThumbnail() {
 
 /* ──────────── 데칼 마커 스타일 ──────────── */
 
-// 데칼 배경색(WHITE/BLACK)과 도형(CIRCLE/SQUARE)에 따른 마커 인라인 스타일 반환
+// hex 색상(#rrggbb)의 상대 밝기(0~1) 반환
+function hexLuminance(hex) {
+  const r = parseInt(hex.slice(1, 3), 16) / 255;
+  const g = parseInt(hex.slice(3, 5), 16) / 255;
+  const b = parseInt(hex.slice(5, 7), 16) / 255;
+  return 0.299 * r + 0.587 * g + 0.114 * b;
+}
+
+// 데칼 배경색(hex)과 도형(CIRCLE/SQUARE)에 따른 마커 인라인 스타일 반환
 function decalMarkerStyle(color, shape) {
-  const colorStyle = color === 'BLACK'
-    ? 'background:rgba(17,17,17,0.92);color:#fff;border:2px solid rgba(160,160,160,0.8);'
-    : 'background:rgba(255,255,255,0.92);color:#111;border:2px solid rgba(80,80,80,0.7);';
+  const bg = color.startsWith('#') ? color : (color === 'BLACK' ? '#000000' : '#ffffff');
+  const light = hexLuminance(bg) > 0.5;
+  const colorStyle = `background:${bg};color:${light ? '#111' : '#fff'};border:2px solid ${light ? 'rgba(80,80,80,0.7)' : 'rgba(160,160,160,0.8)'};`;
   const shapeStyle = shape !== 'SQUARE' ? 'border-radius:50%;' : '';
   return colorStyle + shapeStyle;
 }

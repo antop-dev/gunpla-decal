@@ -137,4 +137,11 @@ class AdminController(
         manualService.deleteDecal(manualId, decalId)
     }
 
+    /** 일본어 문자 사용 횟수 목록 (count DESC → 오십음도 순) */
+    @GetMapping("/japanese-chars")
+    fun japaneseChars(): Any {
+        log.debug { "GET /api/admin/manuals/japanese-chars" }
+        return manualService.getJapaneseCharUsages()
+    }
+
 }
