@@ -30,8 +30,6 @@ spring:
 app:
   db-path: ${DB_PATH:./gunpla.db}
   upload-dir: ${UPLOAD_DIR:./uploads}
-  ai:
-    openai-key: ${OPENAI_KEY}
 
 openai:
   api-key: ${OPENAI_KEY}
