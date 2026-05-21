@@ -257,7 +257,7 @@ function renderOverlay() {
     m.addEventListener('click', e => {
       e.stopPropagation();
       const decal = allDecals.find(d => d.id === +m.dataset.id);
-      if (decal) navigateToDecalByKey(`${decal.decalNumber}|${decal.color ?? 'WHITE'}|${decal.shape ?? 'CIRCLE'}`);
+      if (decal) navigateToDecalByKey(`${decal.decalNumber}|${decal.color ?? '#ffffff'}|${decal.shape ?? 'CIRCLE'}`);
     }));
   if (highlightedDecalId) {
     overlay.querySelector(`.decal-marker[data-id="${highlightedDecalId}"]`)?.classList.add('highlight');
@@ -275,10 +275,10 @@ function sortDecalNumber(a, b) {
   return a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
 }
 
-// 데칼 쌍 정렬: 동그라미 → 네모, 같은 도형 내에서는 흰색 → 검은색, 같은 색상 내에서는 번호 오름차순
+// 데칼 쌍 정렬: 동그라미 → 네모, 같은 도형 내에서는 색상 오름차순, 같은 색상 내에서는 번호 오름차순
 function sortDecalPairs(a, b) {
   if (a.shape !== b.shape) return a.shape === 'CIRCLE' ? -1 : 1;
-  if (a.color !== b.color) return a.color === 'WHITE' ? -1 : 1;
+  if (a.color !== b.color) return a.color < b.color ? -1 : 1;
   return sortDecalNumber(a.num, b.num);
 }
 
@@ -303,8 +303,8 @@ function renderDecalList() {
   const seen = new Set();
   const pairs = [];
   allDecals.forEach(d => {
-    const key = `${d.decalNumber}|${d.color ?? 'WHITE'}|${d.shape ?? 'CIRCLE'}`;
-    if (!seen.has(key)) { seen.add(key); pairs.push({ key, num: d.decalNumber, color: d.color ?? 'WHITE', shape: d.shape ?? 'CIRCLE' }); }
+    const key = `${d.decalNumber}|${d.color ?? '#ffffff'}|${d.shape ?? 'CIRCLE'}`;
+    if (!seen.has(key)) { seen.add(key); pairs.push({ key, num: d.decalNumber, color: d.color ?? '#ffffff', shape: d.shape ?? 'CIRCLE' }); }
   });
   pairs.sort(sortDecalPairs);
   const filtered = kw ? pairs.filter(p => p.num.toLowerCase().includes(kw)) : pairs;
@@ -323,8 +323,12 @@ function renderDecalList() {
   // 5열 그리드, 같은 번호가 여러 위치에 있으면 우하단에 개수 표시
   list.innerHTML = `<div class="grid gap-1" style="grid-template-columns:repeat(5,minmax(0,1fr));">
     ${filtered.map(({ key, num, color, shape }) => {
-      const cnt = allDecals.filter(d => d.decalNumber === num && (d.color ?? 'WHITE') === color && (d.shape ?? 'CIRCLE') === shape).length;
-      const shapeIcon = shape === 'CIRCLE' ? (color === 'BLACK' ? '●' : '○') : (color === 'BLACK' ? '■' : '□');
+      const cnt = allDecals.filter(d => d.decalNumber === num && (d.color ?? '#ffffff') === color && (d.shape ?? 'CIRCLE') === shape).length;
+      const isHex = color.startsWith('#');
+      const lum = isHex ? hexLuminance(color) : 0;
+      const shapeIcon = shape === 'CIRCLE' ? '●' : '■';
+      const iconColor = isHex ? color : '#555';
+      const iconStroke = (isHex && lum > 0.85) ? '-webkit-text-stroke:0.5px #aaa;' : '';
       return `
       <div class="relative">
         <button class="decal-btn w-full h-8 flex items-center justify-center text-xs font-medium
@@ -332,15 +336,19 @@ function renderDecalList() {
                 data-key="${esc(key)}" title="${esc(num)}">
           ${esc(num)}
         </button>
-        <span class="pointer-events-none" style="position:absolute;top:1px;left:2px;font-size:8px;line-height:1;color:#333;opacity:0.8;z-index:1;">${shapeIcon}</span>
-        ${cnt > 1 ? `<span class="pointer-events-none" style="position:absolute;bottom:1px;right:2px;font-size:8px;font-weight:700;line-height:1;color:#111;opacity:0.75;">${cnt}</span>` : ''}
+        <span class="pointer-events-none" style="position:absolute;top:1px;left:2px;font-size:9px;line-height:1;color:${iconColor};${iconStroke}z-index:1;">${shapeIcon}</span>
+        ${cnt > 1 ? `<span class="pointer-events-none" style="position:absolute;bottom:1px;right:2px;font-size:8px;font-weight:700;line-height:1;color:#555;">${cnt}</span>` : ''}
       </div>`;
     }).join('')}
   </div>`;
 
   // 접힌 사이드바용 아이콘 버튼 목록
   iconEl.innerHTML = pairs.map(({ key, num, color, shape }) => {
-    const shapeIcon = shape === 'CIRCLE' ? (color === 'BLACK' ? '●' : '○') : (color === 'BLACK' ? '■' : '□');
+    const isHex = color.startsWith('#');
+    const lum = isHex ? hexLuminance(color) : 0;
+    const shapeIcon = shape === 'CIRCLE' ? '●' : '■';
+    const iconColor = isHex ? color : '#555';
+    const iconStroke = (isHex && lum > 0.85) ? '-webkit-text-stroke:0.5px #aaa;' : '';
     return `
     <div class="relative flex-shrink-0">
       <button class="decal-icon-btn rs-icon-tip w-8 h-8 flex items-center justify-center
@@ -348,7 +356,7 @@ function renderDecalList() {
               data-key="${esc(key)}" data-tip="${esc(num)}">
         ${esc(num.slice(0, 3))}
       </button>
-      <span class="pointer-events-none" style="position:absolute;top:1px;left:2px;font-size:8px;line-height:1;color:#333;opacity:0.8;z-index:1;">${shapeIcon}</span>
+      <span class="pointer-events-none" style="position:absolute;top:1px;left:2px;font-size:9px;line-height:1;color:${iconColor};${iconStroke}z-index:1;">${shapeIcon}</span>
     </div>`;
   }).join('');
 
@@ -363,7 +371,7 @@ function renderDecalList() {
 async function navigateToDecalByKey(key) {
   const [decalNumber, color, shape] = key.split('|');
   const group = sortDecalsByPosition(
-    allDecals.filter(d => d.decalNumber === decalNumber && (d.color ?? 'WHITE') === color && (d.shape ?? 'CIRCLE') === shape)
+    allDecals.filter(d => d.decalNumber === decalNumber && (d.color ?? '#ffffff') === color && (d.shape ?? 'CIRCLE') === shape)
   );
   if (!group.length) return;
 

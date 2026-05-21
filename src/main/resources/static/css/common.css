@@ -164,6 +164,16 @@ body { height: 100vh; overflow: hidden; }
 #drop-zone.drag-over { border-color: #3b82f6; background: #eff6ff; }
 #drop-zone.disabled  { pointer-events: none; opacity: 0.5; }
 
+/* ── color input 스와치 ── */
+input[type="color"].color-swatch { -webkit-appearance: none; padding: 1px; }
+input[type="color"].color-swatch::-webkit-color-swatch-wrapper { padding: 0; }
+input[type="color"].color-swatch::-webkit-color-swatch { border: none; border-radius: 2px; }
+
+/* ── 데칼 모양 토글 ── */
+.shape-toggle .shape-check { display: none; font-size: 0.6rem; }
+input[type="radio"]:checked + .shape-toggle { border-color: #3b82f6; background-color: #eff6ff; }
+input[type="radio"]:checked + .shape-toggle .shape-check { display: block; color: #3b82f6; }
+
 /* ── 데칼 목록 스켈레톤 ── */
 .decal-skel {
   background: rgba(107,114,128,0.2);
