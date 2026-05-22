@@ -69,7 +69,7 @@ jobs:
           port:     ${{ secrets.SSH_PORT }}
           username: ${{ secrets.SSH_USERNAME }}
           password: ${{ secrets.SSH_PASSWORD }}
-          envs: DEPLOY_DIR,DB_PATH,UPLOAD_DIR
+          envs: DEPLOY_DIR,DB_PATH,UPLOAD_DIR,OPENAI_KEY
           script: |
             PID_FILE="$DEPLOY_DIR/app.pid"
 
