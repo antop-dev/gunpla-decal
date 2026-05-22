@@ -59,19 +59,21 @@
       <div class="mb-6">
         <label for="captcha" class="block text-sm font-medium text-gray-300 mb-1.5">캡챠</label>
         <div class="flex gap-2">
-          <img id="captcha-img" th:src="@{/captcha}" alt="캡챠 이미지"
-            class="h-10 rounded-lg border border-gray-600 cursor-pointer flex-shrink-0"
-            title="클릭하면 새로고침" onclick="refreshCaptcha()">
-          <button type="button" onclick="refreshCaptcha()"
-            class="flex-shrink-0 px-3 h-10 bg-gray-700 hover:bg-gray-600 border border-gray-600 rounded-lg text-gray-300 text-sm transition-colors"
-            title="캡챠 새로고침">
-            <i class="fas fa-rotate-right"></i>
-          </button>
           <input type="text" id="captcha" name="captcha" required
             class="flex-1 min-w-0 bg-gray-900 border border-gray-600 rounded-lg px-3 h-10 text-sm text-white placeholder-gray-500
                    focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent tracking-widest"
             placeholder="캡챠 코드 입력" maxlength="5" autocomplete="off"
             oninput="this.value=this.value.replace(/[^A-Za-z]/g,'').toUpperCase()">
+          <div class="relative flex-shrink-0">
+            <img id="captcha-img" th:src="@{/captcha}" alt="캡챠 이미지"
+              class="h-10 rounded-lg border border-gray-600 cursor-pointer block"
+              onclick="refreshCaptcha()">
+            <div id="captcha-tooltip"
+              class="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2 py-1 bg-black/80 text-white text-xs rounded whitespace-nowrap pointer-events-none"
+              style="opacity:0; transition:opacity 0.15s;">
+              클릭하면 새로고침
+            </div>
+          </div>
         </div>
       </div>
 
@@ -98,6 +100,21 @@
     document.getElementById('captcha').value = '';
     document.getElementById('captcha').focus();
   }
+
+  (function () {
+    const img = document.getElementById('captcha-img');
+    const tooltip = document.getElementById('captcha-tooltip');
+    function showTooltip() {
+      tooltip.style.opacity = '1';
+    }
+
+    function hideTooltip() {
+      tooltip.style.opacity = '0';
+    }
+
+    img.addEventListener('mouseenter', showTooltip);
+    img.addEventListener('mouseleave', hideTooltip);
+  })();
 
   function showError(type) {
     document.getElementById('error-text').textContent = ERROR_MESSAGES[type] || '로그인에 실패했습니다.';
