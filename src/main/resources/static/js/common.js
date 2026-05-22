@@ -225,6 +225,25 @@ document.getElementById('zoom-slider')?.addEventListener('input', e => {
   if (pdfDoc) applyZoomPreset(+e.target.value);
 });
 
+/* ──────────── 가로/세로 맞춤 버튼 ──────────── */
+document.getElementById('fit-width-btn')?.addEventListener('click', () => {
+  if (!pdfDoc) { return; }
+  scale = pdfScroll.clientWidth / basePdfWidth;
+  applyTransform();
+  pdfScroll.scrollLeft = 0;
+  pdfScroll.scrollTop  = Math.max(0, (basePdfHeight * scale - pdfScroll.clientHeight) / 2);
+  scheduleRerender();
+});
+
+document.getElementById('fit-height-btn')?.addEventListener('click', () => {
+  if (!pdfDoc) { return; }
+  scale = pdfScroll.clientHeight / basePdfHeight;
+  applyTransform();
+  pdfScroll.scrollTop  = 0;
+  pdfScroll.scrollLeft = Math.max(0, (basePdfWidth * scale - pdfScroll.clientWidth) / 2);
+  scheduleRerender();
+});
+
 /* ──────────── 유틸 ──────────── */
 
 // HTML 특수문자 이스케이프 (innerHTML 삽입 시 XSS 방지)

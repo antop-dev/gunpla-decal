@@ -38,6 +38,13 @@ body { height: 100vh; overflow: hidden; }
 #zoom-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 13px; height: 13px; border-radius: 50%; background: #fff; cursor: pointer; }
 #zoom-slider::-moz-range-thumb { width: 13px; height: 13px; border-radius: 50%; background: #fff; border: none; cursor: pointer; }
 
+/* ── 가로/세로 맞춤 버튼 ── */
+#fit-width-btn, #fit-height-btn {
+  background: none; border: none; padding: 0 2px;
+  color: rgba(255,255,255,0.6); font-size: 14px; cursor: pointer; line-height: 1;
+}
+#fit-width-btn:hover, #fit-height-btn:hover { color: #fff; }
+
 /* ── 마커 보이기/숨기기 토글 ── */
 #marker-toggle { display: flex; align-items: center; gap: 4px; cursor: pointer; }
 #marker-toggle input { display: none; }
