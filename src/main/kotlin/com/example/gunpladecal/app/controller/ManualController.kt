@@ -3,9 +3,6 @@ package com.example.gunpladecal.app.controller
 import com.example.gunpladecal.app.service.ManualService
 import com.example.gunpladecal.app.util.Base62
 import io.github.oshai.kotlinlogging.KotlinLogging
-import org.springframework.core.io.Resource
-import org.springframework.http.MediaType
-import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.RequestMapping
@@ -14,7 +11,7 @@ import org.springframework.web.bind.annotation.RestController
 
 private val log = KotlinLogging.logger {}
 
-/** 사용자 페이지 전용 읽기 API (메뉴얼 조회 및 PDF 스트리밍) */
+/** 사용자 페이지 전용 읽기 API (메뉴얼 조회) */
 @RestController
 @RequestMapping("/api/manuals")
 class ManualController(private val manualService: ManualService) {
@@ -36,19 +33,6 @@ class ManualController(private val manualService: ManualService) {
         return manualService.getManual(id, onlyPublished = true)
     }
 
-    /** PDF 파일 스트리밍 (공개만, inline 표시, pdf.js가 직접 요청) */
-    @GetMapping("/{id}/pdf")
-    fun pdf(
-        @PathVariable id: Long,
-    ): ResponseEntity<Resource> {
-        log.debug { "GET /api/manuals/$id/pdf" }
-        val resource = manualService.getPdfResource(id, onlyPublished = true)
-        return ResponseEntity.ok()
-            .contentType(MediaType.APPLICATION_PDF)
-            .header("Content-Disposition", "inline; filename=\"manual.pdf\"")
-            .body(resource)
-    }
-
     /** 메뉴얼 단건 조회 - base62 ID (공개만, 사용자 페이지 전용) */
     @GetMapping("/b/{b62id}")
     fun getByB62(
@@ -57,19 +41,5 @@ class ManualController(private val manualService: ManualService) {
         val id = Base62.decode(b62id) / 23
         log.debug { "GET /api/manuals/b/$b62id (id=$id)" }
         return manualService.getManual(id, onlyPublished = true)
-    }
-
-    /** PDF 파일 스트리밍 - base62 ID (공개만, 사용자 페이지 전용) */
-    @GetMapping("/b/{b62id}/pdf")
-    fun pdfByB62(
-        @PathVariable b62id: String,
-    ): ResponseEntity<Resource> {
-        val id = Base62.decode(b62id) / 23
-        log.debug { "GET /api/manuals/b/$b62id/pdf (id=$id)" }
-        val resource = manualService.getPdfResource(id, onlyPublished = true)
-        return ResponseEntity.ok()
-            .contentType(MediaType.APPLICATION_PDF)
-            .header("Content-Disposition", "inline; filename=\"manual.pdf\"")
-            .body(resource)
     }
 }

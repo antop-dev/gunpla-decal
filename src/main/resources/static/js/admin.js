@@ -224,7 +224,7 @@ async function selectManual(id) {
     currentManual = data; allDecals = data.decals;
     lastDecalStyle = { color: '#ffffff', shape: 'CIRCLE' };
 
-    pdfDoc = await pdfjsLib.getDocument(`${window.contextPath}/api/admin/manuals/${id}/pdf`).promise;
+    pdfDoc = await pdfjsLib.getDocument(`${window.contextPath}/manuals/${id}/pdf`).promise;
     currentPage = 1;
     await renderPage(currentPage, true);
 
@@ -232,7 +232,7 @@ async function selectManual(id) {
     document.getElementById('pdf-loading').style.display = '';
     document.getElementById('zoom-overlay').style.display = 'flex';
 
-    renderThumbnails();
+    renderThumbnails(`/manuals/${id}/thumbnails`);
   } finally {
     manualLoading = false;
   }
