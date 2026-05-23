@@ -37,6 +37,7 @@ private val log = KotlinLogging.logger {}
 class ManualService(
     private val manualRepository: ManualRepository,
     private val decalRepository: DecalRepository,
+    private val thumbnailService: ThumbnailService,
     private val appProperties: AppProperties,
 ) {
     /** 애플리케이션 시작 시 PDF 업로드 디렉터리가 없으면 생성 */
@@ -118,7 +119,9 @@ class ManualService(
                         it.isNotBlank()
                     },
             )
-        return manualRepository.save(manual).toSummary()
+        val saved = manualRepository.save(manual)
+        thumbnailService.generateThumbnails(saved)
+        return saved.toSummary()
     }
 
     private fun downloadFromUrl(
@@ -161,10 +164,11 @@ class ManualService(
         return manualRepository.save(manual).toSummary()
     }
 
-    /** 메뉴얼 삭제: DB 레코드와 업로드된 PDF 파일을 함께 제거 */
+    /** 메뉴얼 삭제: DB 레코드와 업로드된 PDF·썸네일 파일을 함께 제거 */
     fun deleteManual(id: Long) {
         log.debug { "deleteManual(id=$id)" }
         val manual = findManualById(id)
+        thumbnailService.deleteFiles(manual.id)
         Files.deleteIfExists(Paths.get(manual.pdfPath))
         manualRepository.delete(manual)
     }

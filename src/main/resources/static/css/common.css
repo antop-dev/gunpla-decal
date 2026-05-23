@@ -88,6 +88,7 @@ body { height: 100vh; overflow: hidden; }
 }
 .thumb-item.active { border-color: #3b82f6; }
 .thumb-item canvas { display: block; }
+.thumb-item img { display: block; }
 /* 페이지 번호 레이블 */
 .thumb-label {
   position: absolute; bottom: 0; left: 0; right: 0;

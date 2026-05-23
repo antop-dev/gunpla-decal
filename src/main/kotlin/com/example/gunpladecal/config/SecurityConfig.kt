@@ -67,6 +67,7 @@ class SecurityConfig {
                         "/js/**",
                         "/vendor/**",
                         "/api/manuals/**",
+                        "/manuals/**",
                         "/actuator/**",
                     ).permitAll()
                 // /admin은 인증 필요 — 아래 /* 와일드카드보다 먼저 평가되어야 함

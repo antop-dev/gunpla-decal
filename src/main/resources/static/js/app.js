@@ -69,6 +69,7 @@ async function loadManuals(q = '') {
           </a>` : ''}
           <button class="pdf-dl-btn opacity-0 group-hover:opacity-100 flex-shrink-0 text-gray-500 hover:text-white w-5 h-5 flex items-center justify-center"
                   data-id="${m.b62id}"
+                  data-nid="${m.id}"
                   data-filename="${esc(m.grade)}_${esc(m.modelNumber)}_${esc(m.productName)}.pdf"
                   title="PDF 다운로드">
             <i class="fas fa-download text-xs"></i>
@@ -99,7 +100,7 @@ async function loadManuals(q = '') {
     el.querySelectorAll('.pdf-dl-btn').forEach(btn =>
       btn.addEventListener('click', async e => {
         e.stopPropagation();
-        const res = await fetch(`/api/manuals/b/${btn.dataset.id}/pdf`);
+        const res = await fetch(`/manuals/${btn.dataset.nid}/pdf`);
         const blob = await res.blob();
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -213,7 +214,7 @@ async function selectManual(b62id, push = true) {
       window.dispatchEvent(new Event('resize'));
     }
 
-    pdfDoc = await pdfjsLib.getDocument(`${window.contextPath}/api/manuals/b/${b62id}/pdf`).promise;
+    pdfDoc = await pdfjsLib.getDocument(`${window.contextPath}/manuals/${currentManual.id}/pdf`).promise;
 
     // 데칼이 가장 많은 페이지로 이동
     if (allDecals.length) {
@@ -236,7 +237,7 @@ async function selectManual(b62id, push = true) {
     document.getElementById('pdf-loading').style.display = '';
     document.getElementById('zoom-overlay').style.display = 'flex';
 
-    renderThumbnails();
+    renderThumbnails(`/manuals/${currentManual.id}/thumbnails`);
     renderDecalList();
   } finally {
     manualLoading = false;

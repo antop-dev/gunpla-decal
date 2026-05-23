@@ -138,29 +138,27 @@ async function renderPage(num, resetZoom = false) {
 
 /* ──────────── 썸네일 스트립 ──────────── */
 
-// PDF 전체 페이지의 썸네일을 상단 스트립에 순서대로 렌더링
-async function renderThumbnails() {
+// 서버에서 썸네일 URL 목록을 받아 상단 스트립에 표시
+async function renderThumbnails(apiUrl) {
   const inner = document.createElement('div');
   inner.className = 'strip-inner';
   thumbStrip.innerHTML = '';
   thumbStrip.appendChild(inner);
-  const TH = 68; // 썸네일 높이 px
-  for (let i = 1; i <= pdfDoc.numPages; i++) {
-    const page = await pdfDoc.getPage(i);
-    const raw = page.getViewport({ scale: 1 });
-    const tvp = page.getViewport({ scale: TH / raw.height });
+
+  const urls = await fetch(apiUrl).then(r => r.json());
+  urls.forEach((url, idx) => {
+    const i = idx + 1;
     const wrap = document.createElement('div');
     wrap.className = 'thumb-item' + (i === currentPage ? ' active' : '');
     wrap.dataset.page = i;
-    const tc = document.createElement('canvas');
-    tc.width = tvp.width; tc.height = tvp.height;
-    await page.render({ canvasContext: tc.getContext('2d'), viewport: tvp }).promise;
+    const img = document.createElement('img');
+    img.src = window.contextPath + url;
     const lbl = document.createElement('div');
     lbl.className = 'thumb-label'; lbl.textContent = i;
-    wrap.append(tc, lbl);
+    wrap.append(img, lbl);
     inner.appendChild(wrap);
     wrap.addEventListener('click', async () => { currentPage = i; await renderPage(i); });
-  }
+  });
 }
 
 // 현재 페이지 썸네일에 active 클래스 적용 및 스트립 내 스크롤 포커스

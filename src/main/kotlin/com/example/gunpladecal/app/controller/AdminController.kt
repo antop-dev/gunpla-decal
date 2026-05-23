@@ -6,10 +6,8 @@ import com.example.gunpladecal.app.dto.DecalUpdateRequest
 import com.example.gunpladecal.app.dto.ManualUpdateRequest
 import com.example.gunpladecal.app.service.ManualService
 import io.github.oshai.kotlinlogging.KotlinLogging
-import org.springframework.core.io.Resource
 import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
-import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PatchMapping
@@ -72,19 +70,6 @@ class AdminController(
     ): Any {
         log.debug { "GET /api/admin/manuals/$id" }
         return manualService.getManual(id)
-    }
-
-    /** PDF 스트리밍 (미공개 포함, 관리자 전용) */
-    @GetMapping("/{id}/pdf")
-    fun pdf(
-        @PathVariable id: Long,
-    ): ResponseEntity<Resource> {
-        log.debug { "GET /api/admin/manuals/$id/pdf" }
-        val resource = manualService.getPdfResource(id)
-        return ResponseEntity.ok()
-            .contentType(MediaType.APPLICATION_PDF)
-            .header("Content-Disposition", "inline; filename=\"manual.pdf\"")
-            .body(resource)
     }
 
     /** 공개 여부 토글 */
