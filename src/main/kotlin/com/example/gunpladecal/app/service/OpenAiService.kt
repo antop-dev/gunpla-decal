@@ -1,5 +1,6 @@
 package com.example.gunpladecal.app.service
 
+import com.example.gunpladecal.config.AppProperties
 import com.openai.client.OpenAIClient
 import com.openai.errors.OpenAIException
 import com.openai.models.ChatModel
@@ -14,6 +15,7 @@ import org.springframework.stereotype.Service
 import java.awt.image.BufferedImage
 import java.io.ByteArrayOutputStream
 import java.io.File
+import java.time.Instant
 import java.util.Base64
 import javax.imageio.ImageIO
 
@@ -22,7 +24,44 @@ private val log = KotlinLogging.logger {}
 @Service
 class OpenAiService(
     private val openAIClient: OpenAIClient,
+    private val appProperties: AppProperties,
 ) {
+    private val lock = Any()
+    private var availableCache = false
+    private var cacheExpiry = Instant.EPOCH
+
+    fun isAvailable(): Boolean =
+        synchronized(lock) {
+            if (Instant.now().isBefore(cacheExpiry)) return availableCache
+            availableCache = probe()
+            cacheExpiry = Instant.now().plusSeconds(3600)
+            availableCache
+        }
+
+    private fun probe(): Boolean {
+        if (appProperties.openAiKey.isNullOrBlank()) return false
+        return try {
+            val params =
+                ChatCompletionCreateParams
+                    .builder()
+                    .model(ChatModel.GPT_4O_MINI)
+                    .maxCompletionTokens(1)
+                    .addUserMessageOfArrayOfContentParts(
+                        listOf(
+                            ChatCompletionContentPart.ofText(
+                                ChatCompletionContentPartText.builder().text("hi").build(),
+                            ),
+                        ),
+                    ).build()
+            openAIClient.chat().completions().create(params)
+            log.debug { "OpenAI 가용성 체크 성공" }
+            true
+        } catch (e: OpenAIException) {
+            log.warn(e) { "OpenAI 가용성 체크 실패" }
+            false
+        }
+    }
+
     // 숫자 1~3자리, 영어 대문자 1글자, 히라가나/카타카나 1글자만 유효한 데칼 번호로 허용
     private val validPattern = Regex("^[0-9]{1,3}$|^[A-Z]$|^[ぁ-ゖァ-ヶ]$")
 

@@ -324,6 +324,14 @@ document.getElementById('tt-delete').addEventListener('click', async e => {
 
 /* ──────────── 색상 프리셋 버튼 ──────────── */
 
+function focusActiveDecalNum() {
+  if (!document.getElementById('decal-modal').classList.contains('hidden')) {
+    document.getElementById('inp-decal-num').focus();
+  } else if (!document.getElementById('edit-modal').classList.contains('hidden')) {
+    document.getElementById('inp-edit-num').focus();
+  }
+}
+
 document.addEventListener('click', e => {
   const btn = e.target.closest('.color-preset-btn');
   if (!btn) return;
@@ -335,6 +343,7 @@ document.addEventListener('click', e => {
     document.getElementById(colorId).value = color;
     document.getElementById(colorId).dispatchEvent(new Event('input'));
   }
+  focusActiveDecalNum();
 });
 
 /* ──────────── 헥스 색상 입력 동기화 ──────────── */
@@ -492,6 +501,7 @@ function openColorPicker(hexInputId, colorInputId, anchorEl) {
 function closeColorPicker() {
   cpPopup.classList.add('hidden');
   cpTargetHexId = cpTargetColorId = null;
+  focusActiveDecalNum();
 }
 
 document.getElementById('wrap-decal-color').addEventListener('click', e => {
@@ -580,6 +590,20 @@ document.getElementById('btn-jp-edit').addEventListener('click', e => {
 
 document.getElementById('btn-jp-close').addEventListener('click', closeJpPicker);
 
+/* ──────────── AI 가용성 ──────────── */
+
+async function checkAiAvailable() {
+  const res = await fetch('/api/admin/ai/available').catch(() => null);
+  const available = res?.ok && (await res.json()).available;
+  ['btn-ai-decal', 'btn-ai-edit'].forEach(id => {
+    const btn = document.getElementById(id);
+    if (btn) btn.style.display = available ? '' : 'none';
+  });
+}
+
+checkAiAvailable();
+setInterval(checkAiAvailable, 3600 * 1000);
+
 /* ──────────── AI 인식 ──────────── */
 
 let aiSearching = false;
@@ -645,6 +669,7 @@ async function doAiRecognize(numInputId, btnEl, page, x, y) {
     icon.className = origClass;
     btnEl.disabled = false;
     aiSearching = false;
+    focusActiveDecalNum();
   }
 }
 
@@ -807,6 +832,7 @@ async function saveEditDecal() {
   if (res.ok) {
     const updated = await res.json();
     allDecals = allDecals.map(d => d.id === updated.id ? updated : d);
+    lastDecalStyle = { color: updated.color ?? '#ffffff', shape: updated.shape ?? 'CIRCLE' };
     cancelEditModal();
     renderOverlay();
   }
@@ -1093,6 +1119,9 @@ function applyModelNumValidation(inputEl) {
 /* ──────────── 초기화 ──────────── */
 applyDecalNumValidation(document.getElementById('inp-decal-num'));
 applyDecalNumValidation(document.getElementById('inp-edit-num'));
+document.querySelectorAll('input[name="decal-shape"], input[name="edit-shape"]').forEach(radio =>
+  radio.addEventListener('change', focusActiveDecalNum)
+);
 applyModelNumValidation(document.getElementById('inp-model'));
 applyModelNumValidation(document.getElementById('edit-inp-model'));
 
