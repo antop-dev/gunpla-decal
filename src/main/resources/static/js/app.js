@@ -337,7 +337,7 @@ function renderDecalList() {
                 data-key="${esc(key)}" title="${esc(num)}">
           ${esc(num)}
         </button>
-        <span class="pointer-events-none" style="position:absolute;top:1px;left:2px;font-size:9px;line-height:1;color:${iconColor};${iconStroke}z-index:1;">${shapeIcon}</span>
+        <span class="pointer-events-none" style="position:absolute;top:1px;left:2px;font-size:9px;line-height:1;color:${iconColor};${iconStroke};z-index:1;">${shapeIcon}</span>
         ${cnt > 1 ? `<span class="pointer-events-none" style="position:absolute;bottom:1px;right:2px;font-size:8px;font-weight:700;line-height:1;color:#555;">${cnt}</span>` : ''}
       </div>`;
     }).join('')}
@@ -357,7 +357,7 @@ function renderDecalList() {
               data-key="${esc(key)}" data-tip="${esc(num)}">
         ${esc(num.slice(0, 3))}
       </button>
-      <span class="pointer-events-none" style="position:absolute;top:1px;left:2px;font-size:9px;line-height:1;color:${iconColor};${iconStroke}z-index:1;">${shapeIcon}</span>
+      <span class="pointer-events-none" style="position:absolute;top:1px;left:2px;font-size:9px;line-height:1;color:${iconColor};${iconStroke};z-index:1;">${shapeIcon}</span>
     </div>`;
   }).join('');
 
@@ -453,7 +453,11 @@ PrettyScroll('#decal-list',  LIGHT_SCROLL);
 (async () => {
   const initB62 = location.pathname.slice(window.contextPath.length + 1);
   await loadManuals();
-  if (initB62) selectManual(initB62, false);
+  if (initB62) {
+    selectManual(initB62, false);
+  } else if (allManuals.length) {
+    selectManual(allManuals[0].b62id, false);
+  }
 })();
 
 window.addEventListener('popstate', e => {

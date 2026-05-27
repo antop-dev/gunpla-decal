@@ -9,4 +9,6 @@ data class AppProperties(
     val dbPath: String,
     /** PDF 업로드 파일 저장 디렉터리 경로 */
     val uploadDir: String,
+    /** OpenAI API 키 (환경변수 openai.api-key 또는 application.yml에서 설정) */
+    val openAiKey: String?,
 )
