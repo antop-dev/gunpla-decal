@@ -259,7 +259,7 @@ class ManualService(
     private fun Manual.toSummary() = ManualSummary(id, Base62.encode(id * 23), grade, modelNumber, productName, link, published)
 
     private fun Manual.toDetail(decals: List<DecalResponse>) =
-        ManualDetail(id, Base62.encode(id * 23), grade, modelNumber, productName, decals, link)
+        ManualDetail(id, Base62.encode(id * 23), grade, modelNumber, productName, decals, link, published)
 
     private fun Decal.toResponse() = DecalResponse(id, pageNumber, decalNumber, x, y, color, shape)
 }
