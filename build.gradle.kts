@@ -35,6 +35,8 @@ dependencies {
     implementation(libs.pdfbox)
     implementation(libs.jai.imageio.jpeg2000)
     implementation(libs.openai.java.spring.boot.starter)
+    implementation(libs.sitemap.starter)
+    implementation(libs.rome)
     runtimeOnly(libs.sqlite.jdbc)
     runtimeOnly(libs.hibernate.community.dialects)
     developmentOnly(libs.spring.boot.devtools)

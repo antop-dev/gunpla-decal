@@ -4,7 +4,15 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=1280">
   <meta name="context-path" th:content="@{/}">
-  <title>건담 메뉴얼</title>
+  <title th:text="${manual != null} ? ${manual.productName + ' | 건담 메뉴얼'} : '건담 메뉴얼'">건담 메뉴얼</title>
+  <meta name="description" th:content="${manual != null} ? ${manual.grade + ' ' + manual.modelNumber + ' ' + manual.productName + ' 건담프라 데칼 메뉴얼'} : '건담프라 데칼 메뉴얼 목록'">
+  <meta property="og:type" content="website">
+  <meta property="og:title" th:content="${manual != null} ? ${manual.productName + ' | 건담 메뉴얼'} : '건담 메뉴얼'">
+  <meta property="og:description" th:content="${manual != null} ? ${manual.grade + ' ' + manual.modelNumber + ' ' + manual.productName + ' 건담프라 데칼 메뉴얼'} : '건담프라 데칼 메뉴얼 목록'">
+  <meta property="og:url" th:content="${manual != null} ? ${baseUrl + '/' + manual.b62id} : ${baseUrl}">
+  <script id="json-ld" type="application/ld+json" th:utext="${jsonLd}"></script>
+  <link rel="alternate" type="application/rss+xml" title="RSS Feed" th:href="${baseUrl + '/rss.xml'}">
+  <link rel="alternate" type="application/atom+xml" title="Atom Feed" th:href="${baseUrl + '/atom.xml'}">
   <link rel="stylesheet" th:href="@{/vendor/fontawesome/css/all.min.css}">
   <script th:src="@{/vendor/tailwind/tailwind.min.js}"></script>
   <script th:src="@{/vendor/pdfjs/pdf.min.js}"></script>

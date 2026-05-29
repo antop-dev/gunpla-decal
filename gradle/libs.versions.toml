@@ -8,6 +8,8 @@ sqlite-jdbc = "3.49.1.0"
 pdfbox = "3.0.3"
 jai-imageio-jpeg2000 = "1.3.0"
 openai = "4.37.0"
+sitemap-starter = "1.0.0"
+rome = "2.1.0"
 
 [libraries]
 # spring security
@@ -37,6 +39,8 @@ kotlin-logging = { module = "io.github.oshai:kotlin-logging-jvm", version.ref = 
 pdfbox = { module = "org.apache.pdfbox:pdfbox", version.ref = "pdfbox" }
 jai-imageio-jpeg2000 = { module = "com.github.jai-imageio:jai-imageio-jpeg2000", version.ref = "jai-imageio-jpeg2000" }
 openai-java-spring-boot-starter  = { module = "com.openai:openai-java-spring-boot-starter", version.ref = "openai" }
+sitemap-starter = { module = "net.menoita:sitemap-spring-boot-starter", version.ref = "sitemap-starter" }
+rome = { module = "com.rometools:rome", version.ref = "rome" }
 
 [plugins]
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }

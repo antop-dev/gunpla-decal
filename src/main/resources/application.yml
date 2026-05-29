@@ -31,8 +31,12 @@ app:
   db-path: ${DB_PATH:./gunpla.db}
   upload-dir: ${UPLOAD_DIR:./uploads}
   openai-key: ${openai.api-key}
+  base-url: ${BASE_URL:http://localhost:8080}
 
 openai:
   api-key: ${OPENAI_KEY:}
+
+sitemap:
+  base-url: ${BASE_URL:http://localhost:8080}
 
 
