@@ -5,8 +5,11 @@ server:
 
 app:
   db-path: ${DB_PATH}
-
+  base-url: ${BASE_URL}
 
 decorator:
   datasource:
     enabled: false
+
+sitemap:
+  base-url: ${BASE_URL:https://p.antop.ai/gunpla}
