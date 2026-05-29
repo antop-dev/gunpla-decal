@@ -1032,7 +1032,7 @@ function openUploadModal() {
   document.getElementById('inp-link').value  = '';
   document.getElementById('upload-modal').classList.remove('hidden');
   initDropZone();
-  setPdfMode('file');
+  setPdfMode('url');
   setFormLoading(false);
   setTimeout(() => document.getElementById('inp-grade').focus(), 50);
 }

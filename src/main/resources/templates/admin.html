@@ -143,9 +143,16 @@
       <!-- 제품명 -->
       <div>
         <label for="inp-name" class="block text-xs font-medium text-gray-700 mb-1">제품명 *</label>
-        <input type="text" id="inp-name" required autocomplete="off"
-          class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-          placeholder="예) 1/144 RX-78-2 건담">
+        <div class="flex gap-1.5">
+          <input type="text" id="inp-name" required autocomplete="off"
+            class="flex-1 border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+            placeholder="예) 1/144 RX-78-2 건담">
+          <button type="button" title="소문자를 대문자로 변환"
+            onclick="const i=document.getElementById('inp-name');i.value=i.value.toUpperCase();i.focus();"
+            class="flex-shrink-0 px-2.5 border border-gray-300 rounded text-gray-500 hover:bg-gray-50 hover:text-gray-700">
+            <i class="fas fa-a text-xs"></i>
+          </button>
+        </div>
       </div>
       <!-- 링크 -->
       <div>
@@ -158,10 +165,10 @@
       <div>
         <label class="block text-xs font-medium text-gray-700 mb-1">PDF *</label>
         <div class="flex rounded border border-gray-200 overflow-hidden text-xs mb-2">
-          <button type="button" id="pdf-tab-file"
-            class="flex-1 py-1.5 font-medium bg-blue-600 text-white">파일 업로드</button>
           <button type="button" id="pdf-tab-url"
-            class="flex-1 py-1.5 font-medium bg-gray-100 text-gray-600 hover:bg-gray-50">URL 입력</button>
+            class="flex-1 py-1.5 font-medium bg-blue-600 text-white">URL 입력</button>
+          <button type="button" id="pdf-tab-file"
+            class="flex-1 py-1.5 font-medium bg-gray-100 text-gray-600 hover:bg-gray-50">파일 업로드</button>
         </div>
         <!-- 파일 업로드 영역 -->
         <div id="pdf-file-area">
@@ -396,9 +403,16 @@
       <!-- 제품명 -->
       <div>
         <label for="edit-inp-name" class="block text-xs font-medium text-gray-700 mb-1">제품명 *</label>
-        <input type="text" id="edit-inp-name" required autocomplete="off"
-          class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-          placeholder="예) 1/144 RX-78-2 건담">
+        <div class="flex gap-1.5">
+          <input type="text" id="edit-inp-name" required autocomplete="off"
+            class="flex-1 border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+            placeholder="예) 1/144 RX-78-2 건담">
+          <button type="button" title="소문자를 대문자로 변환"
+            onclick="const i=document.getElementById('edit-inp-name');i.value=i.value.toUpperCase();i.focus();"
+            class="flex-shrink-0 px-2.5 border border-gray-300 rounded text-gray-500 hover:bg-gray-50 hover:text-gray-700">
+            <i class="fas fa-a text-xs"></i>
+          </button>
+        </div>
       </div>
       <!-- 링크 -->
       <div>
