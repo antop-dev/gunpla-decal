@@ -7,6 +7,28 @@ let markersVisible     = true;  // 마커 보이기/숨기기 상태
 let highlightedDecalId = null;  // 현재 하이라이트된 데칼 ID (줌 후 재적용용)
 minZoomMult = 0.5;              // 사용자 페이지: fitScale의 50%까지 축소 허용
 
+// 메뉴얼이 선택될 때 브라우저 title과 OG 메타 태그를 갱신한다 (SEO 무관, 브라우저/SNS 공유 용도).
+function updatePageMeta({ grade, modelNumber, productName, b62id }) {
+  const title = `${productName} | 건담 메뉴얼`;
+  const desc  = `${grade} ${modelNumber} ${productName} 건담프라 데칼 메뉴얼`;
+  const url   = `${location.origin}${window.contextPath}/${b62id}`;
+  document.title = title;
+  document.querySelector('meta[name="description"]')?.setAttribute('content', desc);
+  document.querySelector('meta[property="og:title"]')?.setAttribute('content', title);
+  document.querySelector('meta[property="og:description"]')?.setAttribute('content', desc);
+  document.querySelector('meta[property="og:url"]')?.setAttribute('content', url);
+  const ldEl = document.getElementById('json-ld');
+  if (ldEl) {
+    ldEl.textContent = JSON.stringify({
+      '@context': 'https://schema.org',
+      '@type': 'Article',
+      name: title,
+      description: desc,
+      url,
+    });
+  }
+}
+
 // 드래그 상태 추적 (pdfScroll 패닝용)
 let mouseDownOnContainer = false;
 let wasDragging = false;
@@ -206,6 +228,7 @@ async function selectManual(b62id, push = true) {
     const data = await res.json();
     currentManual = data;
     allDecals = data.decals;
+    updatePageMeta(data);
     // 순환 인덱스 초기화 (이전 메뉴얼의 상태 잔류 방지)
     Object.keys(decalCycleIndex).forEach(k => delete decalCycleIndex[k]);
     // 데칼 없으면 사이드바 숨김 (resize로 pdfScroll 폭 재계산)
