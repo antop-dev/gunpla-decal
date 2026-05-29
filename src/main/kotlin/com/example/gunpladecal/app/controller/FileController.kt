@@ -21,18 +21,20 @@ class FileController(
     private val manualService: ManualService,
     private val thumbnailService: ThumbnailService,
 ) {
-    /** PDF 스트리밍 */
+    /** PDF 스트리밍 (pdfUrl 있으면 외부URL 우선, 실패 시 저장된 PDF fallback) */
     @GetMapping("/{id}/pdf")
     fun pdf(
         @PathVariable id: Long,
     ): ResponseEntity<Resource> {
         log.debug { "GET /manuals/$id/pdf" }
-        val resource = manualService.getPdfResource(id)
-        return ResponseEntity
-            .ok()
-            .contentType(MediaType.APPLICATION_PDF)
-            .header("Content-Disposition", "inline; filename=\"$id.pdf\"")
-            .body(resource)
+        val (resource, fallback) = manualService.fetchClientPdf(id)
+        val builder =
+            ResponseEntity
+                .ok()
+                .contentType(MediaType.APPLICATION_PDF)
+                .header("Content-Disposition", "inline; filename=\"$id.pdf\"")
+        if (fallback) builder.header("X-Pdf-Source", "fallback")
+        return builder.body(resource)
     }
 
     /** 썸네일 URL 목록 반환 */

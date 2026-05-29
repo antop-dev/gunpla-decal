@@ -15,6 +15,7 @@ import com.example.gunpladecal.app.util.Base62
 import com.example.gunpladecal.config.AppProperties
 import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.annotation.PostConstruct
+import org.springframework.core.io.ByteArrayResource
 import org.springframework.core.io.FileSystemResource
 import org.springframework.core.io.Resource
 import org.springframework.http.HttpStatus
@@ -22,12 +23,15 @@ import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import org.springframework.web.multipart.MultipartFile
 import org.springframework.web.server.ResponseStatusException
+import java.io.IOException
 import java.net.HttpURLConnection
 import java.net.URI
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.UUID
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.TimeUnit
 
 private val log = KotlinLogging.logger {}
 
@@ -114,10 +118,8 @@ class ManualService(
                 modelNumber = modelNumber,
                 productName = productName,
                 pdfPath = dest.toString(),
-                link =
-                    link?.takeIf {
-                        it.isNotBlank()
-                    },
+                link = link?.takeIf { it.isNotBlank() },
+                pdfUrl = pdfUrl?.takeIf { it.isNotBlank() },
             )
         val saved = manualRepository.save(manual)
         thumbnailService.generateThumbnails(saved)
@@ -173,7 +175,7 @@ class ManualService(
         manualRepository.delete(manual)
     }
 
-    /** PDF 파일 리소스 반환. 파일이 없거나 onlyPublished=true일 때 미공개이면 404 */
+    /** PDF 파일 리소스 반환 (저장된 파일 직접 반환, AiController 전용) */
     @Transactional(readOnly = true)
     fun getPdfResource(
         id: Long,
@@ -186,6 +188,42 @@ class ManualService(
         if (!Files.exists(path)) throw ResponseStatusException(HttpStatus.NOT_FOUND)
         return FileSystemResource(path)
     }
+
+    /**
+     * 클라이언트에 PDF를 제공한다.
+     * pdfUrl이 있으면 외부URL을 먼저 시도하고, 타임아웃/실패 시 저장된 PDF로 fallback.
+     * 반환값: (리소스, fallback 여부)
+     */
+    @Transactional(readOnly = true)
+    fun fetchClientPdf(id: Long): Pair<Resource, Boolean> {
+        log.debug { "fetchClientPdf(id=$id)" }
+        val manual = findManualById(id)
+        return manual.pdfUrl?.let { pdfUrl ->
+            tryFetchFromUrl(pdfUrl)?.let { ByteArrayResource(it) to false }
+        } ?: run {
+            val path = Paths.get(manual.pdfPath)
+            if (!Files.exists(path)) throw ResponseStatusException(HttpStatus.NOT_FOUND)
+            FileSystemResource(path) to true
+        }
+    }
+
+    private fun tryFetchFromUrl(url: String): ByteArray? =
+        try {
+            CompletableFuture
+                .supplyAsync {
+                    val conn = URI(url).toURL().openConnection() as HttpURLConnection
+                    try {
+                        conn.connect()
+                        if (conn.responseCode !in 200..299) throw IOException("HTTP ${conn.responseCode}")
+                        conn.inputStream.use { it.readBytes() }
+                    } finally {
+                        conn.disconnect()
+                    }
+                }.get(appProperties.pdf.connectTimeout.toMillis(), TimeUnit.MILLISECONDS)
+        } catch (e: Exception) {
+            log.warn { "외부URL PDF 로드 실패: $url (${e.message})" }
+            null
+        }
 
     /** 데칼 등록 */
     fun addDecal(
@@ -259,7 +297,7 @@ class ManualService(
     private fun Manual.toSummary() = ManualSummary(id, Base62.encode(id * 23), grade, modelNumber, productName, link, published)
 
     private fun Manual.toDetail(decals: List<DecalResponse>) =
-        ManualDetail(id, Base62.encode(id * 23), grade, modelNumber, productName, decals, link, published)
+        ManualDetail(id, Base62.encode(id * 23), grade, modelNumber, productName, decals, link, pdfUrl, published)
 
     private fun Decal.toResponse() = DecalResponse(id, pageNumber, decalNumber, x, y, color, shape)
 }

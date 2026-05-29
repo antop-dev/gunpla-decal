@@ -176,6 +176,7 @@ async function selectManual(b62id, push = true) {
     noPdf.style.display = 'none';
     pdfScroll.style.display = '';
     document.getElementById('zoom-overlay').style.display = 'none';
+    document.getElementById('link-broken-overlay').style.display = 'none';
     document.getElementById('pdf-loading').style.display = 'flex';
     thumbStrip.innerHTML = '<div class="strip-inner"><span class="text-gray-500 text-xs select-none">로딩 중…</span></div>';
 
@@ -214,7 +215,11 @@ async function selectManual(b62id, push = true) {
       window.dispatchEvent(new Event('resize'));
     }
 
-    pdfDoc = await pdfjsLib.getDocument(`${window.contextPath}/manuals/${currentManual.id}/pdf`).promise;
+    const pdfRes = await fetch(`${window.contextPath}/manuals/${currentManual.id}/pdf`);
+    pdfDoc = await pdfjsLib.getDocument({ data: await pdfRes.arrayBuffer() }).promise;
+    if (pdfRes.headers.get('X-Pdf-Source') === 'fallback') {
+      document.getElementById('link-broken-overlay').style.display = 'flex';
+    }
 
     // 데칼이 가장 많은 페이지로 이동
     if (allDecals.length) {
@@ -464,3 +469,4 @@ window.addEventListener('popstate', e => {
   const b62id = e.state?.b62id ?? location.pathname.slice(window.contextPath.length + 1);
   if (b62id) selectManual(b62id, false);
 });
+

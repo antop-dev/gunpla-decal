@@ -1,0 +1,1 @@
+ALTER TABLE manual ADD COLUMN pdf_url TEXT NULL;

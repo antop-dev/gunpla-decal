@@ -1,6 +1,7 @@
 package com.example.gunpladecal.config
 
 import org.springframework.boot.context.properties.ConfigurationProperties
+import java.time.Duration
 
 /** application.yml의 app.* 설정을 바인딩하는 프로퍼티 클래스 */
 @ConfigurationProperties(prefix = "app")
@@ -11,4 +12,10 @@ data class AppProperties(
     val uploadDir: String,
     /** OpenAI API 키 (환경변수 openai.api-key 또는 application.yml에서 설정) */
     val openAiKey: String?,
-)
+    val pdf: PdfProperties = PdfProperties(),
+) {
+    data class PdfProperties(
+        /** 외부URL PDF를 기다리는 최대 시간 */
+        val connectTimeout: Duration = Duration.ofSeconds(10),
+    )
+}

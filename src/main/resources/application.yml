@@ -31,6 +31,8 @@ app:
   db-path: ${DB_PATH:./gunpla.db}
   upload-dir: ${UPLOAD_DIR:./uploads}
   openai-key: ${openai.api-key}
+  pdf:
+    connect-timeout: 5s # 외부URL PDF를 기다리는 시간
 
 openai:
   api-key: ${OPENAI_KEY:}

@@ -12,5 +12,6 @@ data class ManualDetail(
     val productName: String,
     val decals: List<DecalResponse>,
     val link: String? = null,
+    val pdfUrl: String? = null,
     val published: Boolean = false,
 )

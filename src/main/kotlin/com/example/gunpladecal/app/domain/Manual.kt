@@ -31,6 +31,9 @@ class Manual(
     /** 외부 링크 (선택, https://로 시작) */
     @Column(name = "link", nullable = true, columnDefinition = "TEXT")
     var link: String? = null,
+    /** PDF 원본 URL (URL로 등록한 경우에만 저장) */
+    @Column(name = "pdf_url", nullable = true, columnDefinition = "TEXT")
+    var pdfUrl: String? = null,
     /** 공개 여부 (false: 미공개, true: 공개) */
     @Column(nullable = false)
     var published: Boolean = false,
