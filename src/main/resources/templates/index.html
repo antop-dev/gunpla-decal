@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=1280">
   <meta name="context-path" th:content="@{/}">
   <title>건담 메뉴얼</title>
+  <link rel="alternate" type="application/rss+xml" title="RSS Feed" th:href="${baseUrl + '/rss.xml'}">
+  <link rel="alternate" type="application/atom+xml" title="Atom Feed" th:href="${baseUrl + '/atom.xml'}">
   <link rel="stylesheet" th:href="@{/vendor/fontawesome/css/all.min.css}">
   <script th:src="@{/vendor/tailwind/tailwind.min.js}"></script>
   <script th:src="@{/vendor/pdfjs/pdf.min.js}"></script>

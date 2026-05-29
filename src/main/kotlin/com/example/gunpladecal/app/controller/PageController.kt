@@ -1,13 +1,20 @@
 package com.example.gunpladecal.app.controller
 
+import net.menoita.sitemap.config.SitemapProperties
 import org.springframework.security.core.Authentication
 import org.springframework.stereotype.Controller
 import org.springframework.web.bind.annotation.GetMapping
+import org.springframework.web.bind.annotation.ModelAttribute
 import org.springframework.web.bind.annotation.PathVariable
 
 /** Thymeleaf 페이지 라우팅 컨트롤러 */
 @Controller
-class PageController {
+class PageController(
+    private val sitemapProperties: SitemapProperties,
+) {
+    @ModelAttribute("baseUrl")
+    fun baseUrl(): String = sitemapProperties.baseUrl
+
     /** 사용자 메인 페이지 (index.html) */
     @GetMapping("/")
     fun index() = "index"
