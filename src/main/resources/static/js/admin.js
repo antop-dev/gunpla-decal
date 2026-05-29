@@ -154,7 +154,7 @@ function renderManualItems(list) {
     return;
   }
   el.innerHTML = list.map(m => `
-    <div class="manual-item group px-2 py-1.5 rounded cursor-pointer hover:bg-gray-700 transition-colors" data-id="${m.id}">
+    <div class="manual-item group px-2 py-1.5 rounded cursor-pointer hover:bg-gray-700 transition-colors${m.published ? '' : ' opacity-50'}" data-id="${m.id}">
       <div class="flex items-center gap-1 mb-0.5">
         <span class="grade-badge grade-${esc(m.grade)}">${esc(m.grade)}</span>
         <span class="text-xs font-medium text-gray-200 leading-snug truncate flex-1">${esc(m.modelNumber)}</span>
@@ -921,6 +921,7 @@ async function togglePublished() {
   const cached = manualList.find(x => x.id === currentManual.id);
   if (cached) cached.published = data.published;
   updatePublishOverlay();
+  await searchManuals();
 }
 
 async function autoUnpublish() {
