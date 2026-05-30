@@ -232,12 +232,7 @@ async function selectManual(id) {
 
 // 현재 페이지의 데칼 마커를 오버레이에 렌더링 (common.js의 renderPage에서 호출)
 function renderOverlay() {
-  overlay.innerHTML = allDecals.filter(d => d.page === currentPage).map(d => `
-    <div class="decal-marker" data-id="${d.id}"
-         style="left:${d.x}%;top:${d.y}%;transform:translate(-50%,-50%);${decalMarkerStyle(d.color, d.shape)}"
-         title="${esc(d.decalNumber)}">
-      ${esc(d.decalNumber.slice(0, 4))}
-    </div>`).join('');
+  overlay.innerHTML = allDecals.filter(d => d.page === currentPage).map(d => buildDecalMarkerHtml(d, 4)).join('');
 
   overlay.querySelectorAll('.decal-marker').forEach(m =>
     m.addEventListener('click', e => {
@@ -718,7 +713,8 @@ function openDecalModal(x, y, clientX, clientY) {
   document.getElementById('inp-decal-hex').value   = dc.slice(1).toUpperCase();
   document.getElementById('inp-decal-color').value = dc;
   document.getElementById('inp-decal-color').dispatchEvent(new Event('input'));
-  document.getElementById(lastDecalStyle.shape === 'SQUARE' ? 'inp-decal-shape-square' : 'inp-decal-shape-circle').checked = true;
+  const shapeIdMap = { SQUARE: 'inp-decal-shape-square', DIAMOND: 'inp-decal-shape-diamond' };
+  document.getElementById(shapeIdMap[lastDecalStyle.shape] ?? 'inp-decal-shape-circle').checked = true;
   const modal = document.getElementById('decal-modal');
   modal.classList.remove('hidden');
   const W = 240, H = 190;

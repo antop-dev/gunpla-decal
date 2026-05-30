@@ -7,4 +7,7 @@ enum class DecalShape {
 
     /** 네모(정사각형) */
     SQUARE,
+
+    /** 다이아(45도 회전한 정사각형) */
+    DIAMOND,
 }

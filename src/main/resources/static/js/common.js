@@ -179,13 +179,28 @@ function hexLuminance(hex) {
   return 0.299 * r + 0.587 * g + 0.114 * b;
 }
 
-// 데칼 배경색(hex)과 도형(CIRCLE/SQUARE)에 따른 마커 인라인 스타일 반환
+// 데칼 배경색(hex)과 도형(CIRCLE/SQUARE/DIAMOND)에 따른 마커 인라인 스타일 반환
 function decalMarkerStyle(color, shape) {
   const bg = color.startsWith('#') ? color : (color === 'BLACK' ? '#000000' : '#ffffff');
   const light = hexLuminance(bg) > 0.5;
-  const colorStyle = `background:${bg};color:${light ? '#111' : '#fff'};border:2px solid ${light ? 'rgba(80,80,80,0.7)' : 'rgba(160,160,160,0.8)'};`;
-  const shapeStyle = shape !== 'SQUARE' ? 'border-radius:50%;' : '';
-  return colorStyle + shapeStyle;
+  const borderColor = light ? 'rgba(80,80,80,0.7)' : 'rgba(160,160,160,0.8)';
+  const textColor = light ? '#111' : '#fff';
+  const shapeStyle = shape === 'CIRCLE' ? 'border-radius:50%;' : '';
+  return `background:${bg};color:${textColor};border:2px solid ${borderColor};${shapeStyle}`;
+}
+
+// 데칼 마커 div HTML 생성 (DIAMOND는 rotate(45deg) + 내부 span 역회전으로 텍스트 바로 세움)
+function buildDecalMarkerHtml(d, textLen) {
+  const style = decalMarkerStyle(d.color, d.shape);
+  const text = esc(d.decalNumber.slice(0, textLen));
+  if (d.shape === 'DIAMOND') {
+    return `<div class="decal-marker" data-id="${d.id}"
+      style="left:${d.x}%;top:${d.y}%;transform:translate(-50%,-50%) rotate(45deg);${style}"
+      title="${esc(d.decalNumber)}"><span style="display:block;transform:rotate(-45deg);">${text}</span></div>`;
+  }
+  return `<div class="decal-marker" data-id="${d.id}"
+    style="left:${d.x}%;top:${d.y}%;transform:translate(-50%,-50%);${style}"
+    title="${esc(d.decalNumber)}">${text}</div>`;
 }
 
 /* ──────────── 왼쪽 사이드바 토글 ──────────── */
