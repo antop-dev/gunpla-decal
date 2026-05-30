@@ -1,14 +1,14 @@
 <!DOCTYPE html>
-<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<html th:lang="${#locale.language}" xmlns:th="http://www.thymeleaf.org">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=1280">
   <meta name="context-path" th:content="@{/}">
-  <title th:text="${manual != null} ? ${manual.productName + ' | 건담 메뉴얼'} : '건담 메뉴얼'">건담 메뉴얼</title>
-  <meta name="description" th:content="${manual != null} ? ${manual.grade + ' ' + manual.modelNumber + ' ' + manual.productName + ' 건담프라 데칼 메뉴얼'} : '건담프라 데칼 메뉴얼 목록'">
+  <title th:text="${manual != null} ? (${manual.productName} + ' | ' + #{site.title}) : #{site.title}">Gundam Manual</title>
+  <meta name="description" th:content="${manual != null} ? (${manual.grade + ' ' + manual.modelNumber + ' ' + manual.productName} + ' ' + #{site.desc.suffix}) : #{site.desc.list}">
   <meta property="og:type" content="website">
-  <meta property="og:title" th:content="${manual != null} ? ${manual.productName + ' | 건담 메뉴얼'} : '건담 메뉴얼'">
-  <meta property="og:description" th:content="${manual != null} ? ${manual.grade + ' ' + manual.modelNumber + ' ' + manual.productName + ' 건담프라 데칼 메뉴얼'} : '건담프라 데칼 메뉴얼 목록'">
+  <meta property="og:title" th:content="${manual != null} ? (${manual.productName} + ' | ' + #{site.title}) : #{site.title}">
+  <meta property="og:description" th:content="${manual != null} ? (${manual.grade + ' ' + manual.modelNumber + ' ' + manual.productName} + ' ' + #{site.desc.suffix}) : #{site.desc.list}">
   <meta property="og:url" th:content="${manual != null} ? ${baseUrl + '/' + manual.b62id} : ${baseUrl}">
   <script id="json-ld" type="application/ld+json" th:utext="${jsonLd}"></script>
   <link rel="alternate" type="application/rss+xml" title="RSS Feed" th:href="${baseUrl + '/rss.xml'}">
@@ -29,13 +29,13 @@
   <div id="sb-header" class="flex items-center gap-2 px-2 bg-gray-800 border-b border-gray-700 flex-shrink-0" style="height:48px;">
     <button id="sb-toggle"
       class="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded hover:bg-gray-700 text-gray-400 hover:text-white"
-      title="접기">
+      th:title="#{sidebar.collapse}">
       <i id="sb-toggle-icon" class="fas fa-angles-left text-sm"></i>
     </button>
-    <span id="sb-title" class="font-bold text-sm whitespace-nowrap flex-1">건담 메뉴얼</span>
+    <span id="sb-title" class="font-bold text-sm whitespace-nowrap flex-1" th:text="#{site.title}">Gundam Manual</span>
     <button id="sb-refresh"
       class="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded hover:bg-gray-700 text-gray-400 hover:text-white"
-      title="새로고침">
+      th:title="#{sidebar.refresh}">
       <i class="fas fa-rotate-right text-xs"></i>
     </button>
   </div>
@@ -46,12 +46,12 @@
     <div class="px-2 py-1.5 border-b border-gray-700 flex-shrink-0">
       <div class="flex items-center gap-1 bg-gray-700 rounded px-2 py-1">
         <i class="fas fa-magnifying-glass text-gray-500 text-xs"></i>
-        <input id="manual-search" type="text" placeholder="등급 또는 제품명 검색…" autocomplete="off" aria-label="메뉴얼 검색"
+        <input id="manual-search" type="text" th:placeholder="#{manual.search.placeholder}" autocomplete="off" th:attr="aria-label=#{manual.search.aria}"
           class="flex-1 bg-transparent text-xs outline-none text-gray-300 placeholder-gray-500">
       </div>
     </div>
     <div id="manual-list" class="flex-1 overflow-y-auto p-1.5">
-      <p class="text-gray-500 text-xs p-2">불러오는 중…</p>
+      <p class="text-gray-500 text-xs p-2" th:text="#{manual.loading}">Loading…</p>
     </div>
   </div>
 
@@ -83,7 +83,7 @@
   <!-- 썸네일 스트립 -->
   <div id="thumb-strip" class="flex-shrink-0 bg-gray-800 overflow-x-auto" style="height:90px;">
     <div class="strip-inner">
-      <span class="text-gray-500 text-xs select-none">메뉴얼을 선택하세요</span>
+      <span class="text-gray-500 text-xs select-none" th:text="#{manual.select}">Select a manual</span>
     </div>
   </div>
 
@@ -95,7 +95,7 @@
       <div id="no-pdf" class="absolute inset-0 flex items-center justify-center text-gray-300 select-none">
         <div class="text-center">
           <i class="fas fa-file-pdf text-5xl mb-3 opacity-40"></i>
-          <p class="text-sm">좌측에서 메뉴얼을 선택하세요</p>
+          <p class="text-sm" th:text="#{pdf.select}">Select a manual from the left</p>
         </div>
       </div>
       <div id="pdf-loading"><div id="pdf-loading-page"></div></div>
@@ -108,14 +108,14 @@
       <div id="zoom-overlay">
         <span id="zoom-label"></span>
         <div class="zoom-divider"></div>
-        <input id="zoom-slider" type="range" min="50" max="500" step="1" value="100" aria-label="확대/축소">
-        <button id="fit-width-btn" title="가로 맞춤">↔︎</button>
-        <button id="fit-height-btn" title="세로 맞춤">↕︎</button>
+        <input id="zoom-slider" type="range" min="50" max="500" step="1" value="100" th:attr="aria-label=#{zoom.aria}">
+        <button id="fit-width-btn" th:title="#{zoom.fitWidth}">↔︎</button>
+        <button id="fit-height-btn" th:title="#{zoom.fitHeight}">↕︎</button>
         <div class="zoom-divider"></div>
-        <label id="marker-toggle" title="마커 보이기/숨기기">
+        <label id="marker-toggle" th:title="#{marker.toggle}">
           <input type="checkbox" id="marker-visible" checked>
           <i class="fas fa-location-dot"></i>
-          <span>마커</span>
+          <span th:text="#{marker.label}">Marker</span>
         </label>
       </div>
     </div>
@@ -129,10 +129,10 @@
       <div id="rs-header" class="flex items-center gap-2 px-2 border-b border-gray-200 bg-gray-50 flex-shrink-0" style="height:40px;">
         <button id="rs-toggle"
           class="flex-shrink-0 w-7 h-7 flex items-center justify-center rounded hover:bg-gray-200 text-gray-500 hover:text-gray-800"
-          title="접기">
+          th:title="#{sidebar.collapse}">
           <i id="rs-toggle-icon" class="fas fa-angles-right text-xs"></i>
         </button>
-        <span id="rs-title" class="text-xs font-semibold text-gray-700 whitespace-nowrap flex-1">데칼 목록</span>
+        <span id="rs-title" class="text-xs font-semibold text-gray-700 whitespace-nowrap flex-1" th:text="#{decal.list.title}">Decal List</span>
       </div>
 
       <!-- 펼쳤을 때: 검색 + 그리드 -->
@@ -141,13 +141,13 @@
         <div class="px-2 py-1.5 border-b border-gray-100 flex-shrink-0">
           <div class="flex items-center gap-1 bg-gray-100 rounded px-2 py-1">
             <i class="fas fa-magnifying-glass text-gray-400 text-xs"></i>
-            <input id="decal-search" type="text" placeholder="검색…" autocomplete="off" aria-label="데칼 검색"
+            <input id="decal-search" type="text" th:placeholder="#{decal.search.placeholder}" autocomplete="off" th:attr="aria-label=#{decal.search.aria}"
               class="flex-1 bg-transparent text-xs outline-none text-gray-700 placeholder-gray-400">
           </div>
         </div>
         <!-- 데칼 그리드 (5열) -->
         <div id="decal-list" class="flex-1 overflow-y-auto p-1.5">
-          <span class="text-xs text-gray-400 p-1 block">메뉴얼을 선택하세요</span>
+          <span class="text-xs text-gray-400 p-1 block" th:text="#{manual.select}">Select a manual</span>
         </div>
       </div>
 
@@ -160,6 +160,22 @@
 </div>
 
 <div id="manual-item-tip"></div>
+<script th:inline="javascript">
+  window.i18n = {
+    siteTitle:        /*[[#{site.title}]]*/ 'Gundam Manual',
+    siteDescSuffix:   /*[[#{site.desc.suffix}]]*/ 'Gunpla Decal Manual',
+    manualLoading:    /*[[#{manual.loading}]]*/ 'Loading…',
+    manualSelect:     /*[[#{manual.select}]]*/ 'Select a manual',
+    manualEmpty:      /*[[#{manual.empty}]]*/ 'No manuals registered',
+    manualSearchEmpty:/*[[#{manual.search.empty}]]*/ 'No results found',
+    manualLinkOpen:   /*[[#{manual.link.open}]]*/ 'Open link',
+    manualPdfDownload:/*[[#{manual.pdf.download}]]*/ 'Download PDF',
+    manualNotFound:   /*[[#{manual.notFound}]]*/ 'Manual not found',
+    decalEmpty:       /*[[#{decal.empty}]]*/ 'No decals',
+    decalSearchEmpty: /*[[#{decal.search.empty}]]*/ 'No results found',
+    pdfLoading:       /*[[#{pdf.loading}]]*/ 'Loading…',
+  };
+</script>
 <script th:src="@{/vendor/pretty-scroll/pretty-scroll.js}"></script>
 <script th:src="@{/js/common.js}"></script>
 <script th:src="@{/js/app.js}"></script>
