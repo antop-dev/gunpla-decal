@@ -271,12 +271,7 @@ async function selectManual(b62id, push = true) {
 
 // 현재 페이지의 데칼 마커를 오버레이에 렌더링 (common.js의 renderPage에서 호출)
 function renderOverlay() {
-  overlay.innerHTML = allDecals.filter(d => d.page === currentPage).map(d => `
-    <div class="decal-marker" data-id="${d.id}"
-         style="left:${d.x}%;top:${d.y}%;transform:translate(-50%,-50%);${decalMarkerStyle(d.color, d.shape)}"
-         title="${esc(d.decalNumber)}">
-      ${esc(d.decalNumber.slice(0, 3))}
-    </div>`).join('');
+  overlay.innerHTML = allDecals.filter(d => d.page === currentPage).map(d => buildDecalMarkerHtml(d, 3)).join('');
   overlay.querySelectorAll('.decal-marker').forEach(m =>
     m.addEventListener('click', e => {
       e.stopPropagation();
@@ -299,9 +294,11 @@ function sortDecalNumber(a, b) {
   return a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
 }
 
-// 데칼 쌍 정렬: 동그라미 → 네모, 같은 도형 내에서는 색상 오름차순, 같은 색상 내에서는 번호 오름차순
+// 데칼 쌍 정렬: 동그라미 → 네모 → 다이아, 같은 도형 내에서는 색상 오름차순, 같은 색상 내에서는 번호 오름차순
+const SHAPE_ORDER = { CIRCLE: 0, SQUARE: 1, DIAMOND: 2 };
 function sortDecalPairs(a, b) {
-  if (a.shape !== b.shape) return a.shape === 'CIRCLE' ? -1 : 1;
+  const so = (SHAPE_ORDER[a.shape] ?? 99) - (SHAPE_ORDER[b.shape] ?? 99);
+  if (so !== 0) return so;
   if (a.color !== b.color) return a.color < b.color ? -1 : 1;
   return sortDecalNumber(a.num, b.num);
 }
@@ -350,7 +347,7 @@ function renderDecalList() {
       const cnt = allDecals.filter(d => d.decalNumber === num && (d.color ?? '#ffffff') === color && (d.shape ?? 'CIRCLE') === shape).length;
       const isHex = color.startsWith('#');
       const lum = isHex ? hexLuminance(color) : 0;
-      const shapeIcon = shape === 'CIRCLE' ? '●' : '■';
+      const shapeIcon = shape === 'CIRCLE' ? '●' : shape === 'DIAMOND' ? '◆' : '■';
       const iconColor = isHex ? color : '#555';
       const iconStroke = (isHex && lum > 0.85) ? '-webkit-text-stroke:0.5px #aaa;' : '';
       return `
