@@ -9,12 +9,14 @@ import com.example.gunpladecal.app.dto.DecalUpdateRequest
 import com.example.gunpladecal.app.dto.ManualDetail
 import com.example.gunpladecal.app.dto.ManualSummary
 import com.example.gunpladecal.app.dto.ManualUpdateRequest
+import com.example.gunpladecal.app.event.ManualPublishedEvent
 import com.example.gunpladecal.app.repository.DecalRepository
 import com.example.gunpladecal.app.repository.ManualRepository
 import com.example.gunpladecal.app.util.Base62
 import com.example.gunpladecal.config.AppProperties
 import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.annotation.PostConstruct
+import org.springframework.context.ApplicationEventPublisher
 import org.springframework.core.io.FileSystemResource
 import org.springframework.core.io.Resource
 import org.springframework.http.HttpStatus
@@ -39,6 +41,7 @@ class ManualService(
     private val decalRepository: DecalRepository,
     private val thumbnailService: ThumbnailService,
     private val appProperties: AppProperties,
+    private val eventPublisher: ApplicationEventPublisher,
 ) {
     /** 애플리케이션 시작 시 PDF 업로드 디렉터리가 없으면 생성 */
     @PostConstruct
@@ -88,7 +91,9 @@ class ManualService(
         log.debug { "togglePublished(id=$id)" }
         val manual = findManualById(id)
         manual.published = !manual.published
-        return manualRepository.save(manual).toSummary()
+        val saved = manualRepository.save(manual)
+        eventPublisher.publishEvent(ManualPublishedEvent(saved.id, saved.published, saved.createdAt))
+        return saved.toSummary()
     }
 
     /** 메뉴얼 등록: PDF 파일 업로드 또는 URL 다운로드로 저장 */

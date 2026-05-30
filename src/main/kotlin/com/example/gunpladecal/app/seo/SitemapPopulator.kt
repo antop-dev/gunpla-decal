@@ -1,5 +1,6 @@
 package com.example.gunpladecal.app.seo
 
+import com.example.gunpladecal.app.event.ManualPublishedEvent
 import com.example.gunpladecal.app.repository.ManualRepository
 import com.example.gunpladecal.app.util.Base62
 import net.menoita.sitemap.config.SitemapProperties
@@ -8,6 +9,8 @@ import net.menoita.sitemap.model.ChangeFrequency
 import net.menoita.sitemap.model.SitemapUrl
 import org.springframework.boot.CommandLineRunner
 import org.springframework.stereotype.Component
+import org.springframework.transaction.event.TransactionPhase
+import org.springframework.transaction.event.TransactionalEventListener
 
 @Component
 class SitemapPopulator(
@@ -26,6 +29,23 @@ class SitemapPopulator(
                     .lastmod(manual.createdAt)
                     .build(),
             )
+        }
+    }
+
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    fun onPublishedChanged(event: ManualPublishedEvent) {
+        val loc = "${sitemapProperties.baseUrl}/${Base62.encode(event.id * 23)}"
+        if (event.published) {
+            sitemapHolder.add(
+                SitemapUrl
+                    .builder(loc)
+                    .priority(0.5)
+                    .changefreq(ChangeFrequency.ALWAYS)
+                    .lastmod(event.createdAt)
+                    .build(),
+            )
+        } else {
+            sitemapHolder.remove(loc)
         }
     }
 }
