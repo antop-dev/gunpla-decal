@@ -11,4 +11,6 @@ data class AppProperties(
     val uploadDir: String,
     /** OpenAI API 키 (환경변수 openai.api-key 또는 application.yml에서 설정) */
     val openAiKey: String?,
+
+    val baseUrl: String
 )

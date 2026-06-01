@@ -2,8 +2,8 @@ package com.example.gunpladecal.app.controller
 
 import com.example.gunpladecal.app.service.ManualService
 import com.example.gunpladecal.app.util.Base62
+import com.example.gunpladecal.config.AppProperties
 import com.fasterxml.jackson.databind.ObjectMapper
-import net.menoita.sitemap.config.SitemapProperties
 import org.springframework.security.core.Authentication
 import org.springframework.stereotype.Controller
 import org.springframework.ui.Model
@@ -14,12 +14,12 @@ import org.springframework.web.bind.annotation.PathVariable
 /** Thymeleaf 페이지 라우팅 컨트롤러 */
 @Controller
 class PageController(
-    private val sitemapProperties: SitemapProperties,
+    private val appProperties: AppProperties,
     private val manualService: ManualService,
     private val objectMapper: ObjectMapper,
 ) {
     @ModelAttribute("baseUrl")
-    fun baseUrl(): String = sitemapProperties.baseUrl
+    fun baseUrl(): String = appProperties.baseUrl
 
     /** 기본 JSON-LD: 메인 페이지용 WebSite 스키마 */
     @ModelAttribute("jsonLd")
@@ -30,7 +30,7 @@ class PageController(
                 "@type" to "WebSite",
                 "name" to "건담 메뉴얼",
                 "description" to "건담프라 데칼 메뉴얼 목록",
-                "url" to sitemapProperties.baseUrl,
+                "url" to appProperties.baseUrl,
             ),
         )
 
@@ -56,7 +56,7 @@ class PageController(
                             "@type" to "Article",
                             "name" to "${manual.productName} | 건담 메뉴얼",
                             "description" to "${manual.grade.name} ${manual.modelNumber} ${manual.productName} 건담프라 데칼 메뉴얼",
-                            "url" to "${sitemapProperties.baseUrl}/${manual.b62id}",
+                            "url" to "${appProperties.baseUrl}/${manual.b62id}",
                         ),
                     ),
                 )

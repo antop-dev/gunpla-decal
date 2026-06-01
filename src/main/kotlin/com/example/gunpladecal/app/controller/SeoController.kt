@@ -1,22 +1,68 @@
-package com.example.gunpladecal.app.seo
+package com.example.gunpladecal.app.controller
 
+import com.example.gunpladecal.app.dto.Sitemap
 import com.example.gunpladecal.app.repository.ManualRepository
 import com.example.gunpladecal.app.util.Base62
+import com.example.gunpladecal.config.AppProperties
 import com.rometools.rome.feed.synd.SyndContentImpl
 import com.rometools.rome.feed.synd.SyndEntryImpl
 import com.rometools.rome.feed.synd.SyndFeedImpl
 import com.rometools.rome.io.SyndFeedOutput
-import net.menoita.sitemap.config.SitemapProperties
+import org.springframework.http.MediaType
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.RestController
 import java.time.ZoneId
 import java.util.Date
 
 @RestController
-class FeedController(
-    private val sitemapProperties: SitemapProperties,
+class SeoController(
+    private val appProperties: AppProperties,
     private val manualRepository: ManualRepository,
 ) {
+    @GetMapping("/robots.txt", produces = [MediaType.TEXT_PLAIN_VALUE])
+    fun robotsTxt(): String {
+        val baseUrl = appProperties.baseUrl
+        return """
+            User-agent: *
+            Disallow: /admin
+            Disallow: /login
+            
+            # AI crawlers
+            User-agent: GPTBot
+            Allow: /
+            
+            User-agent: ChatGPT-User
+            Allow: /
+            
+            User-agent: ClaudeBot
+            Allow: /
+            
+            User-agent: PerplexityBot
+            Allow: /
+            
+            User-agent: Googlebot
+            Allow: /
+            
+            Sitemap: $baseUrl/sitemap.xml
+            
+            # RSS / Atom Feed
+            Feed: $baseUrl/rss.xml
+            Feed: $baseUrl/atom.xml
+            """.trimIndent()
+    }
+
+    @GetMapping("/sitemap.xml", produces = ["application/xml;charset=UTF-8"])
+    fun sitemap(): Sitemap {
+        val urls =
+            manualRepository.findAllByPublishedTrueOrderByIdDesc().map {
+                Sitemap.SitemapUrl(
+                    loc = appProperties.baseUrl + "/" + Base62.encode(it.id),
+                    lastmod = it.updatedAt.atZone(ZoneId.systemDefault()).toOffsetDateTime(),
+                )
+            }
+        return Sitemap(urls = urls)
+    }
+
     @GetMapping("/rss.xml", produces = ["application/rss+xml;charset=UTF-8"])
     fun rss(): String = buildFeed("rss_2.0")
 
@@ -24,7 +70,7 @@ class FeedController(
     fun atom(): String = buildFeed("atom_1.0")
 
     private fun buildFeed(feedType: String): String {
-        val baseUrl = sitemapProperties.baseUrl
+        val baseUrl = appProperties.baseUrl
         val feed =
             SyndFeedImpl().apply {
                 this.feedType = feedType
