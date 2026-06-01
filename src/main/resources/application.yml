@@ -29,6 +29,8 @@ spring:
   flyway:
     enabled: true
     baseline-on-migrate: true
+  jackson:
+    time-zone: Asia/Seoul
 
 app:
   db-path: ${DB_PATH:./gunpla.db}
@@ -38,6 +40,3 @@ app:
 
 openai:
   api-key: ${OPENAI_KEY:}
-
-
-

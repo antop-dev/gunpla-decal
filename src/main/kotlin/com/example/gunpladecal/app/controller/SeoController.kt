@@ -57,7 +57,9 @@ class SeoController(
             manualRepository.findAllByPublishedTrueOrderByIdDesc().map {
                 Sitemap.SitemapUrl(
                     loc = appProperties.baseUrl + "/" + Base62.encode(it.id),
-                    lastmod = it.updatedAt.atZone(ZoneId.systemDefault()).toOffsetDateTime(),
+                    lastmod = it.updatedAt.atZone(ZoneId.of("Asia/Seoul")).toOffsetDateTime(),
+                    changefreq = "daily",
+                    priority = 0.5,
                 )
             }
         return Sitemap(urls = urls)
