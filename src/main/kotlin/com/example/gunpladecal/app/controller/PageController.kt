@@ -21,6 +21,9 @@ class PageController(
     @ModelAttribute("baseUrl")
     fun baseUrl(): String = appProperties.baseUrl
 
+    @ModelAttribute("ga4")
+    fun ga4(): String? = appProperties.ga4
+
     /** 기본 JSON-LD: 메인 페이지용 WebSite 스키마 */
     @ModelAttribute("jsonLd")
     fun defaultJsonLd(): String =

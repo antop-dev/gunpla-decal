@@ -17,6 +17,15 @@
   <script th:src="@{/vendor/tailwind/tailwind.min.js}"></script>
   <script th:src="@{/vendor/pdfjs/pdf.min.js}"></script>
   <link rel="stylesheet" th:href="@{/css/common.css}">
+  <th:block th:if="${not #strings.isEmpty(ga4)}">
+    <script th:src="@{https://www.googletagmanager.com/gtag/js(id=${ga4})}" async="async"></script>
+    <script th:inline="javascript">
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', /*[[${ga4}]]*/ '');
+    </script>
+  </th:block>
 </head>
 <body class="page-viewer flex bg-gray-900">
 

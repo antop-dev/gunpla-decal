@@ -37,6 +37,7 @@ app:
   upload-dir: ${UPLOAD_DIR:./uploads}
   openai-key: ${openai.api-key}
   base-url: ${BASE_URL:http://localhost:8080}
+  ga4: ${GA4_ID:}
 
 openai:
   api-key: ${OPENAI_KEY:}

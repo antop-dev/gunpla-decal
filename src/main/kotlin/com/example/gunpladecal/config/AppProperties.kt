@@ -11,6 +11,8 @@ data class AppProperties(
     val uploadDir: String,
     /** OpenAI API 키 (환경변수 openai.api-key 또는 application.yml에서 설정) */
     val openAiKey: String?,
-
-    val baseUrl: String
+    /** 사이트 기본 URL (환경변수 BASE_URL 또는 application.yml에서 설정) */
+    val baseUrl: String,
+    /** Google Analytics 4 측정 ID (환경변수 GA4_ID 또는 application.yml에서 설정, 미설정 시 GA4 비활성) */
+    val ga4: String?,
 )
