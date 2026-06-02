@@ -65,7 +65,7 @@ jobs:
           UPLOAD_DIR: ${{ secrets.APP_UPLOAD_DIR }}
           OPENAI_KEY: ${{ secrets.APP_OPENAI_KEY }}
           BASE_URL  : ${{ secrets.APP_BASE_URL }}
-          GA4_ID    : ${{ secrets.GA4_ID }}
+          GA4_ID    : ${{ secrets.APP_GA4_ID }}
         with:
           host:     ${{ secrets.SSH_HOST }}
           port:     ${{ secrets.SSH_PORT }}
