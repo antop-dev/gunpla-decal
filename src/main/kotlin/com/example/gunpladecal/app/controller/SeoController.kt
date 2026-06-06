@@ -4,6 +4,10 @@ import com.example.gunpladecal.app.dto.Sitemap
 import com.example.gunpladecal.app.repository.ManualRepository
 import com.example.gunpladecal.app.util.Base62
 import com.example.gunpladecal.config.AppProperties
+import com.fasterxml.jackson.dataformat.xml.XmlMapper
+import com.fasterxml.jackson.dataformat.xml.ser.ToXmlGenerator
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
+import com.fasterxml.jackson.module.kotlin.KotlinModule
 import com.rometools.rome.feed.synd.SyndContentImpl
 import com.rometools.rome.feed.synd.SyndEntryImpl
 import com.rometools.rome.feed.synd.SyndFeedImpl
@@ -19,6 +23,12 @@ class SeoController(
     private val appProperties: AppProperties,
     private val manualRepository: ManualRepository,
 ) {
+    private val xmlMapper =
+        XmlMapper().apply {
+            enable(ToXmlGenerator.Feature.WRITE_XML_DECLARATION)
+            registerModules(KotlinModule.Builder().build(), JavaTimeModule())
+        }
+
     @GetMapping("/robots.txt", produces = [MediaType.TEXT_PLAIN_VALUE])
     fun robotsTxt(): String {
         val baseUrl = appProperties.baseUrl
@@ -52,7 +62,7 @@ class SeoController(
     }
 
     @GetMapping("/sitemap.xml", produces = ["application/xml;charset=UTF-8"])
-    fun sitemap(): Sitemap {
+    fun sitemap(): String {
         val urls =
             manualRepository.findAllByPublishedTrueOrderByIdDesc().map {
                 Sitemap.SitemapUrl(
@@ -62,7 +72,7 @@ class SeoController(
                     priority = 0.5,
                 )
             }
-        return Sitemap(urls = urls)
+        return xmlMapper.writeValueAsString(Sitemap(urls = urls))
     }
 
     @GetMapping("/rss.xml", produces = ["application/rss+xml;charset=UTF-8"])
