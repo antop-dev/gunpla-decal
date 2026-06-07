@@ -45,7 +45,7 @@ const tooltip = document.getElementById('marker-tooltip');
 container.addEventListener('mousedown', e => {
   if (e.button !== 0) return;
   if (e.target.closest('.decal-marker') || e.target.closest('#marker-tooltip')) return;
-  if (e.target.closest('#zoom-overlay') || e.target.closest('#publish-overlay')) return;
+  if (e.target.closest('#zoom-overlay')) return;
   if (!document.getElementById('decal-modal').classList.contains('hidden')) return;
   if (!document.getElementById('edit-modal').classList.contains('hidden')) return;
   mouseDown = true;
@@ -78,8 +78,7 @@ window.addEventListener('mouseup', e => {
   if (!wasDragging && pdfDoc
       && !e.target.closest('.decal-marker')
       && !e.target.closest('#marker-tooltip')
-      && !e.target.closest('#zoom-overlay')
-      && !e.target.closest('#publish-overlay')) {
+      && !e.target.closest('#zoom-overlay')) {
     // 클릭 좌표를 PDF 캔버스 기준 백분율(%)로 변환
     const rect = pdfScroll.getBoundingClientRect();
     const contentX = e.clientX - rect.left + pdfScroll.scrollLeft;
@@ -124,7 +123,7 @@ async function loadManuals() {
     btn.dataset.id  = m.id;
     btn.dataset.tip = `[${m.grade}] ${m.modelNumber} ${m.productName}`;
     btn.innerHTML   = '<i class="fas fa-file-pdf text-sm"></i>';
-    btn.addEventListener('click', () => selectManual(+btn.dataset.id));
+    btn.addEventListener('click', () => selectManual(btn.dataset.id));
     iconEl.appendChild(btn);
   });
 
@@ -175,12 +174,12 @@ function renderManualItems(list) {
   el.querySelectorAll('.manual-item').forEach(item =>
     item.addEventListener('click', e => {
       if (e.target.closest('.btn-edit') || e.target.closest('.btn-del')) return;
-      selectManual(+item.dataset.id);
+      selectManual(item.dataset.id);
     }));
   el.querySelectorAll('.btn-edit').forEach(btn =>
-    btn.addEventListener('click', () => openManualEditModal(+btn.dataset.id)));
+    btn.addEventListener('click', () => openManualEditModal(btn.dataset.id)));
   el.querySelectorAll('.btn-del').forEach(btn =>
-    btn.addEventListener('click', () => deleteManual(+btn.dataset.id)));
+    btn.addEventListener('click', () => deleteManual(btn.dataset.id)));
 }
 
 // 메뉴얼 선택: 목록 하이라이트 업데이트 후 PDF 로드
@@ -205,7 +204,6 @@ async function selectManual(id) {
     noPdf.style.display = 'none';
     pdfScroll.style.display = '';
     document.getElementById('zoom-overlay').style.display = 'none';
-    document.getElementById('publish-overlay').style.display = 'none';
     document.getElementById('pdf-loading').style.display = 'flex';
     thumbStrip.innerHTML = '<div class="strip-inner"><span class="text-gray-500 text-xs select-none">로딩 중…</span></div>';
 
@@ -222,7 +220,7 @@ async function selectManual(id) {
     document.getElementById('zoom-overlay').style.display = 'flex';
     updatePublishOverlay();
 
-    renderThumbnails(`/manuals/${id}/thumbnails`);
+    renderThumbnails(data.thumbnails);
   } finally {
     manualLoading = false;
   }
@@ -898,14 +896,10 @@ document.getElementById('marker-visible').addEventListener('change', e => {
 /* ──────────── 게시 상태 ──────────── */
 
 function updatePublishOverlay() {
-  const el = document.getElementById('publish-overlay');
-  if (!currentManual) { el.style.display = 'none'; return; }
-  el.style.display = 'flex';
-  el.style.background = currentManual.published
-    ? 'rgba(22,163,74,0.85)'
-    : 'rgba(107,114,128,0.75)';
+  const btn = document.getElementById('publish-btn');
+  btn.classList.toggle('published', !!currentManual?.published);
   document.getElementById('publish-icon').className =
-    `fas fa-${currentManual.published ? 'eye' : 'eye-slash'}`;
+    `fas fa-${currentManual?.published ? 'eye' : 'eye-slash'}`;
 }
 
 async function togglePublished() {
@@ -925,7 +919,7 @@ async function autoUnpublish() {
   await togglePublished();
 }
 
-document.getElementById('publish-overlay').addEventListener('click', togglePublished);
+document.getElementById('publish-btn').addEventListener('click', togglePublished);
 
 /* ──────────── 메뉴얼 삭제 ──────────── */
 
@@ -938,7 +932,6 @@ async function deleteManual(id) {
     currentManual = null; pdfDoc = null; allDecals = [];
     pdfScroll.style.display = 'none';
     noPdf.style.display = '';
-    document.getElementById('publish-overlay').style.display = 'none';
     thumbStrip.innerHTML = '<div class="strip-inner"><span class="text-gray-500 text-xs select-none">메뉴얼을 선택하세요</span></div>';
   }
   loadManuals();

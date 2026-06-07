@@ -9,7 +9,7 @@
   <meta property="og:type" content="website">
   <meta property="og:title" th:content="${manual != null} ? (${manual.productName} + ' | ' + #{site.title}) : #{site.title}">
   <meta property="og:description" th:content="${manual != null} ? (${manual.grade + ' ' + manual.modelNumber + ' ' + manual.productName} + ' ' + #{site.desc.suffix}) : #{site.desc.list}">
-  <meta property="og:url" th:content="${manual != null} ? ${baseUrl + '/' + manual.b62id} : ${baseUrl}">
+  <meta property="og:url" th:content="${manual != null} ? ${baseUrl + '/' + manual.id} : ${baseUrl}">
   <script id="json-ld" type="application/ld+json" th:utext="${jsonLd}"></script>
   <link rel="alternate" type="application/rss+xml" title="RSS Feed" th:href="${baseUrl + '/rss.xml'}">
   <link rel="alternate" type="application/atom+xml" title="Atom Feed" th:href="${baseUrl + '/atom.xml'}">
@@ -116,10 +116,9 @@
       </div>
       <div id="zoom-overlay">
         <span id="zoom-label"></span>
-        <div class="zoom-divider"></div>
         <input id="zoom-slider" type="range" min="50" max="500" step="1" value="100" th:attr="aria-label=#{zoom.aria}">
-        <button id="fit-width-btn" th:title="#{zoom.fitWidth}">↔︎</button>
-        <button id="fit-height-btn" th:title="#{zoom.fitHeight}">↕︎</button>
+        <button id="fit-width-btn" th:title="#{zoom.fitWidth}">↔︎ <span th:text="#{zoom.fitWidth.label}">가로</span></button>
+        <button id="fit-height-btn" th:title="#{zoom.fitHeight}">↕︎ <span th:text="#{zoom.fitHeight.label}">세로</span></button>
         <div class="zoom-divider"></div>
         <label id="marker-toggle" th:title="#{marker.toggle}">
           <input type="checkbox" id="marker-visible" checked>

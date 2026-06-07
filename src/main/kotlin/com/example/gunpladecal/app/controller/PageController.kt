@@ -1,7 +1,7 @@
 package com.example.gunpladecal.app.controller
 
-import com.example.gunpladecal.app.service.ManualService
-import com.example.gunpladecal.app.util.Base62
+import com.example.gunpladecal.app.domain.ManualId
+import com.example.gunpladecal.app.service.ManualAssemblyService
 import com.example.gunpladecal.config.AppProperties
 import com.fasterxml.jackson.databind.ObjectMapper
 import org.springframework.security.core.Authentication
@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.PathVariable
 @Controller
 class PageController(
     private val appProperties: AppProperties,
-    private val manualService: ManualService,
+    private val manualAssemblyService: ManualAssemblyService,
     private val objectMapper: ObjectMapper,
 ) {
     @ModelAttribute("baseUrl")
@@ -42,13 +42,12 @@ class PageController(
     fun index() = "index"
 
     /** 메뉴얼 직접 링크 진입 (/A, /1B 등 base62 ID). SEO 메타 태그 주입 후 JS가 동일 메뉴얼 로드 */
-    @GetMapping("/{b62id:[0-9A-Za-z]+}")
+    @GetMapping("/{id:[0-9A-Za-z]+}")
     fun indexWithManual(
-        @PathVariable b62id: String,
+        @PathVariable id: ManualId,
         model: Model,
     ): String {
-        val id = Base62.decode(b62id) / 23
-        runCatching { manualService.getManual(id, onlyPublished = true) }
+        runCatching { manualAssemblyService.getManual(id.value, onlyPublished = true) }
             .onSuccess { manual ->
                 model.addAttribute("manual", manual)
                 model.addAttribute(
@@ -59,7 +58,7 @@ class PageController(
                             "@type" to "Article",
                             "name" to "${manual.productName} | 건담 메뉴얼",
                             "description" to "${manual.grade.name} ${manual.modelNumber} ${manual.productName} 건담프라 데칼 메뉴얼",
-                            "url" to "${appProperties.baseUrl}/${manual.b62id}",
+                            "url" to "${appProperties.baseUrl}/${manual.id}",
                         ),
                     ),
                 )

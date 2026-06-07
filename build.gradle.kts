@@ -33,7 +33,7 @@ dependencies {
     implementation(libs.spring.boot.starter.thymeleaf)
     implementation(libs.spring.boot.starter.actuator)
     implementation(libs.kotlin.logging)
-    implementation(libs.pdfbox)
+    implementation(libs.pdfbox) { exclude(group = "commons-logging", module = "commons-logging") }
     implementation(libs.jai.imageio.jpeg2000)
     implementation(libs.openai.java.spring.boot.starter)
     implementation(libs.rome)

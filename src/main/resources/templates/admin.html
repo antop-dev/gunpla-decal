@@ -93,11 +93,15 @@
       </div>
     </div>
     <div id="zoom-overlay">
-      <span id="zoom-label"></span>
+      <button id="publish-btn" title="게시 상태 전환">
+        <i id="publish-icon" class="fas fa-eye-slash"></i>
+        <span>게시</span>
+      </button>
       <div class="zoom-divider"></div>
-      <input id="zoom-slider" type="range" min="100" max="400" step="1" value="150" aria-label="확대/축소">
-      <button id="fit-width-btn" title="가로 맞춤">↔︎</button>
-      <button id="fit-height-btn" title="세로 맞춤">↕︎</button>
+      <span id="zoom-label"></span>
+      <input id="zoom-slider" type="range" min="100" max="500" step="1" value="150" aria-label="확대/축소">
+      <button id="fit-width-btn" title="가로 맞춤">↔︎ 가로</button>
+      <button id="fit-height-btn" title="세로 맞춤">↕︎ 세로</button>
       <div class="zoom-divider"></div>
       <label id="marker-toggle" title="마커 보이기/숨기기">
         <input type="checkbox" id="marker-visible" checked>
@@ -108,10 +112,6 @@
     <div id="marker-tooltip">
       <button id="tt-edit"   title="번호 수정"><i class="fas fa-pen"></i></button>
       <button id="tt-delete" title="데칼 삭제"><i class="fas fa-trash"></i></button>
-    </div>
-    <div id="publish-overlay" style="position:absolute; top:8px; right:8px; z-index:20; display:none; align-items:center; gap:6px; padding:5px 10px; border-radius:8px; cursor:pointer; user-select:none; border:1px solid #000;">
-      <i id="publish-icon" class="fas fa-eye" style="font-size:12px; color:#fff;"></i>
-      <span style="font-size:12px; font-weight:700; color:#fff;">게시</span>
     </div>
   </div>
 </div>

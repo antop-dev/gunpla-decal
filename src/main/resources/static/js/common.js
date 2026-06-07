@@ -138,14 +138,13 @@ async function renderPage(num, resetZoom = false) {
 
 /* ──────────── 썸네일 스트립 ──────────── */
 
-// 서버에서 썸네일 URL 목록을 받아 상단 스트립에 표시
-async function renderThumbnails(apiUrl) {
+// 썸네일 URL 목록을 받아 상단 스트립에 표시
+function renderThumbnails(urls) {
   const inner = document.createElement('div');
   inner.className = 'strip-inner';
   thumbStrip.innerHTML = '';
   thumbStrip.appendChild(inner);
 
-  const urls = await fetch(apiUrl).then(r => r.json());
   urls.forEach((url, idx) => {
     const i = idx + 1;
     const wrap = document.createElement('div');
@@ -255,6 +254,25 @@ document.getElementById('fit-height-btn')?.addEventListener('click', () => {
   pdfScroll.scrollTop  = 0;
   pdfScroll.scrollLeft = Math.max(0, (basePdfWidth * scale - pdfScroll.clientWidth) / 2);
   scheduleRerender();
+});
+
+/* ──────────── 키보드 단축키 ──────────── */
+
+// 1~5: 줌 100%~500%, M: 마커 보이기/숨기기
+// input/textarea/select 포커스 중에는 무시
+document.addEventListener('keydown', e => {
+  if (e.target.matches('input, textarea, select')) return;
+  if (!pdfDoc) return;
+  if (e.key >= '1' && e.key <= '5') {
+    applyZoomPreset(+e.key * 100);
+    return;
+  }
+  if (e.key === 'm' || e.key === 'M') {
+    const cb = document.getElementById('marker-visible');
+    if (!cb) return;
+    cb.checked = !cb.checked;
+    cb.dispatchEvent(new Event('change'));
+  }
 });
 
 /* ──────────── 유틸 ──────────── */

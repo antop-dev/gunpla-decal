@@ -2,7 +2,6 @@ package com.example.gunpladecal.app.service
 
 import com.example.gunpladecal.app.domain.Manual
 import com.example.gunpladecal.app.domain.ManualThumbnail
-import com.example.gunpladecal.app.repository.ManualRepository
 import com.example.gunpladecal.app.repository.ManualThumbnailRepository
 import com.example.gunpladecal.config.AppProperties
 import io.github.oshai.kotlinlogging.KotlinLogging
@@ -28,7 +27,7 @@ private val log = KotlinLogging.logger {}
 @Service
 class ThumbnailService(
     private val manualThumbnailRepository: ManualThumbnailRepository,
-    private val manualRepository: ManualRepository,
+    private val manualService: ManualService,
     private val appProperties: AppProperties,
 ) {
     private val thumbHeight = 68
@@ -37,7 +36,12 @@ class ThumbnailService(
     fun generateThumbnails(manual: Manual) {
         val pdfFile = File(manual.pdfPath)
         if (!pdfFile.exists()) return
-        val uuidStr = Paths.get(manual.pdfPath).fileName.toString().removeSuffix(".pdf")
+        val uuidStr =
+            Paths
+                .get(manual.pdfPath)
+                .fileName
+                .toString()
+                .removeSuffix(".pdf")
 
         Loader.loadPDF(pdfFile).use { doc ->
             val renderer = PDFRenderer(doc)
@@ -77,7 +81,7 @@ class ThumbnailService(
         onlyPublished: Boolean = false,
     ): Resource {
         if (onlyPublished) {
-            val manual = manualRepository.findById(manualId).orElseThrow { ResponseStatusException(HttpStatus.NOT_FOUND) }
+            val manual = manualService.getManualEntity(manualId)
             if (!manual.published) throw ResponseStatusException(HttpStatus.NOT_FOUND)
         }
         val thumbnail =
@@ -98,7 +102,7 @@ class ThumbnailService(
     /** 스프링 시작 후 PDF는 있으나 썸네일이 없는 메뉴얼에 대해 썸네일 자동 생성 */
     @EventListener(ApplicationReadyEvent::class)
     fun generateMissingThumbnails() {
-        val manuals = manualRepository.findAllByOrderByIdDesc()
+        val manuals = manualService.getAllManualEntities()
         for (manual in manuals) {
             if (!manualThumbnailRepository.existsByManualId(manual.id)) {
                 try {

@@ -8,10 +8,10 @@ let highlightedDecalId = null;  // 현재 하이라이트된 데칼 ID (줌 후 
 minZoomMult = 0.5;              // 사용자 페이지: fitScale의 50%까지 축소 허용
 
 // 메뉴얼이 선택될 때 브라우저 title과 OG 메타 태그를 갱신한다 (SEO 무관, 브라우저/SNS 공유 용도).
-function updatePageMeta({ grade, modelNumber, productName, b62id }) {
+function updatePageMeta({ grade, modelNumber, productName, id }) {
   const title = `${productName} | ${window.i18n.siteTitle}`;
   const desc  = `${grade} ${modelNumber} ${productName} ${window.i18n.siteDescSuffix}`;
-  const url   = `${location.origin}${window.contextPath}/${b62id}`;
+  const url   = `${location.origin}${window.contextPath}/${id}`;
   document.title = title;
   document.querySelector('meta[name="description"]')?.setAttribute('content', desc);
   document.querySelector('meta[property="og:title"]')?.setAttribute('content', title);
@@ -81,7 +81,7 @@ async function loadManuals(q = '') {
       : `<p class="text-gray-500 text-xs p-2">${window.i18n.manualEmpty}</p>`;
   } else {
     el.innerHTML = allManuals.map(m => `
-      <div class="manual-item group px-2 py-1.5 rounded cursor-pointer hover:bg-gray-700 transition-colors" data-id="${m.b62id}">
+      <div class="manual-item group px-2 py-1.5 rounded cursor-pointer hover:bg-gray-700 transition-colors" data-id="${m.id}">
         <div class="flex items-center gap-1 mb-0.5">
           <span class="grade-badge grade-${esc(m.grade)}">${esc(m.grade)}</span>
           <span class="text-xs font-medium text-gray-200 leading-snug truncate flex-1">${esc(m.modelNumber)}</span>
@@ -90,8 +90,7 @@ async function loadManuals(q = '') {
             <i class="fas fa-link text-xs"></i>
           </a>` : ''}
           <button class="pdf-dl-btn opacity-0 group-hover:opacity-100 flex-shrink-0 text-gray-500 hover:text-white w-5 h-5 flex items-center justify-center"
-                  data-id="${m.b62id}"
-                  data-nid="${m.id}"
+                  data-id="${m.id}"
                   data-filename="${esc(m.grade)}_${esc(m.modelNumber)}_${esc(m.productName)}.pdf"
                   title="${window.i18n.manualPdfDownload}">
             <i class="fas fa-download text-xs"></i>
@@ -122,7 +121,7 @@ async function loadManuals(q = '') {
     el.querySelectorAll('.pdf-dl-btn').forEach(btn =>
       btn.addEventListener('click', async e => {
         e.stopPropagation();
-        const res = await fetch(`/manuals/${btn.dataset.nid}/pdf`);
+        const res = await fetch(`/manuals/${btn.dataset.id}/pdf`);
         const blob = await res.blob();
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -133,7 +132,7 @@ async function loadManuals(q = '') {
       }));
     // 검색/새로고침 후에도 이전 선택 상태 유지
     if (currentManual) {
-      el.querySelector(`.manual-item[data-id="${currentManual.b62id}"]`)?.classList.add('bg-gray-600');
+      el.querySelector(`.manual-item[data-id="${currentManual.id}"]`)?.classList.add('bg-gray-600');
     }
   }
 
@@ -141,7 +140,7 @@ async function loadManuals(q = '') {
   const iconEl = document.getElementById('sb-icons');
   iconEl.innerHTML = allManuals.map(m => `
     <button class="manual-icon-item sb-icon-tip w-8 h-8 flex items-center justify-center rounded hover:bg-gray-700 text-gray-400 hover:text-white"
-            data-id="${m.b62id}"
+            data-id="${m.id}"
             data-tip="[${esc(m.grade)}] ${esc(m.modelNumber)} ${esc(m.productName)}">
       <i class="fas fa-file-pdf text-sm"></i>
     </button>`).join('');
@@ -164,7 +163,7 @@ async function loadManuals(q = '') {
 
   // 아이콘 목록에도 현재 선택 상태 반영
   if (currentManual) {
-    const activeIcon = iconEl.querySelector(`.manual-icon-item[data-id="${currentManual.b62id}"]`);
+    const activeIcon = iconEl.querySelector(`.manual-icon-item[data-id="${currentManual.id}"]`);
     if (activeIcon) {
       activeIcon.classList.add('bg-gray-600');
       activeIcon.querySelector('i').className = 'fas fa-file-pdf text-sm text-white';
@@ -211,7 +210,7 @@ async function selectManual(b62id, push = true) {
       Array(10).fill('<div class="decal-skel flex-shrink-0 mx-auto" style="width:32px;height:32px;"></div>').join('');
     window.dispatchEvent(new Event('resize'));
 
-    const res = await fetch(`/api/manuals/b/${b62id}`);
+    const res = await fetch(`/api/manuals/${b62id}`);
     if (!res.ok) {
       document.getElementById('pdf-loading').style.display = '';
       pdfScroll.style.display = 'none';
@@ -260,7 +259,7 @@ async function selectManual(b62id, push = true) {
     document.getElementById('pdf-loading').style.display = '';
     document.getElementById('zoom-overlay').style.display = 'flex';
 
-    renderThumbnails(`/manuals/${currentManual.id}/thumbnails`);
+    renderThumbnails(data.thumbnails);
     renderDecalList();
   } finally {
     manualLoading = false;
@@ -476,7 +475,7 @@ PrettyScroll('#decal-list',  LIGHT_SCROLL);
   if (initB62) {
     selectManual(initB62, false);
   } else if (allManuals.length) {
-    selectManual(allManuals[0].b62id, false);
+    selectManual(allManuals[0].id, false);
   }
 })();
 

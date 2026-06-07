@@ -39,10 +39,22 @@ body { height: 100vh; overflow: hidden; min-width: 1000px; }
 #zoom-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 13px; height: 13px; border-radius: 50%; background: #fff; cursor: pointer; }
 #zoom-slider::-moz-range-thumb { width: 13px; height: 13px; border-radius: 50%; background: #fff; border: none; cursor: pointer; }
 
+/* ── 게시 버튼 (zoom-overlay 내) ── */
+#publish-btn {
+  display: flex; align-items: center; gap: 4px;
+  background: none; border: none; padding: 0 2px; cursor: pointer;
+}
+#publish-btn i,
+#publish-btn span { font-size: 12px; color: rgba(255,255,255,0.4); transition: color 0.15s; }
+#publish-btn:hover i,
+#publish-btn:hover span { color: #fff; }
+#publish-btn.published i,
+#publish-btn.published span { color: #4ade80; }
+
 /* ── 가로/세로 맞춤 버튼 ── */
 #fit-width-btn, #fit-height-btn {
   background: none; border: none; padding: 0 2px;
-  color: rgba(255,255,255,0.6); font-size: 14px; cursor: pointer; line-height: 1;
+  color: rgba(255,255,255,0.6); font-size: 12px; cursor: pointer; line-height: 1;
 }
 #fit-width-btn:hover, #fit-height-btn:hover { color: #fff; }
 

@@ -1,8 +1,7 @@
 package com.example.gunpladecal.app.controller
 
 import com.example.gunpladecal.app.dto.Sitemap
-import com.example.gunpladecal.app.repository.ManualRepository
-import com.example.gunpladecal.app.util.Base62
+import com.example.gunpladecal.app.service.ManualService
 import com.example.gunpladecal.config.AppProperties
 import com.fasterxml.jackson.dataformat.xml.XmlMapper
 import com.fasterxml.jackson.dataformat.xml.ser.ToXmlGenerator
@@ -21,7 +20,7 @@ import java.util.Date
 @RestController
 class SeoController(
     private val appProperties: AppProperties,
-    private val manualRepository: ManualRepository,
+    private val manualService: ManualService,
 ) {
     private val xmlMapper =
         XmlMapper().apply {
@@ -36,25 +35,25 @@ class SeoController(
             User-agent: *
             Disallow: /admin
             Disallow: /login
-            
+
             # AI crawlers
             User-agent: GPTBot
             Allow: /
-            
+
             User-agent: ChatGPT-User
             Allow: /
-            
+
             User-agent: ClaudeBot
             Allow: /
-            
+
             User-agent: PerplexityBot
             Allow: /
-            
+
             User-agent: Googlebot
             Allow: /
-            
+
             Sitemap: $baseUrl/sitemap.xml
-            
+
             # RSS / Atom Feed
             Feed: $baseUrl/rss.xml
             Feed: $baseUrl/atom.xml
@@ -64,9 +63,9 @@ class SeoController(
     @GetMapping("/sitemap.xml", produces = ["application/xml;charset=UTF-8"])
     fun sitemap(): String {
         val urls =
-            manualRepository.findAllByPublishedTrueOrderByIdDesc().map {
+            manualService.getAllPublishedFeedItems().map {
                 Sitemap.SitemapUrl(
-                    loc = appProperties.baseUrl + "/" + Base62.encode(it.id),
+                    loc = appProperties.baseUrl + "/" + it.id,
                     lastmod = it.updatedAt.atZone(ZoneId.of("Asia/Seoul")).toOffsetDateTime(),
                     changefreq = "daily",
                     priority = 0.5,
@@ -90,11 +89,10 @@ class SeoController(
                 link = baseUrl
                 description = "건담프라 데칼 메뉴얼 목록"
                 entries =
-                    manualRepository.findAllByPublishedTrueOrderByIdDesc().map { manual ->
+                    manualService.getAllPublishedFeedItems().map { manual ->
                         SyndEntryImpl().apply {
                             title = "[${manual.grade}] ${manual.modelNumber} ${manual.productName}"
-                            link = "$baseUrl/${Base62.encode(manual.id * 23)}"
-                            // DB ID 직접 노출 방지를 위해 * 23 으로 난독화. ManualController 에서 / 23 으로 역산
+                            link = "$baseUrl/${manual.id}"
                             publishedDate =
                                 Date.from(manual.createdAt.atZone(ZoneId.systemDefault()).toInstant())
                             description =
