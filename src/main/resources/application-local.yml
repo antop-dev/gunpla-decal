@@ -19,3 +19,4 @@ decorator:
 logging:
   level:
     p6spy: debug
+    org.springframework.cache: trace

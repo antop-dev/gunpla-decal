@@ -70,7 +70,7 @@ window.addEventListener('mouseup', () => {
 
 // 서버에서 메뉴얼 목록 로드. q가 있으면 서버 사이드 검색 수행
 async function loadManuals(q = '') {
-  const url = q ? `/api/manuals?q=${encodeURIComponent(q)}` : '/api/manuals';
+  const url = q ? `/api/user/manuals?q=${encodeURIComponent(q)}` : '/api/user/manuals';
   allManuals = await (await fetch(url)).json();
 
   // 텍스트 목록 렌더링
@@ -121,7 +121,7 @@ async function loadManuals(q = '') {
     el.querySelectorAll('.pdf-dl-btn').forEach(btn =>
       btn.addEventListener('click', async e => {
         e.stopPropagation();
-        const res = await fetch(`/manuals/${btn.dataset.id}/pdf`);
+        const res = await fetch(`/resource/${btn.dataset.id}`);
         const blob = await res.blob();
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -210,7 +210,7 @@ async function selectManual(b62id, push = true) {
       Array(10).fill('<div class="decal-skel flex-shrink-0 mx-auto" style="width:32px;height:32px;"></div>').join('');
     window.dispatchEvent(new Event('resize'));
 
-    const res = await fetch(`/api/manuals/${b62id}`);
+    const res = await fetch(`/api/user/${b62id}`);
     if (!res.ok) {
       document.getElementById('pdf-loading').style.display = '';
       pdfScroll.style.display = 'none';
@@ -236,7 +236,7 @@ async function selectManual(b62id, push = true) {
       window.dispatchEvent(new Event('resize'));
     }
 
-    pdfDoc = await pdfjsLib.getDocument(`${window.contextPath}/manuals/${currentManual.id}/pdf`).promise;
+    pdfDoc = await pdfjsLib.getDocument(`${window.contextPath}/resource/${currentManual.id}`).promise;
 
     // 데칼이 가장 많은 페이지로 이동
     if (allDecals.length) {

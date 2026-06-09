@@ -10,6 +10,7 @@
 | 프레임워크 | Spring Boot 3.5 |
 | 보안 | Spring Security (폼 로그인 + 캡차 인증) |
 | DB | SQLite + Spring Data JPA + Flyway |
+| 캐시 | Caffeine (인메모리, 항목당 최대 1,000개) |
 | PDF 처리 | Apache PDFBox 3.0 |
 | AI 인식 | OpenAI GPT-4o mini |
 | 템플릿 | Thymeleaf (다국어: 한국어 · 일본어 · 중국어 · 영어) |
@@ -108,35 +109,36 @@ SPRING_PROFILES_ACTIVE=prd ./gradlew bootRun
 
 ## API
 
-### 공통 파일 API (인증 불필요)
+### 파일 리소스 API (인증 불필요)
 
 | 메서드 | 경로 | 설명 |
 |-------|------|------|
-| `GET` | `/manuals/{id}/pdf` | PDF 파일 스트리밍 |
-| `GET` | `/manuals/{id}/thumbnails/{page}` | 특정 페이지 썸네일 PNG |
+| `GET` | `/resource/{id}` | PDF 파일 스트리밍 |
+| `GET` | `/resource/{id}/thumbnails/{page}` | 특정 페이지 썸네일 PNG |
+
+> HTTP 캐시 헤더 `Cache-Control: max-age=31536000, public` 적용 (1년)
 
 ### 뷰어 API (인증 불필요, 공개 메뉴얼만)
 
 | 메서드 | 경로 | 설명 |
 |-------|------|------|
-| `GET` | `/api/manuals` | 메뉴얼 목록 (`?q=검색어`) |
-| `GET` | `/api/manuals/{id}` | 메뉴얼 상세 + 데칼 목록 + 썸네일 URL 목록 |
+| `GET` | `/api/user/manuals` | 메뉴얼 목록 (`?q=검색어`) |
+| `GET` | `/api/user/{id}` | 메뉴얼 상세 + 데칼 목록 + 썸네일 URL 목록 |
 
 ### 관리자 API (로그인 필요)
 
 | 메서드 | 경로 | 설명 |
 |-------|------|------|
-| `GET` | `/api/admin/manuals` | 메뉴얼 전체 목록 (미공개 포함) |
+| `GET` | `/api/admin/manuals` | 메뉴얼 전체 목록 (미공개 포함, `?q=검색어`) |
 | `POST` | `/api/admin/manuals` | 메뉴얼 등록 (multipart: grade, modelNumber, productName, pdf/pdfUrl, link) |
 | `GET` | `/api/admin/manuals/{id}` | 메뉴얼 단건 조회 (미공개 포함) |
 | `PUT` | `/api/admin/manuals/{id}` | 메뉴얼 정보 수정 |
-| `PATCH` | `/api/admin/manuals/{id}/published` | 공개 여부 토글 |
+| `PATCH` | `/api/admin/{id}/published` | 공개 여부 토글 (`?published=true\|false`) |
 | `DELETE` | `/api/admin/manuals/{id}` | 메뉴얼 삭제 (데칼 + PDF + 썸네일 포함) |
-| `POST` | `/api/admin/manuals/{manualId}/decals` | 데칼 추가 |
-| `PUT` | `/api/admin/manuals/{manualId}/decals/{decalId}` | 데칼 수정 |
-| `DELETE` | `/api/admin/manuals/{manualId}/decals/{decalId}` | 데칼 삭제 |
-| `GET` | `/api/admin/ai/available` | OpenAI 사용 가능 여부 |
-| `POST` | `/api/admin/ai/recognize` | AI 데칼 번호 인식 |
+| `POST` | `/api/admin/manuals/{id}/decals` | 데칼 추가 |
+| `PUT` | `/api/admin/decals/{decalId}` | 데칼 수정 |
+| `DELETE` | `/api/admin/decals/{decalId}` | 데칼 삭제 |
+| `POST` | `/api/admin/manuals/{id}/recognize` | AI 데칼 번호 인식 |
 
 ### SEO
 
@@ -146,6 +148,20 @@ SPRING_PROFILES_ACTIVE=prd ./gradlew bootRun
 | `/sitemap.xml` | 공개 메뉴얼 사이트맵 |
 | `/rss.xml` | RSS 2.0 피드 |
 | `/atom.xml` | Atom 1.0 피드 |
+
+## 캐시
+
+Caffeine 인메모리 캐시를 사용합니다. 최대 1,000개 항목을 캐싱하며 만료 정책은 없습니다(LRU 방식으로 한도 초과 시 제거).
+
+| 캐시 이름 | 키 | 무효화 시점 |
+|----------|-----|-----------|
+| `gunpla:manual` | ManualId | `ManualChangedEvent` 발행 시 |
+| `gunpla:manual:resource` | ManualId | `ManualChangedEvent` 발행 시 |
+| `gunpla:thumbnail:resource` | ManualId | `ManualChangedEvent` 발행 시 |
+
+`ManualChangedEvent`는 다음 두 시점에 발행됩니다:
+- 메뉴얼 **공개 전환** 시 (`published=true`)
+- 메뉴얼 **삭제** 시
 
 ## 데이터베이스
 

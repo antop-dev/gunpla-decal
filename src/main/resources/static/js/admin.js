@@ -211,7 +211,7 @@ async function selectManual(id) {
     currentManual = data; allDecals = data.decals;
     lastDecalStyle = { color: '#ffffff', shape: 'CIRCLE' };
 
-    pdfDoc = await pdfjsLib.getDocument(`${window.contextPath}/manuals/${id}/pdf`).promise;
+    pdfDoc = await pdfjsLib.getDocument(`${window.contextPath}/resource/${id}`).promise;
     currentPage = 1;
     await renderPage(currentPage, true);
 
@@ -300,7 +300,7 @@ document.getElementById('tt-delete').addEventListener('click', async e => {
   if (!tooltipDecalId) return;
   const id = tooltipDecalId;
   hideTooltip();
-  await fetch(`/api/admin/manuals/${currentManual.id}/decals/${id}`, { method: 'DELETE' });
+  await fetch(`/api/admin/decals/${id}`, { method: 'DELETE' });
   allDecals = allDecals.filter(d => d.id !== id);
   await autoUnpublish();
   renderOverlay();
@@ -574,20 +574,6 @@ document.getElementById('btn-jp-edit').addEventListener('click', e => {
 
 document.getElementById('btn-jp-close').addEventListener('click', closeJpPicker);
 
-/* ──────────── AI 가용성 ──────────── */
-
-async function checkAiAvailable() {
-  const res = await fetch('/api/admin/ai/available').catch(() => null);
-  const available = res?.ok && (await res.json()).available;
-  ['btn-ai-decal', 'btn-ai-edit'].forEach(id => {
-    const btn = document.getElementById(id);
-    if (btn) btn.style.display = available ? '' : 'none';
-  });
-}
-
-checkAiAvailable();
-setInterval(checkAiAvailable, 3600 * 1000);
-
 /* ──────────── AI 인식 ──────────── */
 
 let aiSearching = false;
@@ -631,10 +617,11 @@ async function doAiRecognize(numInputId, btnEl, page, x, y) {
   icon.className = 'fas fa-spinner fa-spin text-xs';
   btnEl.disabled = true;
   try {
-    const res = await fetch('/api/admin/ai/recognize', {
+    // manualId는 경로 변수로 전달하므로 body에서 제외
+    const res = await fetch(`/api/admin/manuals/${currentManual.id}/recognize`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ manualId: currentManual.id, page, x, y }),
+      body: JSON.stringify({ page, x, y }),
     });
     if (!res.ok) { showAiTip(btnEl, '오류가 발생했습니다', false); return; }
     const data = await res.json();
@@ -745,7 +732,7 @@ async function saveNewDecal() {
   const res = await fetch(`/api/admin/manuals/${currentManual.id}/decals`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ page: pendingPos.page, decalNumber: num, x: pendingPos.x, y: pendingPos.y, color, shape }),
+    body: JSON.stringify({ pageNumber: pendingPos.page, decalNumber: num, x: pendingPos.x, y: pendingPos.y, color, shape }),
   });
   if (res.ok) {
     allDecals.push(await res.json());
@@ -810,7 +797,7 @@ async function saveEditDecal() {
   const hexVal = document.getElementById('inp-edit-hex').value.replace(/[^0-9a-fA-F]/g, '');
   const color  = '#' + (hexVal.length === 6 ? hexVal.toLowerCase() : 'ffffff');
   const shape = document.querySelector('input[name="edit-shape"]:checked')?.value ?? 'CIRCLE';
-  const res = await fetch(`/api/admin/manuals/${currentManual.id}/decals/${editingDecalId}`, {
+  const res = await fetch(`/api/admin/decals/${editingDecalId}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ decalNumber: num, color, shape }),
@@ -904,12 +891,15 @@ function updatePublishOverlay() {
 
 async function togglePublished() {
   if (!currentManual) return;
-  const res = await fetch(`/api/admin/manuals/${currentManual.id}/published`, { method: 'PATCH' });
+  const newPublished = !currentManual.published;
+  const res = await fetch(
+    `/api/admin/${currentManual.id}/published?published=${newPublished}`,
+    { method: 'PATCH' },
+  );
   if (!res.ok) return;
-  const data = await res.json();
-  currentManual.published = data.published;
+  currentManual.published = newPublished;
   const cached = manualList.find(x => x.id === currentManual.id);
-  if (cached) cached.published = data.published;
+  if (cached) cached.published = newPublished;
   updatePublishOverlay();
   await searchManuals();
 }
