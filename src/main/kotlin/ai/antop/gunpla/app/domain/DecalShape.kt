@@ -1,0 +1,13 @@
+package ai.antop.gunpla.app.domain
+
+/** 데칼 도형 타입 */
+enum class DecalShape {
+    /** 동그라미 */
+    CIRCLE,
+
+    /** 네모(정사각형) */
+    SQUARE,
+
+    /** 다이아(45도 회전한 정사각형) */
+    DIAMOND,
+}
