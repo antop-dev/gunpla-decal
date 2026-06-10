@@ -3,7 +3,7 @@ html { overflow-x: auto; }
 body { height: 100vh; overflow: hidden; min-width: 1000px; }
 
 /* ── pretty-scrollbar 배경 자동 감지용 ── */
-#manual-list { background: #111827; }
+#manual-list { background: #111827; padding-right: 15px; }
 #decal-list  { background: #ffffff; }
 
 /* 왼쪽 사이드바 접기/펼치기 너비 트랜지션 */

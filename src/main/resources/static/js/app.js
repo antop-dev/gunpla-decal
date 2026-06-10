@@ -471,7 +471,7 @@ document.getElementById('shortcut-btn').addEventListener('click', e => {
 document.addEventListener('click', () => { shortcutPopup.style.display = 'none'; });
 
 /* ──────────── 초기화 ── */
-const DARK_SCROLL  = { barWidth: 6, barColor: 'rgba(156,163,175,0.5)', right: 2, autoHide: true };
+const DARK_SCROLL  = { barWidth: 10, defaultWrapperWidth: 11, barColor: 'rgba(156,163,175,0.5)', right: 1, autoHide: true };
 const LIGHT_SCROLL = { barWidth: 6, barColor: 'rgba(107,114,128,0.5)', right: 2, autoHide: true };
 PrettyScroll('#manual-list', DARK_SCROLL);
 PrettyScroll('#decal-list',  LIGHT_SCROLL);
