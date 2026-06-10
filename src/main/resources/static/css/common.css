@@ -3,14 +3,14 @@ html { overflow-x: auto; }
 body { height: 100vh; overflow: hidden; min-width: 1000px; }
 
 /* ── pretty-scrollbar 배경 자동 감지용 ── */
-#manual-list { background: #111827; padding-right: 20px; }
+#manual-list { background: #111827; }
 #decal-list  { background: #ffffff; }
 
 /* 왼쪽 사이드바 접기/펼치기 너비 트랜지션 */
-#sidebar { transition: width 0.2s ease; overflow: hidden; border-right: 1px solid #374151; }
+#sidebar { transition: width 0.2s ease; overflow: hidden; border-right: 1px solid #6b7280; }
 
 /* 사용자 페이지 오른쪽 사이드바 트랜지션 */
-#right-sidebar { transition: width 0.2s ease; overflow: hidden; border-left: 1px solid #d1d5db; }
+#right-sidebar { transition: width 0.2s ease; overflow: hidden; border-left: 1px solid #6b7280; }
 
 /* 데칼 마커 절대 위치 기준 오버레이 */
 #decal-overlay { position: absolute; inset: 0; pointer-events: none; }
@@ -57,6 +57,38 @@ body { height: 100vh; overflow: hidden; min-width: 1000px; }
   color: rgba(255,255,255,0.6); font-size: 12px; cursor: pointer; line-height: 1;
 }
 #fit-width-btn:hover, #fit-height-btn:hover { color: #fff; }
+
+/* ── 단축키 버튼 ── */
+#shortcut-btn {
+  background: none; border: none; padding: 0 2px;
+  color: rgba(255,255,255,0.6); font-size: 12px; cursor: pointer; line-height: 1;
+}
+#shortcut-btn:hover { color: #fff; }
+
+/* ── 단축키 팝업 ── */
+#shortcut-popup {
+  display: none;
+  flex-direction: column;
+  gap: 6px;
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  background: rgba(0,0,0,0.88);
+  border-radius: 6px;
+  padding: 8px 12px;
+  white-space: nowrap;
+  z-index: 30;
+}
+.sp-row { display: flex; align-items: center; gap: 10px; font-size: 11px; }
+.sp-keys { display: flex; align-items: center; gap: 3px; width: 44px; flex-shrink: 0; justify-content: flex-start; }
+.sp-keys kbd {
+  font-family: monospace; font-size: 10px; color: #fff;
+  background: rgba(255,255,255,0.15);
+  border: 1px solid rgba(255,255,255,0.3);
+  border-radius: 3px; padding: 1px 5px;
+}
+.sp-keys > span { color: rgba(255,255,255,0.5); font-size: 10px; }
+.sp-desc { color: rgba(255,255,255,0.8); text-align: left; }
 
 /* ── 마커 보이기/숨기기 토글 ── */
 #marker-toggle { display: flex; align-items: center; gap: 4px; cursor: pointer; }

@@ -353,7 +353,7 @@ function renderDecalList() {
       <div class="relative">
         <button class="decal-btn w-full h-8 flex items-center justify-center text-xs font-medium
                        bg-white text-gray-900 border border-gray-300 hover:bg-gray-100 truncate px-0.5"
-                data-key="${esc(key)}" title="${esc(num)}">
+                data-key="${esc(key)}">
           ${esc(num)}
         </button>
         <span class="pointer-events-none" style="position:absolute;top:1px;left:2px;font-size:9px;line-height:1;color:${iconColor};${iconStroke};z-index:1;">${shapeIcon}</span>
@@ -462,6 +462,13 @@ document.getElementById('marker-visible').addEventListener('change', e => {
   markersVisible = e.target.checked;
   overlay.style.display = markersVisible ? '' : 'none';
 });
+
+const shortcutPopup = document.getElementById('shortcut-popup');
+document.getElementById('shortcut-btn').addEventListener('click', e => {
+  e.stopPropagation();
+  shortcutPopup.style.display = shortcutPopup.style.display === 'flex' ? 'none' : 'flex';
+});
+document.addEventListener('click', () => { shortcutPopup.style.display = 'none'; });
 
 /* ──────────── 초기화 ── */
 const DARK_SCROLL  = { barWidth: 6, barColor: 'rgba(156,163,175,0.5)', right: 2, autoHide: true };

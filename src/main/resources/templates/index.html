@@ -52,7 +52,7 @@
   <!-- 펼쳤을 때: 검색 + 전체 목록 -->
   <div id="sb-content" class="flex-1 flex flex-col min-h-0 overflow-hidden">
     <!-- 검색 -->
-    <div class="px-2 py-1.5 border-b border-gray-700 flex-shrink-0">
+    <div class="px-2 py-1.5 border-b border-gray-500 flex-shrink-0">
       <div class="flex items-center gap-1 bg-gray-700 rounded px-2 py-1">
         <i class="fas fa-magnifying-glass text-gray-500 text-xs"></i>
         <input id="manual-search" type="text" th:placeholder="#{manual.search.placeholder}" autocomplete="off" th:attr="aria-label=#{manual.search.aria}"
@@ -68,20 +68,30 @@
   <div id="sb-icons" class="flex-1 flex-col items-center gap-0.5 py-1.5 overflow-y-auto" style="display:none;">
   </div>
 
-  <!-- GitHub 링크 (펼침) -->
-  <div id="sb-github" class="flex-shrink-0 border-t border-gray-700 px-2 py-2">
+  <!-- GitHub + 이메일 링크 (펼침) -->
+  <div id="sb-github" class="flex-shrink-0 border-t border-gray-500 px-2 py-2 flex justify-evenly">
     <a href="https://github.com/antop-dev/gunpla-decal" target="_blank" rel="noopener"
        class="flex items-center gap-2 text-gray-400 hover:text-white text-xs rounded px-1 py-1 hover:bg-gray-700">
       <i class="fab fa-github text-sm flex-shrink-0"></i>
       <span>GitHub</span>
     </a>
+    <a href="mailto:antop@kakao.com"
+       class="flex items-center gap-2 text-gray-400 hover:text-white text-xs rounded px-1 py-1 hover:bg-gray-700">
+      <i class="fas fa-envelope text-sm flex-shrink-0"></i>
+      <span th:text="#{contact.email}">Email</span>
+    </a>
   </div>
-  <!-- GitHub 링크 (접힘) -->
-  <div id="sb-github-icon" class="flex-shrink-0 border-t border-gray-700 flex items-center justify-center py-2" style="display:none;">
+  <!-- GitHub + 이메일 링크 (접힘) -->
+  <div id="sb-github-icon" class="flex-shrink-0 border-t border-gray-500 flex flex-col items-center gap-0.5 py-2" style="display:none;">
     <a href="https://github.com/antop-dev/gunpla-decal" target="_blank" rel="noopener"
        class="w-8 h-8 flex items-center justify-center rounded hover:bg-gray-700 text-gray-400 hover:text-white"
        title="GitHub">
       <i class="fab fa-github text-sm"></i>
+    </a>
+    <a href="mailto:antop@kakao.com"
+       class="w-8 h-8 flex items-center justify-center rounded hover:bg-gray-700 text-gray-400 hover:text-white"
+       title="antop@kakao.com">
+      <i class="fas fa-envelope text-sm"></i>
     </a>
   </div>
 </aside>
@@ -90,7 +100,7 @@
 <div class="flex-1 flex flex-col min-w-0 bg-gray-100">
 
   <!-- 썸네일 스트립 -->
-  <div id="thumb-strip" class="flex-shrink-0 bg-gray-800 overflow-x-auto" style="height:90px;">
+  <div id="thumb-strip" class="flex-shrink-0 bg-gray-800 overflow-x-auto" style="height:85px; border-bottom:1px solid #6b7280;">
     <div class="strip-inner">
       <span class="text-gray-500 text-xs select-none" th:text="#{manual.select}">Select a manual</span>
     </div>
@@ -100,7 +110,7 @@
   <div class="flex-1 flex min-h-0">
 
     <!-- PDF 뷰어 -->
-    <div id="pdf-container" class="flex-1 relative overflow-hidden bg-gray-500">
+    <div id="pdf-container" class="flex-1 relative overflow-hidden bg-gray-700">
       <div id="no-pdf" class="absolute inset-0 flex items-center justify-center text-gray-300 select-none">
         <div class="text-center">
           <i class="fas fa-file-pdf text-5xl mb-3 opacity-40"></i>
@@ -125,6 +135,20 @@
           <i class="fas fa-location-dot"></i>
           <span th:text="#{marker.label}">Marker</span>
         </label>
+        <div class="zoom-divider"></div>
+        <button id="shortcut-btn" th:title="#{shortcut.btn}">
+          <i class="fas fa-keyboard"></i>
+        </button>
+        <div id="shortcut-popup">
+          <div class="sp-row">
+            <span class="sp-keys"><kbd>1</kbd><span>–</span><kbd>5</kbd></span>
+            <span class="sp-desc" th:text="#{shortcut.zoom}">Zoom 100–500%</span>
+          </div>
+          <div class="sp-row">
+            <span class="sp-keys"><kbd>M</kbd></span>
+            <span class="sp-desc" th:text="#{shortcut.marker}">Show / Hide markers</span>
+          </div>
+        </div>
       </div>
     </div>
 
