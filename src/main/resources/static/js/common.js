@@ -36,7 +36,7 @@ const thumbStrip = document.getElementById('thumb-strip');
 function applyTransform() {
   canvas.style.width  = basePdfWidth  * scale + 'px';
   canvas.style.height = basePdfHeight * scale + 'px';
-  const pct = Math.round(scale / fitScale * 100);
+  const pct = Math.round(scale * 100);
   const labelEl = document.getElementById('zoom-label');
   if (labelEl) labelEl.textContent = pct + '%';
   const sliderEl = document.getElementById('zoom-slider');
@@ -73,7 +73,7 @@ function zoomAt(cx, cy, factor) {
   const mx = cx - rect.left, my = cy - rect.top;
   const canvasX = (pdfScroll.scrollLeft + mx) / scale;
   const canvasY = (pdfScroll.scrollTop  + my) / scale;
-  const ns = Math.max(fitScale * minZoomMult, Math.min(fitScale * 5, scale * factor));
+  const ns = Math.max(fitScale * minZoomMult, Math.min(5, scale * factor));
   scale = ns;
   applyTransform();
   pdfScroll.scrollLeft = canvasX * ns - mx;
@@ -93,7 +93,7 @@ function fitToContainer() {
 
 // 슬라이더 입력값(100~400)을 백분율로 해석해 배율 적용
 function applyZoomPreset(pct) {
-  scale = Math.max(fitScale * minZoomMult, Math.min(fitScale * 5, fitScale * (pct / 100)));
+  scale = Math.max(fitScale * minZoomMult, Math.min(5, pct / 100));
   applyTransform();
   pdfScroll.scrollLeft = (basePdfWidth  * scale - pdfScroll.clientWidth)  / 2;
   pdfScroll.scrollTop  = (basePdfHeight * scale - pdfScroll.clientHeight) / 2;
