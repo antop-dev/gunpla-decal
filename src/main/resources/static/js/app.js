@@ -470,6 +470,25 @@ document.getElementById('shortcut-btn').addEventListener('click', e => {
 });
 document.addEventListener('click', () => { shortcutPopup.style.display = 'none'; });
 
+/* ──────────── 전체화면 ──────────── */
+document.getElementById('fullscreen-btn').addEventListener('click', () => {
+  if (document.fullscreenElement) document.exitFullscreen();
+  else container.requestFullscreen();
+});
+
+document.addEventListener('fullscreenchange', () => {
+  const isFs = !!document.fullscreenElement;
+  document.getElementById('fullscreen-icon').className = isFs ? 'fas fa-compress' : 'fas fa-expand';
+  document.getElementById('fullscreen-label').textContent = isFs ? window.i18n.fullscreenExit : window.i18n.fullscreenEnter;
+  document.getElementById('fullscreen-btn').title = isFs ? window.i18n.fullscreenExitTitle : window.i18n.fullscreenEnterTitle;
+  if (pdfDoc) setTimeout(() => renderPage(currentPage), 50);
+});
+
+document.addEventListener('keydown', e => {
+  if (e.target.matches('input, textarea, select')) return;
+  if (e.key === 'f' || e.key === 'F') document.getElementById('fullscreen-btn').click();
+});
+
 /* ──────────── 초기화 ── */
 const DARK_SCROLL  = { barWidth: 10, defaultWrapperWidth: 11, barColor: 'rgba(156,163,175,0.5)', right: 1, autoHide: true };
 const LIGHT_SCROLL = { barWidth: 6, barColor: 'rgba(107,114,128,0.5)', right: 2, autoHide: true };

@@ -129,6 +129,10 @@
         <input id="zoom-slider" type="range" min="10" max="500" step="1" value="100" th:attr="aria-label=#{zoom.aria}">
         <button id="fit-width-btn" th:title="#{zoom.fitWidth}">↔︎ <span th:text="#{zoom.fitWidth.label}">가로</span></button>
         <button id="fit-height-btn" th:title="#{zoom.fitHeight}">↕︎ <span th:text="#{zoom.fitHeight.label}">세로</span></button>
+        <button id="fullscreen-btn" th:title="#{fullscreen.enter}">
+          <i id="fullscreen-icon" class="fas fa-expand"></i>
+          <span id="fullscreen-label" th:text="#{fullscreen.enter.label}">Fullscreen</span>
+        </button>
         <div class="zoom-divider"></div>
         <label id="marker-toggle" th:title="#{marker.toggle}">
           <input type="checkbox" id="marker-visible" checked>
@@ -147,6 +151,10 @@
           <div class="sp-row">
             <span class="sp-keys"><kbd>M</kbd></span>
             <span class="sp-desc" th:text="#{shortcut.marker}">Show / Hide markers</span>
+          </div>
+          <div class="sp-row">
+            <span class="sp-keys"><kbd>F</kbd></span>
+            <span class="sp-desc" th:text="#{shortcut.fullscreen}">Toggle fullscreen</span>
           </div>
         </div>
       </div>
@@ -205,7 +213,11 @@
     manualNotFound:   /*[[#{manual.notFound}]]*/ 'Manual not found',
     decalEmpty:       /*[[#{decal.empty}]]*/ 'No decals',
     decalSearchEmpty: /*[[#{decal.search.empty}]]*/ 'No results found',
-    pdfLoading:       /*[[#{pdf.loading}]]*/ 'Loading…',
+    pdfLoading:           /*[[#{pdf.loading}]]*/ 'Loading…',
+    fullscreenEnter:      /*[[#{fullscreen.enter.label}]]*/ 'Fullscreen',
+    fullscreenExit:       /*[[#{fullscreen.exit.label}]]*/ 'Exit',
+    fullscreenEnterTitle: /*[[#{fullscreen.enter}]]*/ 'Enter fullscreen',
+    fullscreenExitTitle:  /*[[#{fullscreen.exit}]]*/ 'Exit fullscreen',
   };
 </script>
 <script th:src="@{/vendor/pretty-scroll/pretty-scroll.js}"></script>
