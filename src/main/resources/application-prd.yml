@@ -1,7 +1,7 @@
 server:
   port: 10001
   servlet:
-    context-path: /gunpla
+    context-path: /gunpla-decal
 
 app:
   db-path: ${DB_PATH}
