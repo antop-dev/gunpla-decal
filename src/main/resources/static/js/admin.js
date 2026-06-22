@@ -545,7 +545,7 @@ function openJpPicker(targetInput, anchorEl) {
   const picker = document.getElementById('jp-picker');
   picker.classList.remove('hidden');
   const rect = anchorEl.getBoundingClientRect();
-  const W = 200, H = picker.offsetHeight || 280;
+  const W = 240, H = picker.offsetHeight || 280;
   const vw = window.innerWidth, vh = window.innerHeight;
   let left = rect.right + 4;
   let top  = rect.top;
@@ -661,6 +661,13 @@ document.getElementById('btn-ai-edit').addEventListener('click', e => {
 document.getElementById('btn-decal-close').addEventListener('click', cancelDecalModal);
 document.getElementById('btn-edit-close').addEventListener('click', cancelEditModal);
 
+// ESC 키로 열린 모달 닫기
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Escape') return;
+  if (!document.getElementById('decal-modal').classList.contains('hidden')) { cancelDecalModal(); return; }
+  if (!document.getElementById('edit-modal').classList.contains('hidden')) { cancelEditModal(); return; }
+});
+
 // 팝업 외부 클릭 시 닫기
 document.addEventListener('mousedown', e => {
   // 컬러 피커 외부 클릭 시 닫기
@@ -700,6 +707,9 @@ function openDecalModal(x, y, clientX, clientY) {
   document.getElementById('inp-decal-color').dispatchEvent(new Event('input'));
   const shapeIdMap = { SQUARE: 'inp-decal-shape-square', DIAMOND: 'inp-decal-shape-diamond' };
   document.getElementById(shapeIdMap[lastDecalStyle.shape] ?? 'inp-decal-shape-circle').checked = true;
+  const btnOk = document.getElementById('btn-decal-ok');
+  btnOk.disabled = false;
+  btnOk.innerHTML = '<i class="fas fa-check text-xs"></i> 저장';
   const modal = document.getElementById('decal-modal');
   modal.classList.remove('hidden');
   const W = 240, H = 190;
@@ -729,17 +739,28 @@ async function saveNewDecal() {
   const hexVal = document.getElementById('inp-decal-hex').value.replace(/[^0-9a-fA-F]/g, '');
   const color  = '#' + (hexVal.length === 6 ? hexVal.toLowerCase() : 'ffffff');
   const shape = document.querySelector('input[name="decal-shape"]:checked')?.value ?? 'CIRCLE';
-  const res = await fetch(`/api/admin/manuals/${currentManual.id}/decals`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ pageNumber: pendingPos.page, decalNumber: num, x: pendingPos.x, y: pendingPos.y, color, shape }),
-  });
-  if (res.ok) {
-    allDecals.push(await res.json());
-    lastDecalStyle = { color, shape };
-    await autoUnpublish();
-    cancelDecalModal();
-    renderOverlay();
+  const btn = document.getElementById('btn-decal-ok');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin text-xs"></i> 저장';
+  try {
+    const res = await fetch(`/api/admin/manuals/${currentManual.id}/decals`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pageNumber: pendingPos.page, decalNumber: num, x: pendingPos.x, y: pendingPos.y, color, shape }),
+    });
+    if (res.ok) {
+      allDecals.push(await res.json());
+      lastDecalStyle = { color, shape };
+      await autoUnpublish();
+      cancelDecalModal();
+      renderOverlay();
+    } else {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fas fa-check text-xs"></i> 저장';
+    }
+  } catch {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-check text-xs"></i> 저장';
   }
 }
 
@@ -757,6 +778,9 @@ function cancelDecalModal() {
 /* ──────────── 데칼 수정 모달 ──────────── */
 
 function openEditModal(clientX, clientY) {
+  const btnOk = document.getElementById('btn-edit-ok');
+  btnOk.disabled = false;
+  btnOk.innerHTML = '<i class="fas fa-check text-xs"></i> 저장';
   const modal = document.getElementById('edit-modal');
   modal.classList.remove('hidden');
   const W = 240, H = 190;
@@ -797,18 +821,29 @@ async function saveEditDecal() {
   const hexVal = document.getElementById('inp-edit-hex').value.replace(/[^0-9a-fA-F]/g, '');
   const color  = '#' + (hexVal.length === 6 ? hexVal.toLowerCase() : 'ffffff');
   const shape = document.querySelector('input[name="edit-shape"]:checked')?.value ?? 'CIRCLE';
-  const res = await fetch(`/api/admin/decals/${editingDecalId}`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ decalNumber: num, color, shape }),
-  });
-  if (res.ok) {
-    const updated = await res.json();
-    allDecals = allDecals.map(d => d.id === updated.id ? updated : d);
-    lastDecalStyle = { color: updated.color ?? '#ffffff', shape: updated.shape ?? 'CIRCLE' };
-    await autoUnpublish();
-    cancelEditModal();
-    renderOverlay();
+  const btn = document.getElementById('btn-edit-ok');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin text-xs"></i> 저장';
+  try {
+    const res = await fetch(`/api/admin/decals/${editingDecalId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ decalNumber: num, color, shape }),
+    });
+    if (res.ok) {
+      const updated = await res.json();
+      allDecals = allDecals.map(d => d.id === updated.id ? updated : d);
+      lastDecalStyle = { color: updated.color ?? '#ffffff', shape: updated.shape ?? 'CIRCLE' };
+      await autoUnpublish();
+      cancelEditModal();
+      renderOverlay();
+    } else {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fas fa-check text-xs"></i> 저장';
+    }
+  } catch {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-check text-xs"></i> 저장';
   }
 }
 
