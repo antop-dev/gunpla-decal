@@ -946,6 +946,22 @@ async function autoUnpublish() {
 
 document.getElementById('publish-btn').addEventListener('click', togglePublished);
 
+const copyLinkTippy = tippy(document.getElementById('copy-link-btn'), {
+  content: '링크 복사됨',
+  placement: 'bottom',
+  trigger: 'manual',
+  hideOnClick: false,
+  duration: [0, 200],
+});
+
+document.getElementById('copy-link-btn').addEventListener('click', async () => {
+  if (!currentManual) return;
+  const url = `${location.origin}${window.contextPath}/${currentManual.id}`;
+  await navigator.clipboard.writeText(url);
+  copyLinkTippy.show();
+  setTimeout(() => copyLinkTippy.hide(), 1500);
+});
+
 /* ──────────── 메뉴얼 삭제 ──────────── */
 
 async function deleteManual(id) {

@@ -6,8 +6,11 @@
   <meta name="context-path" th:content="@{/}">
   <title>건담 메뉴얼 – 관리자</title>
   <link rel="stylesheet" th:href="@{/vendor/fontawesome/css/all.min.css}">
+  <link rel="stylesheet" th:href="@{/vendor/tippy/tippy.css}">
   <script th:src="@{/vendor/tailwind/tailwind.min.js}"></script>
   <script th:src="@{/vendor/pdfjs/pdf.min.js}"></script>
+  <script th:src="@{/vendor/tippy/popper.min.js}"></script>
+  <script th:src="@{/vendor/tippy/tippy.min.js}"></script>
   <link rel="stylesheet" th:href="@{/css/common.css}">
 </head>
 <body class="page-admin flex bg-gray-900">
@@ -96,6 +99,9 @@
       <button id="publish-btn" title="게시 상태 전환">
         <i id="publish-icon" class="fas fa-eye-slash"></i>
         <span>게시</span>
+      </button>
+      <button id="copy-link-btn" title="링크 복사">
+        <i id="copy-link-icon" class="fas fa-link"></i>
       </button>
       <div class="zoom-divider"></div>
       <span id="zoom-label"></span>
