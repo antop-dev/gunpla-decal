@@ -26,6 +26,10 @@ class PageController(
     @ModelAttribute("ga4")
     fun ga4(): String? = appProperties.ga4
 
+    /** 모든 뷰에 GTM ID 주입 (미설정 시 null → 템플릿에서 GTM 비활성) */
+    @ModelAttribute("gtmId")
+    fun gtmId(): String? = appProperties.gtmId
+
     /** 기본 JSON-LD: 메인 페이지용 WebSite 스키마 */
     @ModelAttribute("jsonLd")
     fun defaultJsonLd(): String =

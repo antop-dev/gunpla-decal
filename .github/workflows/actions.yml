@@ -65,13 +65,12 @@ jobs:
           UPLOAD_DIR: ${{ secrets.APP_UPLOAD_DIR }}
           OPENAI_KEY: ${{ secrets.APP_OPENAI_KEY }}
           BASE_URL  : ${{ secrets.APP_BASE_URL }}
-          GA4_ID    : ${{ secrets.APP_GA4_ID }}
         with:
           host:     ${{ secrets.SSH_HOST }}
           port:     ${{ secrets.SSH_PORT }}
           username: ${{ secrets.SSH_USERNAME }}
           password: ${{ secrets.SSH_PASSWORD }}
-          envs: DEPLOY_DIR,DB_PATH,UPLOAD_DIR,OPENAI_KEY,BASE_URL,GA4_ID
+          envs: DEPLOY_DIR,DB_PATH,UPLOAD_DIR,OPENAI_KEY,BASE_URL
           script: |
             PID_FILE="$DEPLOY_DIR/app.pid"
 

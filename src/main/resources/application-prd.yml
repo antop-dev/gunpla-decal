@@ -6,7 +6,8 @@ server:
 app:
   db-path: ${DB_PATH}
   base-url: ${BASE_URL}
-  ga4: ${GA4_ID:}
+  ga4: G-1T1RL1L7ZD
+  gtm-id: GTM-5RDNJ7TR
 
 decorator:
   datasource:

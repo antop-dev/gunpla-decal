@@ -15,4 +15,6 @@ data class AppProperties(
     val baseUrl: String,
     /** Google Analytics 4 측정 ID (환경변수 GA4_ID 또는 application.yml에서 설정, 미설정 시 GA4 비활성) */
     val ga4: String?,
+    /** Google Tag Manager ID (환경변수 GTM_ID 또는 application.yml에서 설정, 미설정 시 GTM 비활성) */
+    val gtmId: String?,
 )
