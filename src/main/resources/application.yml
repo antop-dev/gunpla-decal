@@ -32,6 +32,11 @@ spring:
   jackson:
     time-zone: Asia/Seoul
 
+server:
+  servlet:
+    session:
+      timeout: -1s
+
 app:
   db-path: ${DB_PATH:./gunpla.db}
   upload-dir: ${UPLOAD_DIR:./uploads}
