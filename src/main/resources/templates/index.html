@@ -114,6 +114,11 @@
       <i class="fas fa-envelope text-sm flex-shrink-0"></i>
       <span th:text="#{contact.email}">Email</span>
     </a>
+    <a href="https://ko-fi.com/antop" target="_blank" rel="noopener"
+       class="flex items-center gap-2 text-gray-400 hover:text-white text-xs rounded px-1 py-1 hover:bg-gray-700">
+      <i class="fas fa-mug-hot text-sm flex-shrink-0"></i>
+      <span th:text="#{contact.donate}">Donate</span>
+    </a>
   </div>
   <!-- GitHub + 이메일 링크 (접힘) -->
   <div id="sb-github-icon" class="flex-shrink-0 border-t border-gray-500 flex flex-col items-center gap-0.5 py-2" style="display:none;">
@@ -126,6 +131,11 @@
        class="w-8 h-8 flex items-center justify-center rounded hover:bg-gray-700 text-gray-400 hover:text-white"
        title="antop@kakao.com">
       <i class="fas fa-envelope text-sm"></i>
+    </a>
+    <a href="https://ko-fi.com/antop" target="_blank" rel="noopener"
+       class="w-8 h-8 flex items-center justify-center rounded hover:bg-gray-700 text-gray-400 hover:text-white"
+       th:title="#{contact.donate}">
+      <i class="fas fa-mug-hot text-sm"></i>
     </a>
   </div>
 </aside>
