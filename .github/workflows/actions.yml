@@ -87,7 +87,7 @@ jobs:
 
             # 새 프로세스 시작
             nohup java -jar \
-              -Xmx512m -Xlog:gc -Djava.security.egd=file:/dev/urandom \
+              -Xmx1024m -Xlog:gc -Djava.security.egd=file:/dev/urandom \
               -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=$DEPLOY_DIR/heapdump.hprof -XX:+ExitOnOutOfMemoryError \
               "$DEPLOY_DIR/app.jar" \
               --spring.profiles.active=prd \
