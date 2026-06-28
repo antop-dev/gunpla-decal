@@ -29,54 +29,44 @@ class ThumbnailService(
 ) {
     private val thumbHeight = 68
 
-    /** PDF 각 페이지를 높이 68px 비율 PNG로 렌더링하여 저장하고 DB에 등록 */
-    fun generateThumbnails(
-        manualId: ManualId,
-        pdfPath: String,
-    ) {
+    /** PDF 각 페이지를 높이 68px 비율 PNG로 디스크에 렌더링. DB 레코드는 저장하지 않고 (페이지번호, 파일경로) 목록을 반환 */
+    fun renderThumbnailFiles(pdfPath: String): List<Pair<Int, String>> {
         val pdfFilePath = Paths.get(pdfPath)
         if (!Files.exists(pdfFilePath)) {
-            log.warn { "PDF 파일 없음, 썸네일 생성 건너뜀: manualId=$manualId, path=$pdfPath" }
-            return
+            log.warn { "PDF 파일 없음, 썸네일 생성 건너뜀: path=$pdfPath" }
+            return emptyList()
         }
-        val uuidStr =
-            pdfFilePath
-                .fileName
-                .toString()
-                .removeSuffix(".pdf")
+        val uuidStr = pdfFilePath.fileName.toString().removeSuffix(".pdf")
 
-        Loader.loadPDF(pdfFilePath.toFile()).use { doc ->
+        return Loader.loadPDF(pdfFilePath.toFile()).use { doc ->
             val totalPages = doc.numberOfPages
-            log.debug { "썸네일 생성 시작: manualId=$manualId, totalPages=$totalPages, pdf=$pdfPath" }
-
+            log.info { "썸네일 렌더링 시작: totalPages=$totalPages, pdf=$pdfPath" }
             val renderer = PDFRenderer(doc)
-            val thumbnails = mutableListOf<Thumbnail>()
-
-            for (pageIndex in 0 until totalPages) {
+            (0 until totalPages).map { pageIndex ->
                 val page = doc.getPage(pageIndex)
                 val scale = thumbHeight.toFloat() / page.cropBox.height
-
-                val rawImage = renderer.renderImage(pageIndex, scale)
-                val image = toRgb(rawImage)
-
+                val image = toRgb(renderer.renderImage(pageIndex, scale))
                 val pageNum = (pageIndex + 1).toString().padStart(2, '0')
                 val filePath = Paths.get(appProperties.uploadDir, "$uuidStr.$pageNum.png")
-
-                Files.newOutputStream(filePath).use { outputStream ->
-                    ImageIO.write(image, "png", outputStream)
-                }
-                log.debug { "썸네일 생성: manualId=$manualId, page=${pageIndex + 1}/$totalPages, file=${filePath.fileName}" }
-
-                thumbnails +=
-                    Thumbnail(
-                        manualId = manualId.value,
-                        pageNumber = pageIndex + 1,
-                        filePath = filePath.toAbsolutePath().toString(),
-                    )
+                Files.newOutputStream(filePath).use { ImageIO.write(image, "png", it) }
+                log.info { "썸네일 렌더링: page=${pageIndex + 1}/$totalPages, file=${filePath.fileName}" }
+                Pair(pageIndex + 1, filePath.toAbsolutePath().toString())
             }
-            thumbnailRepository.saveAll(thumbnails)
-            log.debug { "썸네일 생성 완료: manualId=$manualId, totalPages=$totalPages" }
         }
+    }
+
+    /** 썸네일 DB 레코드를 저장. 파일은 이미 디스크에 있어야 한다 */
+    @Transactional
+    fun saveThumbnailRecords(
+        manualId: ManualId,
+        files: List<Pair<Int, String>>,
+    ) {
+        val thumbnails =
+            files.map { (pageNumber, filePath) ->
+                Thumbnail(manualId = manualId.value, pageNumber = pageNumber, filePath = filePath)
+            }
+        thumbnailRepository.saveAll(thumbnails)
+        log.info { "썸네일 DB 저장 완료: manualId=$manualId, count=${thumbnails.size}" }
     }
 
     /** 메뉴얼의 썸네일 페이지 번호 목록 반환 (오름차순) */

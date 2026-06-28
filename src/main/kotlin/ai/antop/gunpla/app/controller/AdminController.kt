@@ -9,6 +9,8 @@ import ai.antop.gunpla.app.dto.ManualAssemblyDto
 import ai.antop.gunpla.app.dto.ManualSummaryDto
 import ai.antop.gunpla.app.dto.ManualUpdateRequestDto
 import ai.antop.gunpla.app.service.AdminService
+import ai.antop.gunpla.app.service.ManualTaskService
+import ai.antop.gunpla.app.service.SseService
 import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
 import org.springframework.web.bind.annotation.DeleteMapping
@@ -23,22 +25,29 @@ import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.ResponseStatus
 import org.springframework.web.bind.annotation.RestController
 import org.springframework.web.multipart.MultipartFile
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter
 
 /** 관리자 페이지 전용 CRUD API (메뉴얼·데칼 등록/수정/삭제) */
 @RestController
 @RequestMapping("/api/admin")
 class AdminController(
     private val adminService: AdminService,
+    private val sseService: SseService,
+    private val manualTaskService: ManualTaskService,
 ) {
+    /** SSE 연결. 메뉴얼 등록 결과를 실시간으로 수신한다 */
+    @GetMapping("/sse", produces = [MediaType.TEXT_EVENT_STREAM_VALUE])
+    fun sse(): SseEmitter = sseService.connect()
+
     /** 메뉴얼 전체 목록 반환 (q가 있으면 서버 필터링) */
     @GetMapping("/manuals")
     fun manualList(
         @RequestParam(required = false) q: String?,
     ): List<ManualSummaryDto> = adminService.getManuals(q)
 
-    /** 메뉴얼 등록 (파일 업로드 또는 URL 지정, 멀티파트 폼) */
+    /** 메뉴얼 등록 요청 수신 후 즉시 202 반환. 실제 처리(PDF 저장·썸네일 생성)는 비동기로 진행되며 결과는 SSE로 전달된다 */
     @PostMapping("/manuals", consumes = [MediaType.MULTIPART_FORM_DATA_VALUE])
-    @ResponseStatus(HttpStatus.CREATED)
+    @ResponseStatus(HttpStatus.ACCEPTED)
     fun create(
         @RequestParam grade: Grade,
         @RequestParam modelNumber: String,
@@ -46,7 +55,10 @@ class AdminController(
         @RequestParam("pdf", required = false) pdf: MultipartFile?,
         @RequestParam("pdfUrl", required = false) pdfUrl: String?,
         @RequestParam(required = false) link: String?,
-    ): ManualSummaryDto = adminService.createManual(grade, modelNumber, productName, pdf, pdfUrl, link)
+    ) {
+        val pdfBytes = pdf?.takeIf { !it.isEmpty }?.bytes
+        manualTaskService.createManual(grade, modelNumber, productName, pdfBytes, pdfUrl, link)
+    }
 
     /** 메뉴얼 정보 수정 (등급·제품명) */
     @PutMapping("/manuals/{manualId}")

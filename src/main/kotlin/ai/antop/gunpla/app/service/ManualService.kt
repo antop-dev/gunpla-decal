@@ -17,7 +17,6 @@ import org.springframework.data.repository.findByIdOrNull
 import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
-import org.springframework.web.multipart.MultipartFile
 import org.springframework.web.server.ResponseStatusException
 import java.net.HttpURLConnection
 import java.net.URI
@@ -77,31 +76,38 @@ class ManualService(
         }
     }
 
-    /** 메뉴얼 등록: PDF 파일 업로드 또는 URL 다운로드로 저장 (썸네일 생성은 AdminService에서 처리) */
-    fun createManual(
-        grade: Grade,
-        modelNumber: String,
-        productName: String,
-        pdfFile: MultipartFile? = null,
-        pdfUrl: String? = null,
-        link: String? = null,
-    ): ManualItemDto {
+    /** PDF를 디스크에만 저장하고 경로를 반환. DB 레코드는 생성하지 않는다 */
+    fun savePdfFile(
+        pdfBytes: ByteArray?,
+        pdfUrl: String?,
+    ): Path {
         val dest = Paths.get(appProperties.uploadDir, "${UUID.randomUUID()}.pdf").toAbsolutePath()
         when {
-            pdfFile != null && !pdfFile.isEmpty -> pdfFile.transferTo(dest)
+            pdfBytes != null && pdfBytes.isNotEmpty() -> Files.write(dest, pdfBytes)
             !pdfUrl.isNullOrBlank() -> downloadFromUrl(pdfUrl, dest)
             else -> throw ResponseStatusException(HttpStatus.BAD_REQUEST, "PDF 파일 또는 URL을 입력해주세요")
         }
+        return dest
+    }
+
+    /** Manual DB 레코드를 저장하고 반환. PDF 파일은 이미 디스크에 있어야 한다 */
+    @Transactional
+    fun saveManualRecord(
+        grade: Grade,
+        modelNumber: String,
+        productName: String,
+        pdfPath: String,
+        link: String?,
+    ): ManualItemDto {
         val manual =
             Manual(
                 grade = grade,
                 modelNumber = modelNumber,
                 productName = productName,
-                pdfPath = dest.toString(),
+                pdfPath = pdfPath,
                 link = link?.takeIf { it.isNotBlank() },
             )
-        val saved = manualRepository.save(manual)
-        return saved.toDto()
+        return manualRepository.save(manual).toDto()
     }
 
     /** URL에서 PDF를 다운로드하여 dest 경로에 저장. HTTP 상태 코드 오류 시 400 예외 발생 */

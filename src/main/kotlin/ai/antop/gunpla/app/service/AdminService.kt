@@ -1,18 +1,15 @@
 package ai.antop.gunpla.app.service
 
-import ai.antop.gunpla.app.domain.Grade
 import ai.antop.gunpla.app.domain.ManualId
 import ai.antop.gunpla.app.dto.DecalCreateRequestDto
 import ai.antop.gunpla.app.dto.DecalItemDto
 import ai.antop.gunpla.app.dto.DecalUpdateRequestDto
-import ai.antop.gunpla.app.dto.ManualItemDto
 import ai.antop.gunpla.app.dto.ManualSummaryDto
 import ai.antop.gunpla.app.dto.ManualUpdateRequestDto
 import ai.antop.gunpla.app.event.ManualChangedEvent
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
-import org.springframework.web.multipart.MultipartFile
 
 /** 관리자 페이지 비즈니스 로직. 메뉴얼·데칼·썸네일 CRUD를 조율한다 */
 @Service
@@ -36,21 +33,6 @@ class AdminService(
             onlyPublished = false,
             useCache = false,
         )
-
-    /** 메뉴얼 등록: DB 저장 후 썸네일 생성 */
-    @Transactional
-    fun createManual(
-        grade: Grade,
-        modelNumber: String,
-        productName: String,
-        pdfFile: MultipartFile? = null,
-        pdfUrl: String? = null,
-        link: String? = null,
-    ): ManualSummaryDto {
-        val manual = manualService.createManual(grade, modelNumber, productName, pdfFile, pdfUrl, link)
-        thumbnailService.generateThumbnails(manual.id, manual.pdfPath)
-        return manual.toSummary()
-    }
 
     /** 메뉴얼 정보 수정 (등급·형식번호·제품명, null 필드는 변경하지 않음) */
     @Transactional
@@ -109,6 +91,4 @@ class AdminService(
         val pdf = manualService.getPdfResource(manualId)
         return openAiService.recognizeDecalNumber(pdf.file, pageNumber, x, y)
     }
-
-    private fun ManualItemDto.toSummary() = ManualSummaryDto(id, grade, modelNumber, productName, link, published, createdAt, updatedAt)
 }

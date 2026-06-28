@@ -109,6 +109,16 @@ container.addEventListener('mouseleave', () => {
 
 /* ──────────── 메뉴얼 목록 ──────────── */
 
+function buildManualIconBtn(m) {
+  const btn = document.createElement('button');
+  btn.className = 'manual-icon-item sb-icon-tip w-8 h-8 flex items-center justify-center rounded hover:bg-gray-700 text-gray-400 hover:text-white';
+  btn.dataset.id  = m.id;
+  btn.dataset.tip = `[${m.grade}] ${m.modelNumber} ${m.productName}`;
+  btn.innerHTML   = '<i class="fas fa-file-pdf text-sm"></i>';
+  btn.addEventListener('click', () => selectManual(btn.dataset.id));
+  return btn;
+}
+
 // 관리자 API에서 메뉴얼 목록 로드 후 현재 검색어로 필터링
 async function loadManuals() {
   const manualsRes = await fetch('/api/admin/manuals');
@@ -117,20 +127,62 @@ async function loadManuals() {
   // 아이콘 목록: 전체 표시
   const iconEl = document.getElementById('sb-icons');
   iconEl.querySelectorAll('.manual-icon-item').forEach(e => e.remove());
-  manualList.forEach(m => {
-    const btn = document.createElement('button');
-    btn.className = 'manual-icon-item sb-icon-tip w-8 h-8 flex items-center justify-center rounded hover:bg-gray-700 text-gray-400 hover:text-white';
-    btn.dataset.id  = m.id;
-    btn.dataset.tip = `[${m.grade}] ${m.modelNumber} ${m.productName}`;
-    btn.innerHTML   = '<i class="fas fa-file-pdf text-sm"></i>';
-    btn.addEventListener('click', () => selectManual(btn.dataset.id));
-    iconEl.appendChild(btn);
-  });
+  manualList.forEach(m => iconEl.appendChild(buildManualIconBtn(m)));
 
   // 텍스트 목록: 현재 검색어 적용 (서버 사이드)
   await searchManuals();
 
   window.dispatchEvent(new Event('resize'));
+}
+
+// SSE로 수신된 메뉴얼을 목록 맨 위에 삽입하고 아이콘 목록에도 추가
+function prependManualToList(manual) {
+  manualList.unshift(manual);
+
+  const iconEl = document.getElementById('sb-icons');
+  const firstIcon = iconEl.querySelector('.manual-icon-item');
+  const btn = buildManualIconBtn(manual);
+  if (firstIcon) iconEl.insertBefore(btn, firstIcon); else iconEl.appendChild(btn);
+
+  const q = (document.getElementById('manual-search')?.value ?? '').trim();
+  if (!q) {
+    const listEl = document.getElementById('manual-list');
+    const emptyMsg = listEl.querySelector('p');
+    if (emptyMsg) emptyMsg.remove();
+    listEl.insertAdjacentHTML('afterbegin', buildManualItemHtml(manual));
+    const newItem = listEl.querySelector(`.manual-item[data-id="${manual.id}"]`);
+    newItem.addEventListener('click', e => {
+      if (e.target.closest('.btn-edit') || e.target.closest('.btn-del')) return;
+      selectManual(newItem.dataset.id);
+    });
+    newItem.querySelector('.btn-edit')?.addEventListener('click', () => openManualEditModal(manual.id));
+    newItem.querySelector('.btn-del')?.addEventListener('click', () => deleteManual(manual.id));
+  }
+}
+
+// 등록된 메뉴얼 아이템을 duration(ms) 동안 노란색으로 하이라이트
+function highlightManual(id, duration) {
+  const item = document.querySelector(`.manual-item[data-id="${id}"]`);
+  if (!item) return;
+  item.style.backgroundColor = 'rgba(234, 179, 8, 0.25)';
+  setTimeout(() => {
+    item.style.transition = 'background-color 1s ease';
+    item.style.backgroundColor = '';
+    setTimeout(() => { item.style.transition = ''; }, 1000);
+  }, duration);
+}
+
+// 화면 우하단에 빨간 토스트 메시지를 4.5초 표시
+function showToast(message) {
+  const toast = document.createElement('div');
+  toast.className = 'fixed bottom-6 right-6 bg-red-600 text-white text-sm px-4 py-2.5 rounded-lg shadow-lg z-[9999] flex items-center gap-2';
+  toast.innerHTML = `<i class="fas fa-exclamation-circle"></i><span>${esc(message)}</span>`;
+  document.body.appendChild(toast);
+  setTimeout(() => {
+    toast.style.transition = 'opacity 0.5s';
+    toast.style.opacity = '0';
+    setTimeout(() => toast.remove(), 500);
+  }, 4000);
 }
 
 // 현재 검색어로 서버에 요청해 텍스트 목록 렌더링 (manualList 캐시는 변경하지 않음)
@@ -142,17 +194,8 @@ async function searchManuals() {
   renderManualItems(list);
 }
 
-// 메뉴얼 목록 DOM 렌더링 및 이벤트 연결
-function renderManualItems(list) {
-  const el = document.getElementById('manual-list');
-  if (!list.length) {
-    const q = (document.getElementById('manual-search')?.value ?? '').trim();
-    el.innerHTML = q
-      ? '<p class="text-gray-500 text-xs p-2">검색 결과 없음</p>'
-      : '<p class="text-gray-500 text-xs p-2">등록된 메뉴얼이 없습니다</p>';
-    return;
-  }
-  el.innerHTML = list.map(m => `
+function buildManualItemHtml(m) {
+  return `
     <div class="manual-item group px-2 py-1.5 rounded cursor-pointer hover:bg-gray-700 transition-colors${m.published ? '' : ' opacity-50'}" data-id="${m.id}">
       <div class="flex items-center gap-1 mb-0.5">
         <span class="grade-badge grade-${esc(m.grade)}">${esc(m.grade)}</span>
@@ -165,7 +208,20 @@ function renderManualItems(list) {
         </button>
       </div>
       <div class="text-xs text-gray-400 leading-snug truncate">${esc(m.productName)}</div>
-    </div>`).join('');
+    </div>`;
+}
+
+// 메뉴얼 목록 DOM 렌더링 및 이벤트 연결
+function renderManualItems(list) {
+  const el = document.getElementById('manual-list');
+  if (!list.length) {
+    const q = (document.getElementById('manual-search')?.value ?? '').trim();
+    el.innerHTML = q
+      ? '<p class="text-gray-500 text-xs p-2">검색 결과 없음</p>'
+      : '<p class="text-gray-500 text-xs p-2">등록된 메뉴얼이 없습니다</p>';
+    return;
+  }
+  el.innerHTML = list.map(buildManualItemHtml).join('');
 
   if (currentManual) {
     el.querySelector(`.manual-item[data-id="${currentManual.id}"]`)?.classList.add('bg-gray-600');
@@ -1135,11 +1191,8 @@ document.getElementById('upload-form').addEventListener('submit', async e => {
   setFormLoading(true);
   try {
     const res = await fetch('/api/admin/manuals', { method: 'POST', body: fd });
-    if (res.ok) {
-      const created = await res.json();
+    if (res.status === 202) {
       closeUploadModal();
-      await loadManuals();
-      await selectManual(created.id);
     } else {
       const body = await res.json().catch(() => ({}));
       alert(body.message || '등록에 실패했습니다.');
@@ -1191,3 +1244,15 @@ document.getElementById('manual-search').addEventListener('input', () => {
 });
 
 loadManuals();
+
+/* ──────────── SSE: 메뉴얼 등록 결과 수신 ──────────── */
+const sseSource = new EventSource(`${window.contextPath}/api/admin/sse`);
+sseSource.addEventListener('manual-created', e => {
+  const manual = JSON.parse(e.data);
+  prependManualToList(manual);
+  highlightManual(manual.id, 3000);
+});
+sseSource.addEventListener('manual-failed', e => {
+  const { message } = JSON.parse(e.data);
+  showToast(message || '메뉴얼 등록에 실패했습니다.');
+});
