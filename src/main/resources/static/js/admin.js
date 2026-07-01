@@ -291,7 +291,17 @@ function renderOverlay() {
   overlay.querySelectorAll('.decal-marker').forEach(m =>
     m.addEventListener('click', e => {
       e.stopPropagation();
-      showTooltip(+m.dataset.id);
+      const d = allDecals.find(x => x.id === +m.dataset.id);
+      if (!d) return;
+      editingDecalId = +m.dataset.id;
+      document.getElementById('inp-edit-num').value   = d.decalNumber;
+      const ec = d.color ?? '#ffffff';
+      document.getElementById('inp-edit-hex').value   = ec.slice(1).toUpperCase();
+      document.getElementById('inp-edit-color').value = ec;
+      document.getElementById('inp-edit-color').dispatchEvent(new Event('input'));
+      const shapeRadio = document.querySelector(`input[name="edit-shape"][value="${d.shape ?? 'CIRCLE'}"]`);
+      if (shapeRadio) shapeRadio.checked = true;
+      openEditModal(e.clientX, e.clientY);
     }));
 
   overlay.style.display = markersVisible ? '' : 'none';
@@ -332,30 +342,12 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape') hideTooltip(
 tooltip.addEventListener('mousedown', e => e.stopPropagation());
 tooltip.addEventListener('mouseup',   e => e.stopPropagation());
 
-// 편집 버튼: 툴팁 위치 근처에 수정 모달 열기
-document.getElementById('tt-edit').addEventListener('click', e => {
+// 삭제 버튼: 수정 폼에서 데칼 삭제 후 폼 닫기
+document.getElementById('btn-edit-delete').addEventListener('click', async e => {
   e.stopPropagation();
-  if (!tooltipDecalId) return;
-  const d = allDecals.find(x => x.id === tooltipDecalId);
-  if (!d) return;
-  editingDecalId = tooltipDecalId;
-  document.getElementById('inp-edit-num').value   = d.decalNumber;
-  const ec = d.color ?? '#ffffff';
-  document.getElementById('inp-edit-hex').value   = ec.slice(1).toUpperCase();
-  document.getElementById('inp-edit-color').value = ec;
-  document.getElementById('inp-edit-color').dispatchEvent(new Event('input'));
-  const shapeRadio = document.querySelector(`input[name="edit-shape"][value="${d.shape ?? 'CIRCLE'}"]`);
-  if (shapeRadio) shapeRadio.checked = true;
-  hideTooltip();
-  openEditModal(e.clientX, e.clientY);
-});
-
-// 삭제 버튼: 서버에서 데칼 삭제 후 오버레이 갱신
-document.getElementById('tt-delete').addEventListener('click', async e => {
-  e.stopPropagation();
-  if (!tooltipDecalId) return;
-  const id = tooltipDecalId;
-  hideTooltip();
+  if (!editingDecalId) return;
+  const id = editingDecalId;
+  cancelEditModal();
   await fetch(`/api/admin/decals/${id}`, { method: 'DELETE' });
   allDecals = allDecals.filter(d => d.id !== id);
   await autoUnpublish();
