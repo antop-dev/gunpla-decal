@@ -11,9 +11,9 @@ import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.ModelAttribute
 import org.springframework.web.bind.annotation.PathVariable
 
-/** Thymeleaf 페이지 라우팅 컨트롤러 */
+/** 사용자 페이지 Thymeleaf 라우팅 컨트롤러 */
 @Controller
-class PageController(
+class UserPageController(
     private val appProperties: AppProperties,
     private val manualAssemblyService: ManualAssemblyService,
     private val objectMapper: ObjectMapper,
@@ -75,8 +75,4 @@ class PageController(
     /** 로그인 페이지 (이미 인증된 경우 /admin으로 리디렉션) */
     @GetMapping("/login")
     fun login(authentication: Authentication?): String = if (authentication?.isAuthenticated == true) "redirect:/admin" else "login"
-
-    /** 관리자 페이지 (admin.html) */
-    @GetMapping("/admin")
-    fun admin() = "admin"
 }

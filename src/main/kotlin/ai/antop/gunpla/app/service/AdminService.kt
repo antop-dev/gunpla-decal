@@ -91,4 +91,18 @@ class AdminService(
         val pdf = manualService.getPdfResource(manualId)
         return openAiService.recognizeDecalNumber(pdf.file, pageNumber, x, y)
     }
+
+    /**
+     * AI(GPT-4o mini)를 이용하여 PDF 좌표 주변 이미지에서 주요 색상(HEX) 인식.
+     * 인식 실패 시 null 반환.
+     */
+    fun recognizeDecalColor(
+        manualId: ManualId,
+        pageNumber: Int,
+        x: Double,
+        y: Double,
+    ): String? {
+        val pdf = manualService.getPdfResource(manualId)
+        return openAiService.recognizeDecalColor(pdf.file, pageNumber, x, y)
+    }
 }

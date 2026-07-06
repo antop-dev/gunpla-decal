@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.RestController
 /** 사용자 페이지 전용 읽기 API (메뉴얼 조회) */
 @RestController
 @RequestMapping("/api/user")
-class UserController(
+class UserApiController(
     private val manualAssemblyService: ManualAssemblyService,
 ) {
     /** 메뉴얼 목록 반환 (공개만). q가 있으면 등급명·제품명으로 검색 */

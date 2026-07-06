@@ -364,18 +364,23 @@ function focusActiveDecalNum() {
   }
 }
 
-document.addEventListener('click', e => {
-  const btn = e.target.closest('.color-preset-btn');
-  if (!btn) return;
-  const hexId   = btn.dataset.hexTarget;
-  const colorId = btn.dataset.colorTarget;
-  const color   = btn.dataset.color;
-  if (hexId)   document.getElementById(hexId).value   = color.slice(1).toUpperCase();
-  if (colorId) {
-    document.getElementById(colorId).value = color;
-    document.getElementById(colorId).dispatchEvent(new Event('input'));
-  }
+function applyWbToggle(hexInputId, colorInputId) {
+  const hexEl = document.getElementById(hexInputId);
+  const color = hexEl.value.toUpperCase() === 'FFFFFF' ? '#000000' : '#ffffff';
+  hexEl.value = color.slice(1).toUpperCase();
+  hexEl.dispatchEvent(new Event('input', { bubbles: true }));
+  const colorEl = document.getElementById(colorInputId);
+  colorEl.value = color;
+  colorEl.dispatchEvent(new Event('input'));
   focusActiveDecalNum();
+}
+
+document.getElementById('btn-wb-decal').addEventListener('click', () => {
+  applyWbToggle('inp-decal-hex', 'inp-decal-color');
+});
+
+document.getElementById('btn-wb-edit').addEventListener('click', () => {
+  applyWbToggle('inp-edit-hex', 'inp-edit-color');
 });
 
 /* ──────────── 헥스 색상 입력 동기화 ──────────── */
@@ -704,6 +709,57 @@ document.getElementById('btn-ai-edit').addEventListener('click', e => {
   const d = allDecals.find(x => x.id === editingDecalId);
   if (!d) return;
   doAiRecognize('inp-edit-num', e.currentTarget, d.page, d.x, d.y);
+});
+
+async function doAiColorRecognize(hexInputId, colorInputId, numInputId, btnEl, page, x, y) {
+  if (aiSearching || !currentManual) return;
+  aiSearching = true;
+  hideAiTip();
+  const icon = btnEl.querySelector('i');
+  const origClass = icon.className;
+  icon.className = 'fas fa-spinner fa-spin text-xs';
+  btnEl.disabled = true;
+  try {
+    const res = await fetch(`/api/admin/manuals/${currentManual.id}/recognize-color`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ page, x, y }),
+    });
+    if (!res.ok) { showAiTip(btnEl, '오류가 발생했습니다', false); return; }
+    const data = await res.json();
+    if (data.found && data.hex) {
+      const hexEl = document.getElementById(hexInputId);
+      const colorEl = document.getElementById(colorInputId);
+      hexEl.value = data.hex;
+      hexEl.dispatchEvent(new Event('input', { bubbles: true }));
+      colorEl.value = '#' + data.hex;
+      colorEl.dispatchEvent(new Event('input'));
+      document.getElementById(numInputId).focus();
+      showAiTip(btnEl, '#' + data.hex + ' 인식됨', true);
+    } else {
+      showAiTip(btnEl, '찾을 수 없습니다', false);
+    }
+  } catch {
+    showAiTip(btnEl, '오류가 발생했습니다', false);
+  } finally {
+    icon.className = origClass;
+    btnEl.disabled = false;
+    aiSearching = false;
+  }
+}
+
+document.getElementById('btn-ai-color-decal').addEventListener('click', e => {
+  e.stopPropagation();
+  if (!pendingPos) return;
+  doAiColorRecognize('inp-decal-hex', 'inp-decal-color', 'inp-decal-num', e.currentTarget, pendingPos.page, pendingPos.x, pendingPos.y);
+});
+
+document.getElementById('btn-ai-color-edit').addEventListener('click', e => {
+  e.stopPropagation();
+  if (!editingDecalId) return;
+  const d = allDecals.find(x => x.id === editingDecalId);
+  if (!d) return;
+  doAiColorRecognize('inp-edit-hex', 'inp-edit-color', 'inp-edit-num', e.currentTarget, d.page, d.x, d.y);
 });
 
 document.getElementById('btn-decal-close').addEventListener('click', cancelDecalModal);

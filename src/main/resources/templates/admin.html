@@ -241,15 +241,18 @@
           <input type="text" id="inp-decal-hex" maxlength="6" autocomplete="off" spellcheck="false"
             class="text-xs font-mono uppercase px-1 outline-none flex-1 h-full min-w-0" placeholder="FFFFFF">
         </div>
-        <button type="button" class="color-preset-btn rounded border-2 border-gray-400 bg-white flex-shrink-0"
-          style="width:22px;height:22px;"
-          data-hex-target="inp-decal-hex" data-color-target="inp-decal-color" data-color="#ffffff" title="흰색"></button>
-        <button type="button" class="color-preset-btn rounded border-2 border-gray-600 flex-shrink-0"
-          style="width:22px;height:22px;background:#000000;"
-          data-hex-target="inp-decal-hex" data-color-target="inp-decal-color" data-color="#000000" title="검정"></button>
+        <button type="button" id="btn-wb-decal" title="흰색/검정 전환"
+          class="flex-shrink-0 rounded border border-gray-400 overflow-hidden"
+          style="width:22px;height:22px;background:linear-gradient(to right, #ffffff 50%, #000000 50%);"></button>
         <button type="button" id="wrap-decal-color" class="flex-shrink-0 rounded border border-gray-300 flex items-center justify-center"
           style="width:22px;height:22px;background:#ffffff;" title="색상 선택">
           <i class="fas fa-palette text-xs" id="ico-decal-palette" style="color:#333;pointer-events:none;"></i>
+        </button>
+        <button type="button" id="btn-ai-color-decal" title="AI로 색상 찾기"
+          class="flex-shrink-0 rounded border border-gray-300 flex items-center justify-center hover:bg-gray-50"
+          th:classAppend="${!hasAi} ? 'hidden'"
+          style="width:22px;height:22px;">
+          <i class="fas fa-robot text-xs text-gray-600" style="pointer-events:none;"></i>
         </button>
         <input type="color" id="inp-decal-color" value="#ffffff" class="hidden">
       </div>
@@ -263,13 +266,13 @@
         </label>
         <label class="cursor-pointer flex-shrink-0">
           <input type="radio" name="decal-shape" id="inp-decal-shape-square" value="SQUARE" class="sr-only">
-          <span class="shape-toggle flex items-center justify-center border-2 border-gray-400" style="width:22px;height:22px;">
+          <span class="shape-toggle flex items-center justify-center border-2 border-gray-400" style="width:21px;height:21px;">
             <i class="fas fa-check shape-check"></i>
           </span>
         </label>
         <label class="cursor-pointer flex-shrink-0">
           <input type="radio" name="decal-shape" id="inp-decal-shape-diamond" value="DIAMOND" class="sr-only">
-          <span class="shape-toggle flex items-center justify-center border-2 border-gray-400" style="width:22px;height:22px;transform:rotate(45deg);">
+          <span class="shape-toggle flex items-center justify-center border-2 border-gray-400" style="width:16px;height:16px;transform:rotate(45deg);">
             <i class="fas fa-check shape-check" style="transform:rotate(-45deg);"></i>
           </span>
         </label>
@@ -281,7 +284,8 @@
         <button type="button" id="btn-jp-decal" title="일본어 선택"
           class="px-2 py-1 text-sm border border-gray-300 rounded hover:bg-gray-50 flex-shrink-0 text-gray-600">あ</button>
         <button type="button" id="btn-ai-decal" title="AI로 찾기"
-          class="px-2 py-1 text-sm border border-gray-300 rounded hover:bg-gray-50 flex-shrink-0 text-gray-600">
+          class="px-2 py-1 text-sm border border-gray-300 rounded hover:bg-gray-50 flex-shrink-0 text-gray-600"
+          th:classAppend="${!hasAi} ? 'hidden'">
           <i class="fas fa-robot text-xs"></i>
         </button>
       </div>
@@ -316,15 +320,18 @@
           <input type="text" id="inp-edit-hex" maxlength="6" autocomplete="off" spellcheck="false"
             class="text-xs font-mono uppercase px-1 outline-none flex-1 h-full min-w-0" placeholder="FFFFFF">
         </div>
-        <button type="button" class="color-preset-btn rounded border-2 border-gray-400 bg-white flex-shrink-0"
-          style="width:22px;height:22px;"
-          data-hex-target="inp-edit-hex" data-color-target="inp-edit-color" data-color="#ffffff" title="흰색"></button>
-        <button type="button" class="color-preset-btn rounded border-2 border-gray-600 flex-shrink-0"
-          style="width:22px;height:22px;background:#000000;"
-          data-hex-target="inp-edit-hex" data-color-target="inp-edit-color" data-color="#000000" title="검정"></button>
+        <button type="button" id="btn-wb-edit" title="흰색/검정 전환"
+          class="flex-shrink-0 rounded border border-gray-400 overflow-hidden"
+          style="width:22px;height:22px;background:linear-gradient(to right, #ffffff 50%, #000000 50%);"></button>
         <button type="button" id="wrap-edit-color" class="flex-shrink-0 rounded border border-gray-300 flex items-center justify-center"
           style="width:22px;height:22px;background:#ffffff;" title="색상 선택">
           <i class="fas fa-palette text-xs" id="ico-edit-palette" style="color:#333;pointer-events:none;"></i>
+        </button>
+        <button type="button" id="btn-ai-color-edit" title="AI로 색상 찾기"
+          class="flex-shrink-0 rounded border border-gray-300 flex items-center justify-center hover:bg-gray-50"
+          th:classAppend="${!hasAi} ? 'hidden'"
+          style="width:22px;height:22px;">
+          <i class="fas fa-robot text-xs text-gray-600" style="pointer-events:none;"></i>
         </button>
         <input type="color" id="inp-edit-color" value="#ffffff" class="hidden">
       </div>
@@ -338,13 +345,13 @@
         </label>
         <label class="cursor-pointer flex-shrink-0">
           <input type="radio" name="edit-shape" id="inp-edit-shape-square" value="SQUARE" class="sr-only">
-          <span class="shape-toggle flex items-center justify-center border-2 border-gray-400" style="width:22px;height:22px;">
+          <span class="shape-toggle flex items-center justify-center border-2 border-gray-400" style="width:21px;height:21px;">
             <i class="fas fa-check shape-check"></i>
           </span>
         </label>
         <label class="cursor-pointer flex-shrink-0">
           <input type="radio" name="edit-shape" id="inp-edit-shape-diamond" value="DIAMOND" class="sr-only">
-          <span class="shape-toggle flex items-center justify-center border-2 border-gray-400" style="width:22px;height:22px;transform:rotate(45deg);">
+          <span class="shape-toggle flex items-center justify-center border-2 border-gray-400" style="width:16px;height:16px;transform:rotate(45deg);">
             <i class="fas fa-check shape-check" style="transform:rotate(-45deg);"></i>
           </span>
         </label>
@@ -356,7 +363,8 @@
         <button type="button" id="btn-jp-edit" title="일본어 선택"
           class="px-2 py-1 text-sm border border-gray-300 rounded hover:bg-gray-50 flex-shrink-0 text-gray-600">あ</button>
         <button type="button" id="btn-ai-edit" title="AI로 찾기"
-          class="px-2 py-1 text-sm border border-gray-300 rounded hover:bg-gray-50 flex-shrink-0 text-gray-600">
+          class="px-2 py-1 text-sm border border-gray-300 rounded hover:bg-gray-50 flex-shrink-0 text-gray-600"
+          th:classAppend="${!hasAi} ? 'hidden'">
           <i class="fas fa-robot text-xs"></i>
         </button>
       </div>

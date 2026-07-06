@@ -30,7 +30,7 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter
 /** 관리자 페이지 전용 CRUD API (메뉴얼·데칼 등록/수정/삭제) */
 @RestController
 @RequestMapping("/api/admin")
-class AdminController(
+class AdminApiController(
     private val adminService: AdminService,
     private val sseService: SseService,
     private val manualTaskService: ManualTaskService,
@@ -118,6 +118,16 @@ class AdminController(
         val character = adminService.recognizeDecalNumber(manualId, request.page, request.x, request.y)
         return DecalRecognizeResponse(character != null, character)
     }
+
+    /** AI(GPT-4o mini)로 PDF 좌표 주변 데칼 주요 색상 인식 */
+    @PostMapping("/manuals/{manualId}/recognize-color")
+    fun recognizeColor(
+        @PathVariable manualId: ManualId,
+        @RequestBody request: DecalRecognizeRequest,
+    ): DecalColorRecognizeResponse {
+        val hex = adminService.recognizeDecalColor(manualId, request.page, request.x, request.y)
+        return DecalColorRecognizeResponse(hex != null, hex)
+    }
 }
 
 /** AI 데칼 번호 인식 결과 응답 */
@@ -126,6 +136,14 @@ data class DecalRecognizeResponse(
     val found: Boolean,
     /** 인식된 데칼 번호 문자열. found=false이면 null */
     val character: String?,
+)
+
+/** AI 데칼 색상 인식 결과 응답 */
+data class DecalColorRecognizeResponse(
+    /** 인식 성공 여부 */
+    val found: Boolean,
+    /** 인식된 HEX 색상 코드(# 없이 6자리 대문자). found=false이면 null */
+    val hex: String?,
 )
 
 /** AI 데칼 번호 인식 요청 */
