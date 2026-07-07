@@ -574,8 +574,17 @@ function applyDecalNumValidation(inputEl) {
 /* ──────────── 일본어 문자 선택기 ──────────── */
 
 // jp-grid에 문자 버튼 렌더링 후 팝업 위치 지정·표시
-function openJpPicker(targetInput, anchorEl) {
+async function openJpPicker(targetInput, anchorEl) {
   jpPickerTarget = targetInput;
+
+  let top20 = [];
+  try {
+    const res = await fetch('/api/admin/japanese-usage/top20');
+    if (res.ok) top20 = await res.json();
+  } catch {}
+  const top10Set = new Set(top20.slice(0, 10));
+  const top20Set = new Set(top20.slice(10, 20));
+
   const grid = document.getElementById('jp-grid');
   grid.innerHTML = '';
   for (const character of JP_CHARS) {
@@ -583,7 +592,13 @@ function openJpPicker(targetInput, anchorEl) {
     btn.type = 'button';
     btn.textContent = character;
     btn.className = 'text-sm rounded hover:bg-blue-100 py-1';
-    btn.style.cssText = 'font-size:14px; line-height:1.4;';
+    if (top10Set.has(character)) {
+      btn.style.cssText = 'font-size:14px; line-height:1.4; text-decoration:underline; color:#dc2626;';
+    } else if (top20Set.has(character)) {
+      btn.style.cssText = 'font-size:14px; line-height:1.4; color:#dc2626;';
+    } else {
+      btn.style.cssText = 'font-size:14px; line-height:1.4;';
+    }
     btn.addEventListener('click', e => {
       e.stopPropagation();
       const target = jpPickerTarget;

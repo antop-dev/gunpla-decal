@@ -109,6 +109,10 @@ class AdminApiController(
         @PathVariable decalId: Long,
     ) = adminService.deleteDecal(decalId)
 
+    /** 많이 사용된 일본어 문자 상위 20개 반환 (1~10위: 굵은 빨강, 11~20위: 빨강) */
+    @GetMapping("/japanese-usage/top20")
+    fun getJapaneseTop20(): List<String> = adminService.getJapaneseTop20()
+
     /** AI(GPT-4o mini)로 PDF 좌표 주변 데칼 번호 인식 */
     @PostMapping("/manuals/{manualId}/recognize")
     fun recognize(

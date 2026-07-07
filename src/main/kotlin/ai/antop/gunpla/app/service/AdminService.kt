@@ -78,6 +78,9 @@ class AdminService(
         decalService.deleteDecal(decalId)
     }
 
+    /** 많이 사용된 일본어 문자 상위 20개 반환 */
+    fun getJapaneseTop20(): List<String> = decalService.getJapaneseTop20()
+
     /**
      * AI(GPT-4o mini)를 이용하여 PDF 좌표 주변 이미지에서 데칼 번호 인식.
      * 인식 실패 또는 유효하지 않은 형식이면 null 반환.
