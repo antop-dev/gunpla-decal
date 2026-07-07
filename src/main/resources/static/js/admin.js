@@ -14,6 +14,7 @@ let currentManual   = null;  // 현재 선택된 메뉴얼 객체 { id, grade, m
 let allDecals       = [];    // 현재 메뉴얼의 전체 데칼 목록
 let manualList      = [];    // 로드된 메뉴얼 목록 캐시 (삭제 confirm에 사용)
 let editingManualId = null;  // 수정 중인 메뉴얼 ID
+let lastManualGrade = 'RG'; // 마지막으로 선택한 메뉴얼 등급
 let manualLoading   = false; // PDF 로드 중 중복 선택 방지 플래그
 
 // 드래그 상태 추적 (pdfScroll 패닝 + 단순 클릭 구분)
@@ -994,6 +995,9 @@ document.getElementById('manual-edit-form').addEventListener('submit', async e =
   const modelNumber = document.getElementById('edit-inp-model').value.trim();
   const productName = document.getElementById('edit-inp-name').value.trim();
   const link        = document.getElementById('edit-inp-link').value.trim() || null;
+  document.getElementById('edit-inp-model').value = modelNumber;
+  document.getElementById('edit-inp-name').value  = productName;
+  document.getElementById('edit-inp-link').value  = link ?? '';
   if (!productName) { alert('제품명을 입력해주세요.'); return; }
   if (link && !link.startsWith('https://')) { alert('링크는 https://로 시작해야 합니다.'); return; }
 
@@ -1202,7 +1206,7 @@ function setFormLoading(loading) {
 }
 
 function openUploadModal() {
-  document.getElementById('inp-grade').value = 'RG';
+  document.getElementById('inp-grade').value = lastManualGrade;
   document.getElementById('inp-model').value = '';
   document.getElementById('inp-name').value  = '';
   document.getElementById('inp-link').value  = '';
@@ -1232,6 +1236,9 @@ document.getElementById('upload-form').addEventListener('submit', async e => {
   const modelNumber = document.getElementById('inp-model').value.trim();
   const productName = document.getElementById('inp-name').value.trim();
   const link        = document.getElementById('inp-link').value.trim();
+  document.getElementById('inp-model').value = modelNumber;
+  document.getElementById('inp-name').value  = productName;
+  document.getElementById('inp-link').value  = link;
   if (!grade)       { alert('등급을 선택해주세요.'); return; }
   if (!productName) { alert('제품명을 입력해주세요.'); return; }
   if (link && !link.startsWith('https://')) { alert('링크는 https://로 시작해야 합니다.'); return; }
@@ -1247,6 +1254,7 @@ document.getElementById('upload-form').addEventListener('submit', async e => {
     fd.append('pdf', selectedFile);
   } else {
     const pdfUrl = document.getElementById('inp-pdf-url').value.trim();
+    document.getElementById('inp-pdf-url').value = pdfUrl;
     if (!pdfUrl) { alert('PDF URL을 입력해주세요.'); return; }
     fd.append('pdfUrl', pdfUrl);
   }
@@ -1255,6 +1263,7 @@ document.getElementById('upload-form').addEventListener('submit', async e => {
   try {
     const res = await fetch('/api/admin/manuals', { method: 'POST', body: fd });
     if (res.status === 202) {
+      lastManualGrade = grade;
       closeUploadModal();
     } else {
       const body = await res.json().catch(() => ({}));
