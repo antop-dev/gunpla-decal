@@ -565,6 +565,10 @@ function sanitizeDecalNum(val) {
   return val.slice(0, 1);
 }
 
+function isValidDecalNum(val) {
+  return /^\d{1,3}$/.test(val) || /^[A-Z]$/.test(val) || /^[぀-ゟ゠-ヿ]$/.test(val);
+}
+
 function applyDecalNumValidation(inputEl) {
   let composing = false;
   inputEl.addEventListener('compositionstart', () => { composing = true; });
@@ -856,6 +860,11 @@ document.getElementById('btn-decal-cancel').addEventListener('click', cancelDeca
 async function saveNewDecal() {
   const num = document.getElementById('inp-decal-num').value.trim();
   if (!num || !pendingPos) return;
+  if (!isValidDecalNum(num)) {
+    showToast('데칼번호는 숫자(1~3자리), 영대문자(1자), 일본어 가나(1자)만 입력 가능합니다.');
+    document.getElementById('inp-decal-num').focus();
+    return;
+  }
   const hexVal = document.getElementById('inp-decal-hex').value.replace(/[^0-9a-fA-F]/g, '');
   const color  = '#' + (hexVal.length === 6 ? hexVal.toLowerCase() : 'ffffff');
   const shape = document.querySelector('input[name="decal-shape"]:checked')?.value ?? 'CIRCLE';
@@ -938,6 +947,11 @@ document.getElementById('btn-edit-cancel').addEventListener('click', cancelEditM
 async function saveEditDecal() {
   const num = document.getElementById('inp-edit-num').value.trim();
   if (!num || !editingDecalId) return;
+  if (!isValidDecalNum(num)) {
+    showToast('데칼번호는 숫자(1~3자리), 영대문자(1자), 일본어 가나(1자)만 입력 가능합니다.');
+    document.getElementById('inp-edit-num').focus();
+    return;
+  }
   const hexVal = document.getElementById('inp-edit-hex').value.replace(/[^0-9a-fA-F]/g, '');
   const color  = '#' + (hexVal.length === 6 ? hexVal.toLowerCase() : 'ffffff');
   const shape = document.querySelector('input[name="edit-shape"]:checked')?.value ?? 'CIRCLE';
