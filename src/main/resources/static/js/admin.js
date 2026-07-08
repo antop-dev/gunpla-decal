@@ -28,7 +28,7 @@ let markersVisible  = true;  // 마커 보이기/숨기기 상태
 let tooltipDecalId  = null; // 현재 툴팁이 표시된 데칼 ID
 let pendingPos      = null; // 데칼 등록 모달에서 사용할 클릭 위치 {x, y, page}
 let editingDecalId  = null; // 수정 모달에서 편집 중인 데칼 ID
-let lastDecalStyle  = { color: '#ffffff', shape: 'CIRCLE' }; // 마지막으로 사용한 데칼 스타일
+let lastDecalStyle  = { color: '#ffffff', shape: 'CIRCLE', num: '' }; // 마지막으로 사용한 데칼 스타일
 
 // 일본어 문자 선택기 상태
 const JP_CHARS = 'あいうえおかきくけこさしすせそたちつてとなにぬねのはひふへほまみむめもやゆよらりるれろわをん' +
@@ -266,7 +266,7 @@ async function selectManual(id) {
 
     const data = await (await fetch(`/api/admin/manuals/${id}`)).json();
     currentManual = data; allDecals = data.decals;
-    lastDecalStyle = { color: '#ffffff', shape: 'CIRCLE' };
+    lastDecalStyle = { color: '#ffffff', shape: 'CIRCLE', num: '' };
 
     pdfDoc = await pdfjsLib.getDocument(`${window.contextPath}/resource/${id}`).promise;
     currentPage = 1;
@@ -824,7 +824,7 @@ document.addEventListener('mousedown', e => {
 
 function openDecalModal(x, y, clientX, clientY) {
   pendingPos = { x, y, page: currentPage };
-  document.getElementById('inp-decal-num').value   = '';
+  document.getElementById('inp-decal-num').value   = lastDecalStyle.num;
   const dc = lastDecalStyle.color.startsWith('#') ? lastDecalStyle.color : '#ffffff';
   document.getElementById('inp-decal-hex').value   = dc.slice(1).toUpperCase();
   document.getElementById('inp-decal-color').value = dc;
@@ -846,7 +846,7 @@ function openDecalModal(x, y, clientX, clientY) {
   if (top  < 4) top  = 4;
   modal.style.left = left + 'px';
   modal.style.top  = top  + 'px';
-  setTimeout(() => document.getElementById('inp-decal-num').focus(), 50);
+  setTimeout(() => { const el = document.getElementById('inp-decal-num'); el.focus(); el.select(); }, 50);
 }
 
 document.getElementById('btn-decal-ok').addEventListener('click', saveNewDecal);
@@ -879,7 +879,7 @@ async function saveNewDecal() {
     });
     if (res.ok) {
       allDecals.push(await res.json());
-      lastDecalStyle = { color, shape };
+      lastDecalStyle = { color, shape, num };
       await autoUnpublish();
       cancelDecalModal();
       renderOverlay();
