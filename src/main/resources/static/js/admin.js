@@ -967,7 +967,7 @@ async function saveEditDecal() {
     if (res.ok) {
       const updated = await res.json();
       allDecals = allDecals.map(d => d.id === updated.id ? updated : d);
-      lastDecalStyle = { color: updated.color ?? '#ffffff', shape: updated.shape ?? 'CIRCLE' };
+      lastDecalStyle = { ...lastDecalStyle, color: updated.color ?? '#ffffff', shape: updated.shape ?? 'CIRCLE' };
       await autoUnpublish();
       cancelEditModal();
       renderOverlay();
