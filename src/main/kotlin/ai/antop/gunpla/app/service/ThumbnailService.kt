@@ -41,7 +41,10 @@ class ThumbnailService(
         return Loader.loadPDF(pdfFilePath.toFile()).use { doc ->
             val totalPages = doc.numberOfPages
             log.info { "썸네일 렌더링 시작: totalPages=$totalPages, pdf=$pdfPath" }
-            val renderer = PDFRenderer(doc)
+            val renderer =
+                PDFRenderer(doc).apply {
+                    isSubsamplingAllowed = true
+                }
             (0 until totalPages).map { pageIndex ->
                 val page = doc.getPage(pageIndex)
                 val scale = thumbHeight.toFloat() / page.cropBox.height
