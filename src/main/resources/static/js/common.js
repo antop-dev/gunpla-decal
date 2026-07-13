@@ -154,8 +154,9 @@ function renderThumbnails(urls) {
   urls.forEach((url, idx) => {
     const i = idx + 1;
     const wrap = document.createElement('div');
-    wrap.className = 'thumb-item' + (i === currentPage ? ' active' : '');
+    wrap.className = 'gtm-thumb-page thumb-item' + (i === currentPage ? ' active' : '');
     wrap.dataset.page = i;
+    wrap.dataset.gtmPage = i;
     const img = document.createElement('img');
     img.src = window.contextPath + url;
     const lbl = document.createElement('div');
@@ -198,12 +199,13 @@ function decalMarkerStyle(color, shape) {
 function buildDecalMarkerHtml(d, textLen) {
   const style = decalMarkerStyle(d.color, d.shape);
   const text = esc(d.decalNumber.slice(0, textLen));
+  const gtmAttrs = `data-gtm-num="${esc(d.decalNumber)}" data-gtm-page="${d.page}" data-gtm-color="${esc(d.color)}" data-gtm-shape="${esc(d.shape)}"`;
   if (d.shape === 'DIAMOND') {
-    return `<div class="decal-marker" data-id="${d.id}"
+    return `<div class="gtm-decal-marker decal-marker" data-id="${d.id}" ${gtmAttrs}
       style="left:${d.x}%;top:${d.y}%;transform:translate(-50%,-50%) rotate(45deg);${style}"
       title="${esc(d.decalNumber)}"><span style="display:block;transform:rotate(-45deg);">${text}</span></div>`;
   }
-  return `<div class="decal-marker" data-id="${d.id}"
+  return `<div class="gtm-decal-marker decal-marker" data-id="${d.id}" ${gtmAttrs}
     style="left:${d.x}%;top:${d.y}%;transform:translate(-50%,-50%);${style}"
     title="${esc(d.decalNumber)}">${text}</div>`;
 }

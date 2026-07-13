@@ -81,17 +81,21 @@ async function loadManuals(q = '') {
       : `<p class="text-gray-500 text-xs p-2">${window.i18n.manualEmpty}</p>`;
   } else {
     el.innerHTML = allManuals.map(m => `
-      <div class="manual-item group px-2 py-1.5 rounded cursor-pointer hover:bg-gray-700 transition-colors" data-id="${m.id}">
+      <div class="gtm-manual-select manual-item group px-2 py-1.5 rounded cursor-pointer hover:bg-gray-700 transition-colors"
+           data-id="${m.id}"
+           data-gtm-id="${m.id}" data-gtm-grade="${esc(m.grade)}" data-gtm-model="${esc(m.modelNumber)}" data-gtm-name="${esc(m.productName)}">
         <div class="flex items-center gap-1 mb-0.5">
           <span class="grade-badge grade-${esc(m.grade)}">${esc(m.grade)}</span>
           <span class="text-xs font-medium text-gray-200 leading-snug truncate flex-1">${esc(m.modelNumber)}</span>
-          ${m.link ? `<a class="manual-link-btn opacity-0 group-hover:opacity-100 flex-shrink-0 text-gray-500 hover:text-white w-5 h-5 flex items-center justify-center"
-                  href="${esc(m.link)}" target="_blank" rel="noopener noreferrer" title="${window.i18n.manualLinkOpen}">
+          ${m.link ? `<a class="gtm-manual-ext-link manual-link-btn opacity-0 group-hover:opacity-100 flex-shrink-0 text-gray-500 hover:text-white w-5 h-5 flex items-center justify-center"
+                  href="${esc(m.link)}" target="_blank" rel="noopener noreferrer" title="${window.i18n.manualLinkOpen}"
+                  data-gtm-id="${m.id}" data-gtm-url="${esc(m.link)}">
             <i class="fas fa-link text-xs"></i>
           </a>` : ''}
-          <button class="pdf-dl-btn opacity-0 group-hover:opacity-100 flex-shrink-0 text-gray-500 hover:text-white w-5 h-5 flex items-center justify-center"
+          <button class="gtm-pdf-download pdf-dl-btn opacity-0 group-hover:opacity-100 flex-shrink-0 text-gray-500 hover:text-white w-5 h-5 flex items-center justify-center"
                   data-id="${m.id}"
                   data-filename="${esc(m.grade)}_${esc(m.modelNumber)}_${esc(m.productName)}.pdf"
+                  data-gtm-id="${m.id}" data-gtm-grade="${esc(m.grade)}" data-gtm-model="${esc(m.modelNumber)}"
                   title="${window.i18n.manualPdfDownload}">
             <i class="fas fa-download text-xs"></i>
           </button>
@@ -139,9 +143,10 @@ async function loadManuals(q = '') {
   // 접힌 사이드바용 아이콘 목록 렌더링
   const iconEl = document.getElementById('sb-icons');
   iconEl.innerHTML = allManuals.map(m => `
-    <button class="manual-icon-item sb-icon-tip w-8 h-8 flex items-center justify-center rounded hover:bg-gray-700 text-gray-400 hover:text-white"
+    <button class="gtm-manual-select manual-icon-item sb-icon-tip w-8 h-8 flex items-center justify-center rounded hover:bg-gray-700 text-gray-400 hover:text-white"
             data-id="${m.id}"
-            data-tip="[${esc(m.grade)}] ${esc(m.modelNumber)} ${esc(m.productName)}">
+            data-tip="[${esc(m.grade)}] ${esc(m.modelNumber)} ${esc(m.productName)}"
+            data-gtm-id="${m.id}" data-gtm-grade="${esc(m.grade)}" data-gtm-model="${esc(m.modelNumber)}" data-gtm-source="icon">
       <i class="fas fa-file-pdf text-sm"></i>
     </button>`).join('');
   iconEl.querySelectorAll('.manual-icon-item').forEach(icon =>
@@ -351,9 +356,10 @@ function renderDecalList() {
       const iconStroke = (isHex && lum > 0.85) ? '-webkit-text-stroke:0.5px #aaa;' : '';
       return `
       <div class="relative">
-        <button class="decal-btn w-full h-8 flex items-center justify-center text-xs font-medium
+        <button class="gtm-decal-click decal-btn w-full h-8 flex items-center justify-center text-xs font-medium
                        bg-white text-gray-900 border border-gray-300 hover:bg-gray-100 truncate px-0.5"
-                data-key="${esc(key)}">
+                data-key="${esc(key)}"
+                data-gtm-num="${esc(num)}" data-gtm-color="${esc(color)}" data-gtm-shape="${esc(shape)}" data-gtm-source="grid">
           ${esc(num)}
         </button>
         <span class="pointer-events-none" style="position:absolute;top:1px;left:2px;font-size:9px;line-height:1;color:${iconColor};${iconStroke};z-index:1;">${shapeIcon}</span>
@@ -371,9 +377,10 @@ function renderDecalList() {
     const iconStroke = (isHex && lum > 0.85) ? '-webkit-text-stroke:0.5px #aaa;' : '';
     return `
     <div class="relative flex-shrink-0">
-      <button class="decal-icon-btn rs-icon-tip w-8 h-8 flex items-center justify-center
+      <button class="gtm-decal-click decal-icon-btn rs-icon-tip w-8 h-8 flex items-center justify-center
                      bg-white text-gray-900 border border-gray-300 hover:bg-gray-100 text-xs font-bold"
-              data-key="${esc(key)}" data-tip="${esc(num)}">
+              data-key="${esc(key)}" data-tip="${esc(num)}"
+              data-gtm-num="${esc(num)}" data-gtm-color="${esc(color)}" data-gtm-shape="${esc(shape)}" data-gtm-source="icon">
         ${esc(num.slice(0, 3))}
       </button>
       <span class="pointer-events-none" style="position:absolute;top:1px;left:2px;font-size:9px;line-height:1;color:${iconColor};${iconStroke};z-index:1;">${shapeIcon}</span>

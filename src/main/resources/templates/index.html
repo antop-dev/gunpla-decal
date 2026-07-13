@@ -71,13 +71,13 @@
   <!-- 헤더 -->
   <div id="sb-header" class="flex items-center gap-2 px-2 bg-gray-800 border-b border-gray-700 flex-shrink-0" style="height:48px;">
     <button id="sb-toggle"
-      class="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded hover:bg-gray-700 text-gray-400 hover:text-white"
+      class="gtm-sidebar-toggle flex-shrink-0 w-8 h-8 flex items-center justify-center rounded hover:bg-gray-700 text-gray-400 hover:text-white"
       th:title="#{sidebar.collapse}">
       <i id="sb-toggle-icon" class="fas fa-angles-left text-sm"></i>
     </button>
     <span id="sb-title" class="font-bold text-sm whitespace-nowrap flex-1" th:text="#{site.title}">Gundam Manual</span>
     <button id="sb-refresh"
-      class="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded hover:bg-gray-700 text-gray-400 hover:text-white"
+      class="gtm-manual-refresh flex-shrink-0 w-8 h-8 flex items-center justify-center rounded hover:bg-gray-700 text-gray-400 hover:text-white"
       th:title="#{sidebar.refresh}">
       <i class="fas fa-rotate-right text-xs"></i>
     </button>
@@ -105,17 +105,17 @@
   <!-- GitHub + 이메일 링크 (펼침) -->
   <div id="sb-github" class="flex-shrink-0 border-t border-gray-500 px-2 py-2 flex justify-evenly">
     <a href="https://github.com/antop-dev/gunpla-decal" target="_blank" rel="noopener"
-       class="flex items-center gap-2 text-gray-400 hover:text-white text-xs rounded px-1 py-1 hover:bg-gray-700">
+       class="gtm-github-link flex items-center gap-2 text-gray-400 hover:text-white text-xs rounded px-1 py-1 hover:bg-gray-700">
       <i class="fab fa-github text-sm flex-shrink-0"></i>
       <span>GitHub</span>
     </a>
     <a href="mailto:antop@kakao.com"
-       class="flex items-center gap-2 text-gray-400 hover:text-white text-xs rounded px-1 py-1 hover:bg-gray-700">
+       class="gtm-email-link flex items-center gap-2 text-gray-400 hover:text-white text-xs rounded px-1 py-1 hover:bg-gray-700">
       <i class="fas fa-envelope text-sm flex-shrink-0"></i>
       <span th:text="#{contact.email}">Email</span>
     </a>
     <a href="https://ko-fi.com/antop?hidefeed=true&widget=true" target="_blank" rel="noopener"
-       class="flex items-center gap-2 text-gray-400 hover:text-white text-xs rounded px-1 py-1 hover:bg-gray-700">
+       class="gtm-kofi-link flex items-center gap-2 text-gray-400 hover:text-white text-xs rounded px-1 py-1 hover:bg-gray-700">
       <i class="fas fa-mug-hot text-sm flex-shrink-0"></i>
       <span th:text="#{contact.donate}">Donate</span>
     </a>
@@ -123,17 +123,17 @@
   <!-- GitHub + 이메일 링크 (접힘) -->
   <div id="sb-github-icon" class="flex-shrink-0 border-t border-gray-500 flex flex-col items-center gap-0.5 py-2" style="display:none;">
     <a href="https://github.com/antop-dev/gunpla-decal" target="_blank" rel="noopener"
-       class="w-8 h-8 flex items-center justify-center rounded hover:bg-gray-700 text-gray-400 hover:text-white"
+       class="gtm-github-link w-8 h-8 flex items-center justify-center rounded hover:bg-gray-700 text-gray-400 hover:text-white"
        title="GitHub">
       <i class="fab fa-github text-sm"></i>
     </a>
     <a href="mailto:antop@kakao.com"
-       class="w-8 h-8 flex items-center justify-center rounded hover:bg-gray-700 text-gray-400 hover:text-white"
+       class="gtm-email-link w-8 h-8 flex items-center justify-center rounded hover:bg-gray-700 text-gray-400 hover:text-white"
        title="antop@kakao.com">
       <i class="fas fa-envelope text-sm"></i>
     </a>
     <a href="https://ko-fi.com/antop?hidefeed=true&widget=true" target="_blank" rel="noopener"
-       class="w-8 h-8 flex items-center justify-center rounded hover:bg-gray-700 text-gray-400 hover:text-white"
+       class="gtm-kofi-link w-8 h-8 flex items-center justify-center rounded hover:bg-gray-700 text-gray-400 hover:text-white"
        th:title="#{contact.donate}">
       <i class="fas fa-mug-hot text-sm"></i>
     </a>
@@ -171,20 +171,20 @@
       <div id="zoom-overlay">
         <span id="zoom-label"></span>
         <input id="zoom-slider" type="range" min="10" max="500" step="1" value="100" th:attr="aria-label=#{zoom.aria}">
-        <button id="fit-width-btn" th:title="#{zoom.fitWidth}">↔︎ <span th:text="#{zoom.fitWidth.label}">가로</span></button>
-        <button id="fit-height-btn" th:title="#{zoom.fitHeight}">↕︎ <span th:text="#{zoom.fitHeight.label}">세로</span></button>
-        <button id="fullscreen-btn" th:title="#{fullscreen.enter}">
+        <button id="fit-width-btn" class="gtm-fit-width" th:title="#{zoom.fitWidth}">↔︎ <span th:text="#{zoom.fitWidth.label}">가로</span></button>
+        <button id="fit-height-btn" class="gtm-fit-height" th:title="#{zoom.fitHeight}">↕︎ <span th:text="#{zoom.fitHeight.label}">세로</span></button>
+        <button id="fullscreen-btn" class="gtm-fullscreen" th:title="#{fullscreen.enter}">
           <i id="fullscreen-icon" class="fas fa-expand"></i>
           <span id="fullscreen-label" th:text="#{fullscreen.enter.label}">Fullscreen</span>
         </button>
         <div class="zoom-divider"></div>
-        <label id="marker-toggle" th:title="#{marker.toggle}">
+        <label id="marker-toggle" class="gtm-marker-toggle" th:title="#{marker.toggle}">
           <input type="checkbox" id="marker-visible" checked>
           <i class="fas fa-location-dot"></i>
           <span th:text="#{marker.label}">Marker</span>
         </label>
         <div class="zoom-divider"></div>
-        <button id="shortcut-btn" th:title="#{shortcut.btn}">
+        <button id="shortcut-btn" class="gtm-shortcut" th:title="#{shortcut.btn}">
           <i class="fas fa-keyboard"></i>
         </button>
         <div id="shortcut-popup">
@@ -212,7 +212,7 @@
       <!-- 헤더 -->
       <div id="rs-header" class="flex items-center gap-2 px-2 border-b border-gray-200 bg-gray-50 flex-shrink-0" style="height:40px;">
         <button id="rs-toggle"
-          class="flex-shrink-0 w-7 h-7 flex items-center justify-center rounded hover:bg-gray-200 text-gray-500 hover:text-gray-800"
+          class="gtm-right-sidebar-toggle flex-shrink-0 w-7 h-7 flex items-center justify-center rounded hover:bg-gray-200 text-gray-500 hover:text-gray-800"
           th:title="#{sidebar.collapse}">
           <i id="rs-toggle-icon" class="fas fa-angles-right text-xs"></i>
         </button>
