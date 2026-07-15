@@ -724,11 +724,13 @@ function flashDecalModalBorder(success) {
   card.style.boxShadow = `0 8px 24px rgba(0,0,0,0.18), 0 0 0 3px ${color}`;
 }
 
-async function doOnnxRecognize(page, x, y) {
+async function doOnnxRecognize(btnEl, page, x, y) {
   if (!currentManual || !window.onnxAvailable) return;
   const input = document.getElementById('inp-decal-num');
-  const loading = document.getElementById('onnx-loading');
-  loading.classList.remove('hidden');
+  const icon = btnEl.querySelector('i');
+  const origClass = icon.className;
+  icon.className = 'fas fa-spinner fa-spin text-xs';
+  btnEl.disabled = true;
   input.disabled = true;
   let recognized = false;
   try {
@@ -745,15 +747,22 @@ async function doOnnxRecognize(page, x, y) {
       recognized = true;
     }
   } catch {
-    // 자동 인식 실패는 조용히 무시
+    // 인식 실패는 조용히 무시
   } finally {
-    loading.classList.add('hidden');
+    icon.className = origClass;
+    btnEl.disabled = false;
     input.disabled = false;
     input.focus();
     input.select();
     flashDecalModalBorder(recognized);
   }
 }
+
+document.getElementById('btn-onnx-decal').addEventListener('click', e => {
+  e.stopPropagation();
+  if (!pendingPos) return;
+  doOnnxRecognize(e.currentTarget, pendingPos.page, pendingPos.x, pendingPos.y);
+});
 
 document.getElementById('btn-ai-decal').addEventListener('click', e => {
   e.stopPropagation();
@@ -885,7 +894,6 @@ function openDecalModal(x, y, clientX, clientY) {
   modal.style.left = left + 'px';
   modal.style.top  = top  + 'px';
   setTimeout(() => { const el = document.getElementById('inp-decal-num'); el.focus(); el.select(); }, 50);
-  doOnnxRecognize(currentPage, x, y);
 }
 
 document.getElementById('btn-decal-ok').addEventListener('click', saveNewDecal);
