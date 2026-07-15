@@ -19,6 +19,7 @@ class AdminService(
     private val decalService: DecalService,
     private val thumbnailService: ThumbnailService,
     private val openAiService: OpenAiService,
+    private val onnxDecalService: OnnxDecalService,
     private val eventPublisher: ApplicationEventPublisher,
 ) {
     /** 메뉴얼 전체 목록 반환 (미공개 포함). q가 있으면 서버 필터링 */
@@ -93,6 +94,20 @@ class AdminService(
     ): String? {
         val pdf = manualService.getPdfResource(manualId)
         return openAiService.recognizeDecalNumber(pdf.file, pageNumber, x, y)
+    }
+
+    /**
+     * ONNX EfficientNet-B0 모델을 이용하여 PDF 좌표 주변 이미지에서 데칼 번호 인식.
+     * 모델 미로드 또는 인식 실패 시 null 반환.
+     */
+    fun recognizeDecalNumberOnnx(
+        manualId: ManualId,
+        pageNumber: Int,
+        x: Double,
+        y: Double,
+    ): String? {
+        val pdf = manualService.getPdfResource(manualId)
+        return onnxDecalService.recognizeDecalNumber(pdf.file, pageNumber, x, y)
     }
 
     /**

@@ -717,6 +717,44 @@ async function doAiRecognize(numInputId, btnEl, page, x, y) {
   }
 }
 
+function flashDecalModalBorder(success) {
+  const card = document.getElementById('decal-modal-card');
+  if (!card) return;
+  const color = success ? '#22c55e' : '#ef4444';
+  card.style.boxShadow = `0 8px 24px rgba(0,0,0,0.18), 0 0 0 3px ${color}`;
+}
+
+async function doOnnxRecognize(page, x, y) {
+  if (!currentManual || !window.onnxAvailable) return;
+  const input = document.getElementById('inp-decal-num');
+  const loading = document.getElementById('onnx-loading');
+  loading.classList.remove('hidden');
+  input.disabled = true;
+  let recognized = false;
+  try {
+    const res = await fetch(`/api/admin/manuals/${currentManual.id}/recognize-onnx`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ page, x, y }),
+    });
+    if (!res.ok || document.getElementById('decal-modal').classList.contains('hidden')) return;
+    const data = await res.json();
+    if (data.found && data.character) {
+      input.value = data.character;
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+      recognized = true;
+    }
+  } catch {
+    // 자동 인식 실패는 조용히 무시
+  } finally {
+    loading.classList.add('hidden');
+    input.disabled = false;
+    input.focus();
+    input.select();
+    flashDecalModalBorder(recognized);
+  }
+}
+
 document.getElementById('btn-ai-decal').addEventListener('click', e => {
   e.stopPropagation();
   if (!pendingPos) return;
@@ -847,6 +885,7 @@ function openDecalModal(x, y, clientX, clientY) {
   modal.style.left = left + 'px';
   modal.style.top  = top  + 'px';
   setTimeout(() => { const el = document.getElementById('inp-decal-num'); el.focus(); el.select(); }, 50);
+  doOnnxRecognize(currentPage, x, y);
 }
 
 document.getElementById('btn-decal-ok').addEventListener('click', saveNewDecal);
@@ -902,6 +941,7 @@ function cancelDecalModal() {
   modal.classList.add('hidden');
   modal.style.left = '';
   modal.style.top  = '';
+  document.getElementById('decal-modal-card').style.boxShadow = '';
 }
 
 /* ──────────── 데칼 수정 모달 ──────────── */
@@ -922,7 +962,7 @@ function openEditModal(clientX, clientY) {
   if (top  < 4) top  = 4;
   modal.style.left = left + 'px';
   modal.style.top  = top  + 'px';
-  setTimeout(() => document.getElementById('inp-edit-num').focus(), 50);
+  setTimeout(() => { const el = document.getElementById('inp-edit-num'); el.focus(); el.select(); }, 50);
 }
 
 function cancelEditModal() {

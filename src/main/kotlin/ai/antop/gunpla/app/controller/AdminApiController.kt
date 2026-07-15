@@ -123,6 +123,16 @@ class AdminApiController(
         return DecalRecognizeResponse(character != null, character)
     }
 
+    /** ONNX 모델로 PDF 좌표 주변 데칼 번호 인식 */
+    @PostMapping("/manuals/{manualId}/recognize-onnx")
+    fun recognizeOnnx(
+        @PathVariable manualId: ManualId,
+        @RequestBody request: DecalRecognizeRequest,
+    ): DecalRecognizeResponse {
+        val character = adminService.recognizeDecalNumberOnnx(manualId, request.page, request.x, request.y)
+        return DecalRecognizeResponse(character != null, character)
+    }
+
     /** AI(GPT-4o mini)로 PDF 좌표 주변 데칼 주요 색상 인식 */
     @PostMapping("/manuals/{manualId}/recognize-color")
     fun recognizeColor(

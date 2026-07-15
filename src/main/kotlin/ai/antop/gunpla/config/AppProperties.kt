@@ -17,4 +17,15 @@ data class AppProperties(
     val ga4: String?,
     /** Google Tag Manager ID (환경변수 GTM_ID 또는 application.yml에서 설정, 미설정 시 GTM 비활성) */
     val gtmId: String?,
-)
+    /** ONNX 모델 설정 (미설정 시 ONNX 인식 기능 비활성) */
+    val onnx: OnnxProperties = OnnxProperties(),
+) {
+    data class OnnxProperties(
+        /** ONNX 모델 파일 경로 (app.onnx.model) */
+        val model: String? = null,
+        /** 클래스 레이블 JSON 파일 경로 (app.onnx.labels) */
+        val labels: String? = null,
+        /** 인식 신뢰도 임계값 — 최대 확률이 이 값 미만이면 null 반환 (app.onnx.threshold) */
+        val threshold: Double = 0.9,
+    )
+}

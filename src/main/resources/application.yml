@@ -42,6 +42,10 @@ app:
   upload-dir: ${UPLOAD_DIR:./uploads}
   openai-key: ${openai.api-key}
   base-url: ${BASE_URL:http://localhost:8080}
+  onnx:
+    model: ${ONNX_MODEL:}
+    labels: ${ONNX_LABELS:}
+    threshold: ${ONNX_THRESHOLD:0.9}
 
 openai:
   api-key: ${OPENAI_KEY:}

@@ -16,7 +16,15 @@ decorator:
       multiline: true
       log-format: "%(executionTime) ms | %(sql)"
 
+
 logging:
   level:
     p6spy: debug
     org.springframework.cache: trace
+
+app:
+  db-path: ./assets/db/gunpla.db
+  upload-dir: ./assets/uploads
+  onnx:
+    model: ./assets/onnx/decal.onnx
+    labels: ./assets/onnx/labels.json

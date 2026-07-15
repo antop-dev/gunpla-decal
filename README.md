@@ -12,7 +12,7 @@
 | DB | SQLite + Spring Data JPA + Flyway |
 | 캐시 | Caffeine (인메모리, 항목당 최대 1,000개) |
 | PDF 처리 | Apache PDFBox 3.0 |
-| AI 인식 | OpenAI GPT-4o mini |
+| AI 인식 | OpenAI GPT-4o mini · ONNX Runtime 1.20 (EfficientNet-B0) |
 | 템플릿 | Thymeleaf (다국어: 한국어 · 일본어 · 중국어 · 영어) |
 | 프론트엔드 | Tailwind CSS, PDF.js, Font Awesome |
 | SEO | sitemap.xml, robots.txt, RSS/Atom 피드, OG 태그, JSON-LD |
@@ -50,7 +50,9 @@
   - 데칼 번호, 배경색(HEX), 도형(원/사각형/다이아) 지정
   - 데칼 마커 수정 / 삭제
   - 데칼 수정·삭제 시 공개 메뉴얼 자동 비공개 전환
-- AI(OpenAI GPT-4o mini)를 이용한 데칼 번호 자동 인식
+- AI 데칼 번호 자동 인식
+  - **OpenAI GPT-4o mini** — 버튼 클릭 시 클릭 영역 이미지를 GPT에 전송하여 인식
+  - **ONNX (EfficientNet-B0)** — PDF 클릭 위치 주변 이미지를 서버에서 직접 추론, 등록 팝업 오픈 시 자동 실행. 신뢰도(softmax 확률)가 임계값 미만이면 결과를 반환하지 않음
 
 ## 실행 방법
 
@@ -95,6 +97,9 @@
 | `BASE_URL` | 사이트 기본 URL (sitemap·피드 URL 생성에 사용) | `http://localhost:8080` |
 | `OPENAI_KEY` | OpenAI API 키 (AI 인식 기능, 미설정 시 비활성) | — |
 | `GA4_ID` | Google Analytics 4 측정 ID (미설정 시 비활성) | — |
+| `ONNX_MODEL` | ONNX 모델 파일 경로 (미설정 시 ONNX 인식 비활성) | — |
+| `ONNX_LABELS` | 클래스 레이블 JSON 파일 경로 | — |
+| `ONNX_THRESHOLD` | ONNX 추론 신뢰도 임계값 (0.0 ~ 1.0, 미만이면 결과 미반환) | `0.9` |
 
 ### 프로덕션 프로파일 (`prd`)
 
@@ -138,7 +143,8 @@ SPRING_PROFILES_ACTIVE=prd ./gradlew bootRun
 | `POST` | `/api/admin/manuals/{id}/decals` | 데칼 추가 |
 | `PUT` | `/api/admin/decals/{decalId}` | 데칼 수정 |
 | `DELETE` | `/api/admin/decals/{decalId}` | 데칼 삭제 |
-| `POST` | `/api/admin/manuals/{id}/recognize` | AI 데칼 번호 인식 |
+| `POST` | `/api/admin/manuals/{id}/recognize` | AI(GPT) 데칼 번호 인식 |
+| `POST` | `/api/admin/manuals/{id}/recognize-onnx` | ONNX 데칼 번호 인식 (body: `{page, x, y}`) |
 
 ### SEO
 
