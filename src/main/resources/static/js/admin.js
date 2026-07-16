@@ -717,51 +717,58 @@ async function doAiRecognize(numInputId, btnEl, page, x, y) {
   }
 }
 
-function flashDecalModalBorder(success) {
-  const card = document.getElementById('decal-modal-card');
-  if (!card) return;
-  const color = success ? '#22c55e' : '#ef4444';
-  card.style.boxShadow = `0 8px 24px rgba(0,0,0,0.18), 0 0 0 3px ${color}`;
+function resetOnnxBtn() {
+  const btn = document.getElementById('btn-onnx-decal');
+  if (!btn) return;
+  btn.innerHTML = '<i class="fas fa-microchip text-xs"></i>';
+  btn.disabled = false;
+  btn.style.boxShadow = '';
+  delete btn.dataset.onnxValue;
 }
 
 async function doOnnxRecognize(btnEl, page, x, y) {
   if (!currentManual || !window.onnxAvailable) return;
-  const input = document.getElementById('inp-decal-num');
-  const icon = btnEl.querySelector('i');
-  const origClass = icon.className;
-  icon.className = 'fas fa-spinner fa-spin text-xs';
+  btnEl.innerHTML = '<i class="fas fa-spinner fa-spin text-xs"></i>';
   btnEl.disabled = true;
-  input.disabled = true;
-  let recognized = false;
+  let recognizedValue = null;
   try {
     const res = await fetch(`/api/admin/manuals/${currentManual.id}/recognize-onnx`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ page, x, y }),
     });
-    if (!res.ok || document.getElementById('decal-modal').classList.contains('hidden')) return;
-    const data = await res.json();
-    if (data.found && data.character) {
-      input.value = data.character;
-      input.dispatchEvent(new Event('input', { bubbles: true }));
-      recognized = true;
+    if (res.ok && !document.getElementById('decal-modal').classList.contains('hidden')) {
+      const data = await res.json();
+      if (data.found && data.character) recognizedValue = data.character;
     }
   } catch {
     // 인식 실패는 조용히 무시
   } finally {
-    icon.className = origClass;
-    btnEl.disabled = false;
-    input.disabled = false;
-    input.focus();
-    input.select();
-    flashDecalModalBorder(recognized);
+    if (document.getElementById('decal-modal').classList.contains('hidden')) return;
+    if (recognizedValue) {
+      btnEl.textContent = recognizedValue;
+      btnEl.dataset.onnxValue = recognizedValue;
+      btnEl.disabled = false;
+      btnEl.style.boxShadow = '0 0 0 1px #22c55e';
+    } else {
+      btnEl.innerHTML = '<i class="fas fa-question text-xs" style="color:#d1d5db;"></i>';
+      btnEl.disabled = false;
+      btnEl.style.boxShadow = '';
+    }
   }
 }
 
 document.getElementById('btn-onnx-decal').addEventListener('click', e => {
   e.stopPropagation();
-  if (!pendingPos) return;
-  doOnnxRecognize(e.currentTarget, pendingPos.page, pendingPos.x, pendingPos.y);
+  const btn = e.currentTarget;
+  const input = document.getElementById('inp-decal-num');
+  if (!btn.dataset.onnxValue) {
+    input.focus();
+    return;
+  }
+  input.value = btn.dataset.onnxValue;
+  input.dispatchEvent(new Event('input', { bubbles: true }));
+  saveNewDecal();
 });
 
 document.getElementById('btn-ai-decal').addEventListener('click', e => {
@@ -893,6 +900,9 @@ function openDecalModal(x, y, clientX, clientY) {
   if (top  < 4) top  = 4;
   modal.style.left = left + 'px';
   modal.style.top  = top  + 'px';
+  const onnxBtn = document.getElementById('btn-onnx-decal');
+  resetOnnxBtn();
+  if (window.onnxAvailable) doOnnxRecognize(onnxBtn, currentPage, x, y);
   setTimeout(() => { const el = document.getElementById('inp-decal-num'); el.focus(); el.select(); }, 50);
 }
 
@@ -949,7 +959,7 @@ function cancelDecalModal() {
   modal.classList.add('hidden');
   modal.style.left = '';
   modal.style.top  = '';
-  document.getElementById('decal-modal-card').style.boxShadow = '';
+  resetOnnxBtn();
 }
 
 /* ──────────── 데칼 수정 모달 ──────────── */
