@@ -559,14 +559,14 @@ function sanitizeDecalNum(val) {
   if (!val) return '';
   const first = val[0];
   if (/^\d/.test(first)) return val.replace(/\D/g, '').slice(0, 3);
-  if (/^[A-Za-z]/.test(first)) return val.replace(/[^A-Za-z]/g, '').slice(0, 1).toUpperCase();
+  if (/^[A-Za-z]/.test(first)) return val.replace(/[^A-Za-z]/g, '').slice(0, 1);
   if (/^[぀-ゟ゠-ヿ]/.test(first))
     return val.replace(/[^぀-ゟ゠-ヿ]/g, '').slice(0, 1);
   return val.slice(0, 1);
 }
 
 function isValidDecalNum(val) {
-  return /^\d{1,3}$/.test(val) || /^[A-Z]$/.test(val) || /^[぀-ゟ゠-ヿ]$/.test(val);
+  return /^\d{1,3}$/.test(val) || /^[A-Za-z]$/.test(val) || /^[぀-ゟ゠-ヿ]$/.test(val);
 }
 
 function applyDecalNumValidation(inputEl) {
