@@ -47,7 +47,10 @@ class ThumbnailService(
                 }
             (0 until totalPages).map { pageIndex ->
                 val page = doc.getPage(pageIndex)
-                val scale = thumbHeight.toFloat() / page.cropBox.height
+                // 페이지 회전(90/270)을 반영하면 렌더 이미지 높이는 cropBox.width 기준으로 정해지므로 유효 높이로 scale 계산
+                val effectiveHeight =
+                    if (page.rotation == 90 || page.rotation == 270) page.cropBox.width else page.cropBox.height
+                val scale = thumbHeight.toFloat() / effectiveHeight
                 val image = toRgb(renderer.renderImage(pageIndex, scale))
                 val pageNum = (pageIndex + 1).toString().padStart(2, '0')
                 val filePath = Paths.get(appProperties.uploadDir, "$uuidStr.$pageNum.png")
