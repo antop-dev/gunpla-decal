@@ -55,7 +55,7 @@ class SecurityConfig {
 
     /**
      * HTTP 보안 필터 체인 구성.
-     * - 공개 경로: /, /login, /captcha, /css/{all}, /js/{all}, /vendor/{all}, /api/user/{all}, /resource/{all}, /actuator/{all}
+     * - 공개 경로: /, /login, /captcha, /css/{all}, /js/{all}, /vendor/{all}, /favicon/{all}, /api/user/{all}, /resource/{all}, /actuator/{all}
      * - /admin: 인증 필요
      * - Base62 단축 URL: 인증 불필요
      * - API 경로: CSRF 검증 제외
@@ -78,6 +78,7 @@ class SecurityConfig {
                         "/css/**",
                         "/js/**",
                         "/vendor/**",
+                        "/favicon/**",
                         "/api/user/**",
                         "/resource/**",
                         "/actuator/**",
