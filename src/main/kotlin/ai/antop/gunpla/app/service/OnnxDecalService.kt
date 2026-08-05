@@ -9,13 +9,13 @@ import com.fasterxml.jackson.module.kotlin.readValue
 import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.annotation.PostConstruct
 import jakarta.annotation.PreDestroy
-import org.apache.pdfbox.Loader
-import org.apache.pdfbox.rendering.PDFRenderer
 import org.springframework.stereotype.Service
 import java.awt.RenderingHints
 import java.awt.image.BufferedImage
+import java.io.ByteArrayInputStream
 import java.io.File
 import java.nio.FloatBuffer
+import javax.imageio.ImageIO
 
 private val log = KotlinLogging.logger {}
 
@@ -67,21 +67,16 @@ class OnnxDecalService(
     }
 
     /**
-     * PDF 파일의 지정 페이지·좌표 주변 이미지를 ONNX 모델로 분류하여 데칼 번호 반환.
+     * 크롭 이미지를 ONNX 모델로 분류하여 데칼 번호 반환.
      * 모델 미로드 또는 추론 실패 시 null 반환.
      */
-    fun recognizeDecalNumber(
-        pdfFile: File,
-        page: Int,
-        x: Double,
-        y: Double,
-    ): String? {
+    fun recognizeDecalNumber(imageBytes: ByteArray): String? {
         val sess = session ?: return null
         val env = env ?: return null
         if (labels.isEmpty()) return null
 
         return try {
-            val image = renderAndCrop(pdfFile, page, x, y) ?: return null
+            val image = decodeAndResize(imageBytes) ?: return null
             toTensor(env, image).use { tensor ->
                 sess.run(mapOf("input" to tensor)).use { output ->
                     @Suppress("UNCHECKED_CAST")
@@ -108,30 +103,16 @@ class OnnxDecalService(
         return FloatArray(exp.size) { exp[it] / sum }
     }
 
-    private fun renderAndCrop(
-        pdfFile: File,
-        page: Int,
-        x: Double,
-        y: Double,
-    ): BufferedImage? =
-        try {
-            Loader.loadPDF(pdfFile).use { doc ->
-                val renderer = PDFRenderer(doc)
-                val full = renderer.renderImage(page - 1, 3.0f)
-                val cx = (x / 100.0 * full.width).toInt()
-                val cy = (y / 100.0 * full.height).toInt()
-                val half = 20
-                val x1 = (cx - half).coerceAtLeast(0)
-                val y1 = (cy - half).coerceAtLeast(0)
-                val x2 = (cx + half).coerceAtMost(full.width)
-                val y2 = (cy + half).coerceAtMost(full.height)
-                val cropped = full.getSubimage(x1, y1, x2 - x1, y2 - y1)
-                resize(cropped, inputSize, inputSize)
-            }
-        } catch (e: Exception) {
-            log.error(e) { "PDF 렌더링 실패: ${pdfFile.path}" }
-            null
-        }
+    private fun decodeAndResize(imageBytes: ByteArray): BufferedImage? {
+        val decoded =
+            try {
+                ImageIO.read(ByteArrayInputStream(imageBytes))
+            } catch (e: Exception) {
+                log.error(e) { "크롭 이미지 디코딩 실패" }
+                null
+            } ?: return null
+        return resize(decoded, inputSize, inputSize)
+    }
 
     private fun resize(
         src: BufferedImage,
