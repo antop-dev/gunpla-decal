@@ -28,6 +28,15 @@ let markersVisible  = true;  // 마커 보이기/숨기기 상태
 let tooltipDecalId  = null; // 현재 툴팁이 표시된 데칼 ID
 let pendingPos      = null; // 데칼 등록 모달에서 사용할 클릭 위치 {x, y, page}
 let editingDecalId  = null; // 수정 모달에서 편집 중인 데칼 ID
+
+// 데칼 인식용 크롭 반경(pt)·출력 해상도(px) — 서버가 예전에 scale=3.0 렌더 기준으로 쓰던
+// crop 반경(20~25px)을 pt로 환산한 값(20/3≈7, 25/3≈9)이라 인식 품질이 기존과 비슷하다.
+const CROP_RADIUS_ONNX_PT   = 7;
+const CROP_OUTPUT_ONNX_PX   = 224; // ONNX 모델 입력 크기와 동일
+const CROP_RADIUS_NUMBER_PT = 7;
+const CROP_OUTPUT_NUMBER_PX = 160;
+const CROP_RADIUS_COLOR_PT  = 9;
+const CROP_OUTPUT_COLOR_PX  = 160;
 let lastDecalStyle  = { color: '#ffffff', shape: 'CIRCLE', num: '' }; // 마지막으로 사용한 데칼 스타일
 
 // 일본어 문자 선택기 상태
@@ -690,11 +699,12 @@ async function doAiRecognize(numInputId, btnEl, page, x, y) {
   icon.className = 'fas fa-spinner fa-spin text-xs';
   btnEl.disabled = true;
   try {
+    const image = await captureCrop(page, x, y, CROP_RADIUS_NUMBER_PT, CROP_OUTPUT_NUMBER_PX);
     // manualId는 경로 변수로 전달하므로 body에서 제외
     const res = await fetch(`/api/admin/manuals/${currentManual.id}/recognize`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ page, x, y }),
+      body: JSON.stringify({ image }),
     });
     if (!res.ok) { showAiTip(btnEl, '오류가 발생했습니다', false); return; }
     const data = await res.json();
@@ -732,10 +742,11 @@ async function doOnnxRecognize(btnEl, page, x, y) {
   btnEl.disabled = true;
   let recognizedValue = null;
   try {
+    const image = await captureCrop(page, x, y, CROP_RADIUS_ONNX_PT, CROP_OUTPUT_ONNX_PX);
     const res = await fetch(`/api/admin/manuals/${currentManual.id}/recognize-onnx`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ page, x, y }),
+      body: JSON.stringify({ image }),
     });
     if (res.ok && !document.getElementById('decal-modal').classList.contains('hidden')) {
       const data = await res.json();
@@ -794,10 +805,11 @@ async function doAiColorRecognize(hexInputId, colorInputId, numInputId, btnEl, p
   icon.className = 'fas fa-spinner fa-spin text-xs';
   btnEl.disabled = true;
   try {
+    const image = await captureCrop(page, x, y, CROP_RADIUS_COLOR_PT, CROP_OUTPUT_COLOR_PX);
     const res = await fetch(`/api/admin/manuals/${currentManual.id}/recognize-color`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ page, x, y }),
+      body: JSON.stringify({ image }),
     });
     if (!res.ok) { showAiTip(btnEl, '오류가 발생했습니다', false); return; }
     const data = await res.json();

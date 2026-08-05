@@ -26,6 +26,7 @@ import org.springframework.web.bind.annotation.ResponseStatus
 import org.springframework.web.bind.annotation.RestController
 import org.springframework.web.multipart.MultipartFile
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter
+import java.util.Base64
 
 /** 관리자 페이지 전용 CRUD API (메뉴얼·데칼 등록/수정/삭제) */
 @RestController
@@ -113,33 +114,33 @@ class AdminApiController(
     @GetMapping("/japanese-usage/top20")
     fun getJapaneseTop20(): List<String> = adminService.getJapaneseTop20()
 
-    /** AI(GPT-4o mini)로 PDF 좌표 주변 데칼 번호 인식 */
+    /** AI(GPT-4o mini)로 전달받은 크롭 이미지에서 데칼 번호 인식 */
     @PostMapping("/manuals/{manualId}/recognize")
     fun recognize(
         @PathVariable manualId: ManualId,
         @RequestBody request: DecalRecognizeRequest,
     ): DecalRecognizeResponse {
-        val character = adminService.recognizeDecalNumber(manualId, request.page, request.x, request.y)
+        val character = adminService.recognizeDecalNumber(Base64.getDecoder().decode(request.image))
         return DecalRecognizeResponse(character != null, character)
     }
 
-    /** ONNX 모델로 PDF 좌표 주변 데칼 번호 인식 */
+    /** ONNX 모델로 전달받은 크롭 이미지에서 데칼 번호 인식 */
     @PostMapping("/manuals/{manualId}/recognize-onnx")
     fun recognizeOnnx(
         @PathVariable manualId: ManualId,
         @RequestBody request: DecalRecognizeRequest,
     ): DecalRecognizeResponse {
-        val character = adminService.recognizeDecalNumberOnnx(manualId, request.page, request.x, request.y)
+        val character = adminService.recognizeDecalNumberOnnx(Base64.getDecoder().decode(request.image))
         return DecalRecognizeResponse(character != null, character)
     }
 
-    /** AI(GPT-4o mini)로 PDF 좌표 주변 데칼 주요 색상 인식 */
+    /** AI(GPT-4o mini)로 전달받은 크롭 이미지에서 데칼 주요 색상 인식 */
     @PostMapping("/manuals/{manualId}/recognize-color")
     fun recognizeColor(
         @PathVariable manualId: ManualId,
         @RequestBody request: DecalRecognizeRequest,
     ): DecalColorRecognizeResponse {
-        val hex = adminService.recognizeDecalColor(manualId, request.page, request.x, request.y)
+        val hex = adminService.recognizeDecalColor(Base64.getDecoder().decode(request.image))
         return DecalColorRecognizeResponse(hex != null, hex)
     }
 }
@@ -160,12 +161,7 @@ data class DecalColorRecognizeResponse(
     val hex: String?,
 )
 
-/** AI 데칼 번호 인식 요청 */
+/** AI 데칼 번호 인식 요청. 클릭 지점 주변을 프론트에서 캡처한 PNG 이미지(base64, prefix 없음) */
 data class DecalRecognizeRequest(
-    /** PDF 페이지 번호 (1-based) */
-    val page: Int,
-    /** PDF 캔버스 기준 가로 위치 (0~100 %) */
-    val x: Double,
-    /** PDF 캔버스 기준 세로 위치 (0~100 %) */
-    val y: Double,
+    val image: String,
 )

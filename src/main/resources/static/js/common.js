@@ -142,6 +142,32 @@ async function renderPage(num, resetZoom = false) {
   updateActiveThumbnail();
 }
 
+// 클릭 지점(xPercent, yPercent — 페이지 기준 %) 주변을 반경 radiusPt(pt)만큼 잘라
+// outputSize × outputSize 캔버스에 고정 해상도로 렌더링해 base64 PNG(프리픽스 제외) 문자열로 반환한다.
+// 현재 화면 줌 레벨과 무관하게 항상 같은 캡처 품질을 보장한다 (페이지 전체를 다시 그리지 않으므로 빠름).
+async function captureCrop(pageNumber, xPercent, yPercent, radiusPt, outputSize) {
+  const page = (pageNumber === currentPage && currentPdfPage) ? currentPdfPage : await pdfDoc.getPage(pageNumber);
+  const rawVp = page.getViewport({ scale: 1 }); // pt 단위
+  const cxPt = xPercent / 100 * rawVp.width;
+  const cyPt = yPercent / 100 * rawVp.height;
+  const renderScale = outputSize / (radiusPt * 2);
+
+  const cropCanvas = document.createElement('canvas');
+  cropCanvas.width  = outputSize;
+  cropCanvas.height = outputSize;
+  const viewport = page.getViewport({ scale: renderScale });
+  // 관심 영역(클릭 지점 ± radiusPt)의 좌상단이 캔버스 원점에 오도록 이동
+  const offsetX = -(cxPt - radiusPt) * renderScale;
+  const offsetY = -(cyPt - radiusPt) * renderScale;
+  await page.render({
+    canvasContext: cropCanvas.getContext('2d'),
+    viewport,
+    transform: [1, 0, 0, 1, offsetX, offsetY],
+  }).promise;
+
+  return cropCanvas.toDataURL('image/png').split(',')[1];
+}
+
 /* ──────────── 썸네일 스트립 ──────────── */
 
 // 썸네일 URL 목록을 받아 상단 스트립에 표시

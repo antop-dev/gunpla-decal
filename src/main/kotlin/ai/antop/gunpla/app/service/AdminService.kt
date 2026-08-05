@@ -83,44 +83,20 @@ class AdminService(
     fun getJapaneseTop20(): List<String> = decalService.getJapaneseTop20()
 
     /**
-     * AI(GPT-4o mini)를 이용하여 PDF 좌표 주변 이미지에서 데칼 번호 인식.
+     * AI(GPT-4o mini)를 이용하여 전달받은 크롭 이미지에서 데칼 번호 인식.
      * 인식 실패 또는 유효하지 않은 형식이면 null 반환.
      */
-    fun recognizeDecalNumber(
-        manualId: ManualId,
-        pageNumber: Int,
-        x: Double,
-        y: Double,
-    ): String? {
-        val pdf = manualService.getPdfResource(manualId)
-        return openAiService.recognizeDecalNumber(pdf.file, pageNumber, x, y)
-    }
+    fun recognizeDecalNumber(imageBytes: ByteArray): String? = openAiService.recognizeDecalNumber(imageBytes)
 
     /**
-     * ONNX EfficientNet-B0 모델을 이용하여 PDF 좌표 주변 이미지에서 데칼 번호 인식.
+     * ONNX EfficientNet-B0 모델을 이용하여 전달받은 크롭 이미지에서 데칼 번호 인식.
      * 모델 미로드 또는 인식 실패 시 null 반환.
      */
-    fun recognizeDecalNumberOnnx(
-        manualId: ManualId,
-        pageNumber: Int,
-        x: Double,
-        y: Double,
-    ): String? {
-        val pdf = manualService.getPdfResource(manualId)
-        return onnxDecalService.recognizeDecalNumber(pdf.file, pageNumber, x, y)
-    }
+    fun recognizeDecalNumberOnnx(imageBytes: ByteArray): String? = onnxDecalService.recognizeDecalNumber(imageBytes)
 
     /**
-     * AI(GPT-4o mini)를 이용하여 PDF 좌표 주변 이미지에서 주요 색상(HEX) 인식.
+     * AI(GPT-4o mini)를 이용하여 전달받은 크롭 이미지에서 주요 색상(HEX) 인식.
      * 인식 실패 시 null 반환.
      */
-    fun recognizeDecalColor(
-        manualId: ManualId,
-        pageNumber: Int,
-        x: Double,
-        y: Double,
-    ): String? {
-        val pdf = manualService.getPdfResource(manualId)
-        return openAiService.recognizeDecalColor(pdf.file, pageNumber, x, y)
-    }
+    fun recognizeDecalColor(imageBytes: ByteArray): String? = openAiService.recognizeDecalColor(imageBytes)
 }

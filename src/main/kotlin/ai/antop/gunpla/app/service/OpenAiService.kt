@@ -1,21 +1,14 @@
 package ai.antop.gunpla.app.service
 
 import com.openai.client.OpenAIClient
-import com.openai.errors.OpenAIException
 import com.openai.models.ChatModel
 import com.openai.models.chat.completions.ChatCompletionContentPart
 import com.openai.models.chat.completions.ChatCompletionContentPartImage
 import com.openai.models.chat.completions.ChatCompletionContentPartText
 import com.openai.models.chat.completions.ChatCompletionCreateParams
 import io.github.oshai.kotlinlogging.KotlinLogging
-import org.apache.pdfbox.Loader
-import org.apache.pdfbox.rendering.PDFRenderer
 import org.springframework.stereotype.Service
-import java.awt.image.BufferedImage
-import java.io.ByteArrayOutputStream
-import java.io.File
 import java.util.Base64
-import javax.imageio.ImageIO
 
 private val log = KotlinLogging.logger {}
 
@@ -28,71 +21,25 @@ class OpenAiService(
     private val validPattern = Regex("^[0-9]{1,3}$|^[A-Z]$|^[ぁ-ゖァ-ヶ]$")
 
     /**
-     * PDF 파일의 지정 페이지·좌표 주변 이미지를 GPT-4o mini로 분석하여 데칼 번호 반환.
+     * 크롭 이미지를 GPT-4o mini로 분석하여 데칼 번호 반환.
      * 인식 실패 또는 유효하지 않은 형식(validPattern 불일치)이면 null 반환.
      */
-    fun recognizeDecalNumber(
-        pdfFile: File,
-        page: Int,
-        x: Double,
-        y: Double,
-    ): String? {
-        val imageBase64 = renderAndCrop(pdfFile, page, x, y) ?: return null
-        val result = callOpenAiForNumber(imageBase64) ?: return null
+    fun recognizeDecalNumber(imageBytes: ByteArray): String? {
+        val result = callOpenAiForNumber(Base64.getEncoder().encodeToString(imageBytes)) ?: return null
         val trimmed = result.trim()
         return if (validPattern.matches(trimmed)) trimmed else null
     }
 
     /**
-     * PDF 파일의 지정 페이지·좌표 주변 이미지를 GPT-4o mini로 분석하여 주요 색상(HEX) 반환.
+     * 크롭 이미지를 GPT-4o mini로 분석하여 주요 색상(HEX) 반환.
      * 흰색 글자와 대비되는 메인 컬러를 찾는다. 인식 실패 시 null 반환.
      */
-    fun recognizeDecalColor(
-        pdfFile: File,
-        page: Int,
-        x: Double,
-        y: Double,
-    ): String? {
-        // 색상 인식은 더 넓은 영역(50×50px)을 사용해 맥락을 파악
-        val imageBase64 = renderAndCrop(pdfFile, page, x, y, cropHalf = 25) ?: return null
-        val result = callOpenAiForColor(imageBase64) ?: return null
+    fun recognizeDecalColor(imageBytes: ByteArray): String? {
+        val result = callOpenAiForColor(Base64.getEncoder().encodeToString(imageBytes)) ?: return null
         val trimmed = result.trim().uppercase()
         val hexPattern = Regex("^[0-9A-F]{6}$")
         return if (hexPattern.matches(trimmed)) trimmed else null
     }
-
-    /**
-     * PDF 페이지를 3배 확대 렌더링한 뒤 좌표(x%, y%) 중심의 영역을 잘라 Base64로 반환.
-     * 렌더링 실패 시 null 반환.
-     */
-    private fun renderAndCrop(
-        pdfFile: File,
-        page: Int,
-        x: Double,
-        y: Double,
-        cropHalf: Int = 20,
-    ): String? =
-        try {
-            Loader.loadPDF(pdfFile).use { doc ->
-                val renderer = PDFRenderer(doc)
-                // 3배 확대 렌더링: 저해상도 PDF에서 번호 인식률을 높이기 위함
-                val image: BufferedImage = renderer.renderImage(page - 1, 3.0f)
-                // 좌표는 퍼센트(%) 기준이므로 픽셀 환산 후, 중심에서 cropHalf 픽셀 반경으로 잘라냄
-                val cx = (x / 100.0 * image.width).toInt()
-                val cy = (y / 100.0 * image.height).toInt()
-                val x1 = (cx - cropHalf).coerceAtLeast(0)
-                val y1 = (cy - cropHalf).coerceAtLeast(0)
-                val x2 = (cx + cropHalf).coerceAtMost(image.width)
-                val y2 = (cy + cropHalf).coerceAtMost(image.height)
-                val cropped = image.getSubimage(x1, y1, x2 - x1, y2 - y1)
-                val baos = ByteArrayOutputStream()
-                ImageIO.write(cropped, "png", baos)
-                Base64.getEncoder().encodeToString(baos.toByteArray())
-            }
-        } catch (e: Exception) {
-            log.error(e) { "PDF 렌더링 실패: ${pdfFile.path}" }
-            null
-        }
 
     /**
      * Base64 인코딩된 이미지를 GPT-4o mini에 전송하여 데칼 번호 문자열 반환.
@@ -164,7 +111,7 @@ class OpenAiService(
                 ?.message()
                 ?.content()
                 ?.orElse("") ?: ""
-        } catch (e: OpenAIException) {
+        } catch (e: Exception) {
             log.error(e) { "OpenAI API 오류" }
             null
         }
