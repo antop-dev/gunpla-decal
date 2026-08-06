@@ -10,6 +10,8 @@ import ai.antop.gunpla.app.event.ManualChangedEvent
 import ai.antop.gunpla.app.repository.ManualRepository
 import ai.antop.gunpla.config.AppProperties
 import jakarta.annotation.PostConstruct
+import org.apache.pdfbox.io.MemoryUsageSetting
+import org.apache.pdfbox.multipdf.PDFMergerUtility
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.core.io.FileSystemResource
 import org.springframework.core.io.Resource
@@ -23,6 +25,7 @@ import java.net.URI
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
+import java.nio.file.StandardCopyOption
 import java.util.UUID
 
 /** 메뉴얼 CRUD 비즈니스 로직 */
@@ -80,11 +83,13 @@ class ManualService(
     fun savePdfFile(
         pdfBytes: ByteArray?,
         pdfUrl: String?,
+        pdfNumbers: List<String>? = null,
     ): Path {
         val dest = Paths.get(appProperties.uploadDir, "${UUID.randomUUID()}.pdf").toAbsolutePath()
         when {
-            pdfBytes != null && pdfBytes.isNotEmpty() -> Files.write(dest, pdfBytes)
+            pdfBytes?.isNotEmpty() == true -> Files.write(dest, pdfBytes)
             !pdfUrl.isNullOrBlank() -> downloadFromUrl(pdfUrl, dest)
+            !pdfNumbers.isNullOrEmpty() -> downloadAndMergeByNumbers(pdfNumbers, dest)
             else -> throw ResponseStatusException(HttpStatus.BAD_REQUEST, "PDF 파일 또는 URL을 입력해주세요")
         }
         return dest
@@ -140,6 +145,65 @@ class ManualService(
         }
     }
 
+    /** 번호 목록으로 반다이 호비 메뉴얼 PDF를 각각 다운로드한 뒤 하나로 병합하여 dest 경로에 저장 */
+    private fun downloadAndMergeByNumbers(
+        numbers: List<String>,
+        dest: Path,
+    ) {
+        val invalid = numbers.firstOrNull { !MANUAL_NUMBER_REGEX.matches(it) }
+        if (invalid != null) {
+            throw ResponseStatusException(HttpStatus.BAD_REQUEST, "$invalid: 번호는 숫자와 '_'만 입력할 수 있습니다")
+        }
+        val tempFiles = numbers.map { Files.createTempFile("manual-pdf-", ".pdf") }
+        try {
+            numbers.zip(tempFiles).forEach { (number, tempFile) -> downloadPdfByNumber(number, tempFile) }
+            val merger = PDFMergerUtility()
+            tempFiles.forEach { merger.addSource(it.toFile()) }
+            merger.destinationFileName = dest.toString()
+            merger.mergeDocuments(MemoryUsageSetting.setupTempFileOnly().streamCache)
+        } finally {
+            tempFiles.forEach { Files.deleteIfExists(it) }
+        }
+    }
+
+    /** 반다이 호비 메뉴얼 사이트에서 번호에 해당하는 PDF를 다운로드하여 dest 경로에 저장. 실제 PDF가 아니면(존재하지 않는 번호) 400 예외 발생 */
+    private fun downloadPdfByNumber(
+        number: String,
+        dest: Path,
+    ) {
+        val url = "https://manual.bandai-hobby.net/pdf/$number.pdf"
+        val conn =
+            try {
+                URI(url).toURL().openConnection() as HttpURLConnection
+            } catch (_: Exception) {
+                throw ResponseStatusException(HttpStatus.BAD_REQUEST, "$number: 유효하지 않은 번호입니다")
+            }
+        try {
+            conn.connect()
+            val code = conn.responseCode
+            if (code !in 200..299) {
+                throw ResponseStatusException(HttpStatus.BAD_REQUEST, "$number: PDF를 찾을 수 없습니다 (HTTP $code)")
+            }
+            conn.inputStream.use { Files.copy(it, dest, StandardCopyOption.REPLACE_EXISTING) }
+        } catch (e: ResponseStatusException) {
+            throw e
+        } catch (_: Exception) {
+            throw ResponseStatusException(HttpStatus.BAD_REQUEST, "$number: PDF 다운로드 중 오류가 발생했습니다")
+        } finally {
+            conn.disconnect()
+        }
+        if (!isPdfFile(dest)) {
+            throw ResponseStatusException(HttpStatus.BAD_REQUEST, "$number: 존재하지 않는 메뉴얼 번호입니다")
+        }
+    }
+
+    /** 파일 시작 부분의 매직 바이트(%PDF-)로 실제 PDF 여부를 판별. 존재하지 않는 번호는 HTML 안내 페이지가 200으로 내려오므로 이 검사가 필요하다 */
+    private fun isPdfFile(path: Path): Boolean {
+        val header = ByteArray(PDF_MAGIC.size)
+        val read = Files.newInputStream(path).use { it.read(header) }
+        return read == PDF_MAGIC.size && header.contentEquals(PDF_MAGIC)
+    }
+
     /** 메뉴얼 삭제: DB 레코드와 업로드된 PDF 파일 제거 (썸네일 삭제는 AdminService에서 처리) */
     fun deleteManual(manualId: ManualId) {
         val manual = getManualEntity(manualId)
@@ -185,4 +249,9 @@ class ManualService(
 
     private fun Manual.toDto() =
         ManualItemDto(ManualId(id), grade, modelNumber, productName, pdfPath, link, published, createdAt, updatedAt)
+
+    companion object {
+        private val MANUAL_NUMBER_REGEX = Regex("^[0-9_]+$")
+        private val PDF_MAGIC = "%PDF-".toByteArray()
+    }
 }

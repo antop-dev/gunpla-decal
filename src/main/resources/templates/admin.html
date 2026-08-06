@@ -7,10 +7,12 @@
   <title>건담 메뉴얼 – 관리자</title>
   <link rel="stylesheet" th:href="@{/vendor/fontawesome/css/all.min.css}">
   <link rel="stylesheet" th:href="@{/vendor/tippy/tippy.css}">
+  <link rel="stylesheet" th:href="@{/vendor/tagify/tagify.css}">
   <script th:src="@{/vendor/tailwind/tailwind.min.js}"></script>
   <script th:src="@{/vendor/pdfjs/pdf.min.js}"></script>
   <script th:src="@{/vendor/tippy/popper.min.js}"></script>
   <script th:src="@{/vendor/tippy/tippy.min.js}"></script>
+  <script th:src="@{/vendor/tagify/tagify.min.js}"></script>
   <link rel="stylesheet" th:href="@{/css/common.css}">
 </head>
 <body class="page-admin flex bg-gray-900">
@@ -179,6 +181,8 @@
             class="flex-1 py-1.5 font-medium bg-blue-600 text-white">URL 입력</button>
           <button type="button" id="pdf-tab-file"
             class="flex-1 py-1.5 font-medium bg-gray-100 text-gray-600 hover:bg-gray-50">파일 업로드</button>
+          <button type="button" id="pdf-tab-number"
+            class="flex-1 py-1.5 font-medium bg-gray-100 text-gray-600 hover:bg-gray-50">번호 입력</button>
         </div>
         <!-- 파일 업로드 영역 -->
         <div id="pdf-file-area">
@@ -205,6 +209,12 @@
           <input type="text" id="inp-pdf-url" autocomplete="off"
             class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
             placeholder="https://.../manual.pdf">
+        </div>
+        <!-- 번호 입력 영역 -->
+        <div id="pdf-number-area" class="hidden">
+          <input type="text" id="inp-pdf-number" autocomplete="off"
+            placeholder="예) 5057419">
+          <p class="text-xs text-gray-400 mt-1">숫자와 "_"만 입력. Enter·공백·콤마로 구분해 여러 개 추가</p>
         </div>
       </div>
       <!-- 버튼 -->

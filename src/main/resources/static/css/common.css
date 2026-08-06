@@ -238,6 +238,23 @@ body { height: 100vh; overflow: hidden; min-width: 1000px; }
 #drop-zone.drag-over { border-color: #3b82f6; background: #eff6ff; }
 #drop-zone.disabled  { pointer-events: none; opacity: 0.5; }
 
+/* ── 관리자 페이지: 메뉴얼 번호 태그 입력(Tagify) ── */
+#pdf-number-area .tagify {
+  --tag-bg: #f3f4f6;
+  --tag-hover: #e5e7eb;
+  --tag-text-color: #374151;
+  --tag-remove-btn-color: #9ca3af;
+  --tag-remove-btn-bg--hover: #ef4444;
+  --tags-border-color: #d1d5db;
+  --tags-hover-border-color: #d1d5db;
+  --tags-focus-border-color: #60a5fa;
+  --tag-pad: 0.3em 0.5em;
+  border-radius: 0.25rem;
+  font-size: 0.875rem;
+}
+#pdf-number-area .tagify--focus { box-shadow: 0 0 0 2px #60a5fa; }
+#pdf-number-area .tagify.tagify--disabled { opacity: 0.5; }
+
 /* ── color input 스와치 ── */
 input[type="color"].color-swatch { -webkit-appearance: none; padding: 1px; }
 input[type="color"].color-swatch::-webkit-color-swatch-wrapper { padding: 0; }

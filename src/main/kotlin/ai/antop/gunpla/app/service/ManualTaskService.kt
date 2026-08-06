@@ -25,12 +25,13 @@ class ManualTaskService(
         productName: String,
         pdfBytes: ByteArray?,
         pdfUrl: String?,
+        pdfNumbers: List<String>?,
         link: String?,
     ) {
         taskLog.info { "[메뉴얼 등록] 시작 - grade=$grade, modelNumber=$modelNumber, productName=$productName" }
         try {
             taskLog.info { "[1/6] PDF 파일 저장 시작" }
-            val pdfPath = manualService.savePdfFile(pdfBytes, pdfUrl)
+            val pdfPath = manualService.savePdfFile(pdfBytes, pdfUrl, pdfNumbers)
             taskLog.info { "[1/6] PDF 파일 저장 완료 - path=$pdfPath" }
 
             taskLog.info { "[2/6] JPX 이미지 검증/정규화 시작" }

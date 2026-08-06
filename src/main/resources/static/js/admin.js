@@ -1188,18 +1188,34 @@ async function deleteManual(id) {
 /* ──────────── 메뉴얼 등록 모달 ──────────── */
 
 let selectedFile   = null;   // 업로드 대기 중인 PDF 파일
-let pdfUploadMode  = 'file'; // 'file' | 'url'
+let pdfUploadMode  = 'file'; // 'file' | 'url' | 'number'
+
+/* 메뉴얼 번호 태그 입력 (숫자·"_"만 허용, Enter·공백·콤마로 구분) */
+const pdfNumberTagify = new Tagify(document.getElementById('inp-pdf-number'), {
+  delimiters: ',| ',
+  pattern: /^[0-9_]+$/,
+  editTags: false,
+  transformTag: tagData => {
+    tagData.value = (tagData.value || '').replace(/[^0-9_]/g, '');
+  },
+});
+pdfNumberTagify.on('add', e => {
+  if (e.detail.data && !e.detail.data.value) pdfNumberTagify.removeTags(e.detail.tag);
+});
 
 function setPdfMode(mode) {
   pdfUploadMode = mode;
-  const isFile = mode === 'file';
-  document.getElementById('pdf-file-area').classList.toggle('hidden', !isFile);
-  document.getElementById('pdf-url-area').classList.toggle('hidden', isFile);
-  const tabFile = document.getElementById('pdf-tab-file');
-  const tabUrl  = document.getElementById('pdf-tab-url');
-  tabFile.className = `flex-1 py-1.5 font-medium ${isFile  ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-50'}`;
-  tabUrl.className  = `flex-1 py-1.5 font-medium ${!isFile ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-50'}`;
-  if (!isFile) document.getElementById('inp-pdf-url').value = '';
+  document.getElementById('pdf-file-area').classList.toggle('hidden', mode !== 'file');
+  document.getElementById('pdf-url-area').classList.toggle('hidden', mode !== 'url');
+  document.getElementById('pdf-number-area').classList.toggle('hidden', mode !== 'number');
+  const tabs = { file: 'pdf-tab-file', url: 'pdf-tab-url', number: 'pdf-tab-number' };
+  Object.entries(tabs).forEach(([m, id]) => {
+    const active = m === mode;
+    document.getElementById(id).className =
+      `flex-1 py-1.5 font-medium ${active ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-50'}`;
+  });
+  if (mode !== 'url') document.getElementById('inp-pdf-url').value = '';
+  if (mode !== 'number') pdfNumberTagify.removeAllTags();
 }
 
 function initDropZone() {
@@ -1273,10 +1289,11 @@ function fmtSize(b) {
 }
 
 function setFormLoading(loading) {
-  ['inp-grade', 'inp-model', 'inp-name', 'inp-link', 'btn-upload-cancel', 'file-input', 'inp-pdf-url', 'pdf-tab-file', 'pdf-tab-url'].forEach(id => {
+  ['inp-grade', 'inp-model', 'inp-name', 'inp-link', 'btn-upload-cancel', 'file-input', 'inp-pdf-url', 'pdf-tab-file', 'pdf-tab-url', 'pdf-tab-number'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.disabled = loading;
   });
+  pdfNumberTagify.setDisabled(loading);
   const zone = document.getElementById('drop-zone');
   if (zone) zone.classList.toggle('disabled', loading);
 
@@ -1296,6 +1313,7 @@ function openUploadModal() {
   document.getElementById('inp-link').value  = '';
   document.getElementById('upload-modal').classList.remove('hidden');
   initDropZone();
+  pdfNumberTagify.removeAllTags();
   setPdfMode('url');
   setFormLoading(false);
   setTimeout(() => document.getElementById('inp-grade').focus(), 50);
@@ -1311,8 +1329,9 @@ function closeUploadModal() {
 document.getElementById('btn-upload').addEventListener('click', openUploadModal);
 document.getElementById('btn-upload-icon').addEventListener('click', openUploadModal);
 document.getElementById('btn-upload-cancel').addEventListener('click', closeUploadModal);
-document.getElementById('pdf-tab-file').addEventListener('click', () => setPdfMode('file'));
-document.getElementById('pdf-tab-url').addEventListener('click',  () => setPdfMode('url'));
+document.getElementById('pdf-tab-file').addEventListener('click',   () => setPdfMode('file'));
+document.getElementById('pdf-tab-url').addEventListener('click',    () => setPdfMode('url'));
+document.getElementById('pdf-tab-number').addEventListener('click', () => setPdfMode('number'));
 
 document.getElementById('upload-form').addEventListener('submit', async e => {
   e.preventDefault();
@@ -1336,11 +1355,15 @@ document.getElementById('upload-form').addEventListener('submit', async e => {
   if (pdfUploadMode === 'file') {
     if (!selectedFile) { alert('PDF 파일을 선택해주세요.'); return; }
     fd.append('pdf', selectedFile);
-  } else {
+  } else if (pdfUploadMode === 'url') {
     const pdfUrl = document.getElementById('inp-pdf-url').value.trim();
     document.getElementById('inp-pdf-url').value = pdfUrl;
     if (!pdfUrl) { alert('PDF URL을 입력해주세요.'); return; }
     fd.append('pdfUrl', pdfUrl);
+  } else {
+    const pdfNumbers = pdfNumberTagify.value.map(t => t.value).filter(Boolean);
+    if (pdfNumbers.length === 0) { alert('메뉴얼 번호를 입력해주세요.'); return; }
+    pdfNumbers.forEach(n => fd.append('pdfNumbers', n));
   }
 
   setFormLoading(true);

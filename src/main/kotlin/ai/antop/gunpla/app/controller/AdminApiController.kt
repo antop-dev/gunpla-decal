@@ -55,10 +55,11 @@ class AdminApiController(
         @RequestParam productName: String,
         @RequestParam("pdf", required = false) pdf: MultipartFile?,
         @RequestParam("pdfUrl", required = false) pdfUrl: String?,
+        @RequestParam("pdfNumbers", required = false) pdfNumbers: List<String>?,
         @RequestParam(required = false) link: String?,
     ) {
         val pdfBytes = pdf?.takeIf { !it.isEmpty }?.bytes
-        manualTaskService.createManual(grade, modelNumber, productName, pdfBytes, pdfUrl, link)
+        manualTaskService.createManual(grade, modelNumber, productName, pdfBytes, pdfUrl, pdfNumbers, link)
     }
 
     /** 메뉴얼 정보 수정 (등급·제품명) */
