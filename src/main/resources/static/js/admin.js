@@ -1195,6 +1195,7 @@ const pdfNumberTagify = new Tagify(document.getElementById('inp-pdf-number'), {
   delimiters: ',| ',
   pattern: /^[0-9_]+$/,
   editTags: false,
+  dropdown: { enabled: 0 },
   transformTag: tagData => {
     tagData.value = (tagData.value || '').replace(/[^0-9_]/g, '');
   },
