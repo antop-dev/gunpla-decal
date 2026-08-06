@@ -296,6 +296,11 @@ document.getElementById('fit-height-btn')?.addEventListener('click', () => {
 // input/textarea/select 포커스 중에는 무시
 document.addEventListener('keydown', e => {
   if (e.target.matches('input, textarea, select')) return;
+  const modalOpen = id => {
+    const el = document.getElementById(id);
+    return el && !el.classList.contains('hidden');
+  };
+  if (modalOpen('upload-modal') || modalOpen('manual-edit-modal')) return;
   if (!pdfDoc) return;
   if (e.key >= '1' && e.key <= '5') {
     const rect = pdfScroll.getBoundingClientRect();

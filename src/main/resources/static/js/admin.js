@@ -856,6 +856,8 @@ document.addEventListener('keydown', e => {
   if (e.key !== 'Escape') return;
   if (!document.getElementById('decal-modal').classList.contains('hidden')) { cancelDecalModal(); return; }
   if (!document.getElementById('edit-modal').classList.contains('hidden')) { cancelEditModal(); return; }
+  if (!document.getElementById('upload-modal').classList.contains('hidden')) { closeUploadModal(); return; }
+  if (!document.getElementById('manual-edit-modal').classList.contains('hidden')) { closeManualEditModal(); return; }
 });
 
 // 팝업 외부 클릭 시 닫기
@@ -1312,6 +1314,7 @@ function openUploadModal() {
   document.getElementById('inp-model').value = '';
   document.getElementById('inp-name').value  = '';
   document.getElementById('inp-link').value  = '';
+  document.getElementById('inp-pdf-url').value = '';
   document.getElementById('upload-modal').classList.remove('hidden');
   initDropZone();
   pdfNumberTagify.removeAllTags();
