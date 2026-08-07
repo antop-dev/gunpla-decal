@@ -326,3 +326,8 @@ document.addEventListener('keydown', e => {
 function esc(s) {
   return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
+
+// 줌 오버레이 좌측에 "등급 | 상품명" 표시
+function updatePdfTitle(manual) {
+  document.getElementById('pdf-title').textContent = manual ? `${manual.grade} | ${manual.productName}` : '';
+}

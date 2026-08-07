@@ -6,6 +6,6 @@ data class ThumbnailItemDto(
     val id: Long,
     /** PDF 페이지 번호 (1-based) */
     val pageNumber: Int,
-    /** 썸네일 PNG 파일의 절대 경로 */
+    /** 썸네일 PNG 파일명 (app.upload-dir 기준 상대 경로) */
     val filPath: String,
 )

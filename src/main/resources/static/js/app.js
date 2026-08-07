@@ -233,6 +233,7 @@ async function selectManual(b62id, push = true) {
     currentManual = data;
     allDecals = data.decals;
     updatePageMeta(data);
+    updatePdfTitle(data);
     // 순환 인덱스 초기화 (이전 메뉴얼의 상태 잔류 방지)
     Object.keys(decalCycleIndex).forEach(k => delete decalCycleIndex[k]);
     // 데칼 없으면 사이드바 숨김 (resize로 pdfScroll 폭 재계산)

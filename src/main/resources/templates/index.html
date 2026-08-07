@@ -184,23 +184,27 @@
           <span th:text="#{marker.label}">Marker</span>
         </label>
         <div class="zoom-divider"></div>
-        <button id="shortcut-btn" class="gtm-shortcut" th:title="#{shortcut.btn}">
-          <i class="fas fa-keyboard"></i>
-        </button>
-        <div id="shortcut-popup">
-          <div class="sp-row">
-            <span class="sp-keys"><kbd>1</kbd><span>–</span><kbd>5</kbd></span>
-            <span class="sp-desc" th:text="#{shortcut.zoom}">Zoom 100–500%</span>
-          </div>
-          <div class="sp-row">
-            <span class="sp-keys"><kbd>M</kbd></span>
-            <span class="sp-desc" th:text="#{shortcut.marker}">Show / Hide markers</span>
-          </div>
-          <div class="sp-row">
-            <span class="sp-keys"><kbd>F</kbd></span>
-            <span class="sp-desc" th:text="#{shortcut.fullscreen}">Toggle fullscreen</span>
+        <div id="shortcut-wrap">
+          <button id="shortcut-btn" class="gtm-shortcut" th:title="#{shortcut.btn}">
+            <i class="fas fa-keyboard"></i>
+          </button>
+          <div id="shortcut-popup">
+            <div class="sp-row">
+              <span class="sp-keys"><kbd>1</kbd><span>–</span><kbd>5</kbd></span>
+              <span class="sp-desc" th:text="#{shortcut.zoom}">Zoom 100–500%</span>
+            </div>
+            <div class="sp-row">
+              <span class="sp-keys"><kbd>M</kbd></span>
+              <span class="sp-desc" th:text="#{shortcut.marker}">Show / Hide markers</span>
+            </div>
+            <div class="sp-row">
+              <span class="sp-keys"><kbd>F</kbd></span>
+              <span class="sp-desc" th:text="#{shortcut.fullscreen}">Toggle fullscreen</span>
+            </div>
           </div>
         </div>
+        <div class="zoom-divider"></div>
+        <span id="pdf-title"></span>
       </div>
     </div>
 

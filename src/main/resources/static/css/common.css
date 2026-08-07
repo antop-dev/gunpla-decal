@@ -29,6 +29,9 @@ body { height: 100vh; overflow: hidden; min-width: 1000px; }
   background: rgba(0,0,0,0.6); padding: 5px 10px;
   border-radius: 8px; user-select: none;
 }
+/* 줌 오버레이 우측: 등급 | 상품명 */
+#pdf-title { color: #fff; font-size: 12px; font-weight: 700; white-space: nowrap; }
+
 /* 줌 비율 텍스트 */
 #zoom-label { color: #fff; font-size: 12px; font-weight: 700; min-width: 36px; text-align: right; }
 /* 줌 레이블·슬라이더 사이 구분선 */
@@ -70,6 +73,7 @@ body { height: 100vh; overflow: hidden; min-width: 1000px; }
 #fit-width-btn:hover, #fit-height-btn:hover { color: #fff; }
 
 /* ── 단축키 버튼 ── */
+#shortcut-wrap { position: relative; display: flex; }
 #shortcut-btn {
   background: none; border: none; padding: 0 2px;
   color: rgba(255,255,255,0.6); font-size: 12px; cursor: pointer; line-height: 1;

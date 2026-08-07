@@ -14,7 +14,7 @@ data class ManualItemDto(
     val modelNumber: String,
     /** 제품명 */
     val productName: String,
-    /** 업로드된 PDF 파일의 절대 경로 */
+    /** 업로드된 PDF 파일명 (app.upload-dir 기준 상대 경로) */
     val pdfPath: String,
     /** 외부 링크 (선택, https://로 시작) */
     val link: String?,

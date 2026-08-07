@@ -275,6 +275,7 @@ async function selectManual(id) {
 
     const data = await (await fetch(`/api/admin/manuals/${id}`)).json();
     currentManual = data; allDecals = data.decals;
+    updatePdfTitle(data);
     lastDecalStyle = { color: '#ffffff', shape: 'CIRCLE', num: '' };
 
     pdfDoc = await pdfjsLib.getDocument(`${window.contextPath}/resource/${id}`).promise;
@@ -1097,6 +1098,7 @@ document.getElementById('manual-edit-form').addEventListener('submit', async e =
     if (cached) { cached.grade = grade; cached.modelNumber = modelNumber; cached.productName = productName; cached.link = link; }
     if (currentManual?.id === editingManualId) {
       currentManual = { ...currentManual, grade, modelNumber, productName, link };
+      updatePdfTitle(currentManual);
     }
     const item = document.querySelector(`.manual-item[data-id="${editingManualId}"]`);
     if (item) {
@@ -1182,6 +1184,7 @@ async function deleteManual(id) {
     currentManual = null; pdfDoc = null; allDecals = [];
     pdfScroll.style.display = 'none';
     noPdf.style.display = '';
+    updatePdfTitle(null);
     thumbStrip.innerHTML = '<div class="strip-inner"><span class="text-gray-500 text-xs select-none">메뉴얼을 선택하세요</span></div>';
   }
   loadManuals();

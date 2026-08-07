@@ -207,7 +207,7 @@ class ManualService(
     /** 메뉴얼 삭제: DB 레코드와 업로드된 PDF 파일 제거 (썸네일 삭제는 AdminService에서 처리) */
     fun deleteManual(manualId: ManualId) {
         val manual = getManualEntity(manualId)
-        Files.deleteIfExists(Paths.get(manual.pdfPath))
+        Files.deleteIfExists(Paths.get(appProperties.uploadDir, manual.pdfPath))
         manualRepository.delete(manual)
     }
 
@@ -215,7 +215,7 @@ class ManualService(
     @Transactional(readOnly = true)
     fun getPdfResource(manualId: ManualId): Resource {
         val manual = getManualEntity(manualId)
-        val path = Paths.get(manual.pdfPath)
+        val path = Paths.get(appProperties.uploadDir, manual.pdfPath)
         if (!Files.exists(path)) {
             throw ResponseStatusException(HttpStatus.NOT_FOUND)
         }

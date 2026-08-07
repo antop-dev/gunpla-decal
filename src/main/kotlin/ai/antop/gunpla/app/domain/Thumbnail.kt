@@ -15,6 +15,7 @@ class Thumbnail(
     var manualId: Long,
     @Column(name = "page_number", nullable = false)
     var pageNumber: Int,
+    /** 썸네일 PNG 파일명 (app.upload-dir 기준 상대 경로) */
     @Column(name = "file_path", nullable = false, columnDefinition = "TEXT")
     var filePath: String,
     @Id

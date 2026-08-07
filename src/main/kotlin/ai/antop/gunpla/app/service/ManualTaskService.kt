@@ -49,7 +49,7 @@ class ManualTaskService(
             taskLog.info { "[3/6] 썸네일 렌더링 완료 - ${thumbnailFiles.size}페이지" }
 
             taskLog.info { "[4/6] 메뉴얼 DB 저장 시작" }
-            val manual = manualService.saveManualRecord(grade, modelNumber, productName, pdfPath.toString(), link)
+            val manual = manualService.saveManualRecord(grade, modelNumber, productName, pdfPath.fileName.toString(), link)
             taskLog.info { "[4/6] 메뉴얼 DB 저장 완료 - manualId=${manual.id}" }
 
             taskLog.info { "[5/6] 썸네일 DB 저장 시작 - manualId=${manual.id}, count=${thumbnailFiles.size}" }

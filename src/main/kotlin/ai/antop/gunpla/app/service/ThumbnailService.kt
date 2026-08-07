@@ -56,7 +56,7 @@ class ThumbnailService(
                 val filePath = Paths.get(appProperties.uploadDir, "$uuidStr.$pageNum.png")
                 Files.newOutputStream(filePath).use { ImageIO.write(image, "png", it) }
                 log.info { "썸네일 렌더링: page=${pageIndex + 1}/$totalPages, file=${filePath.fileName}" }
-                Pair(pageIndex + 1, filePath.toAbsolutePath().toString())
+                Pair(pageIndex + 1, filePath.fileName.toString())
             }
         }
     }
@@ -95,7 +95,7 @@ class ThumbnailService(
         val thumbnail =
             thumbnailRepository.findByManualIdAndPageNumber(manualId.value, pageNumber)
                 ?: throw ResponseStatusException(HttpStatus.NOT_FOUND)
-        val path = Paths.get(thumbnail.filePath)
+        val path = Paths.get(appProperties.uploadDir, thumbnail.filePath)
         if (!Files.exists(path)) {
             throw ResponseStatusException(HttpStatus.NOT_FOUND)
         }
@@ -108,7 +108,7 @@ class ThumbnailService(
         // 파일 삭제
         thumbnailRepository
             .findByManualIdOrderByPageNumber(manualId.value)
-            .forEach { Files.deleteIfExists(Paths.get(it.filePath)) }
+            .forEach { Files.deleteIfExists(Paths.get(appProperties.uploadDir, it.filePath)) }
         // 데이터베이스에서 삭제
         thumbnailRepository.deleteThumbnailsByManualIdQuery(manualId.value)
     }
