@@ -21,7 +21,7 @@ class ResourceController(
     private val resourceService: ResourceService,
 ) {
     /** PDF 스트리밍 */
-    @GetMapping("/{manualId}")
+    @GetMapping("/{manualId:[0-9A-Za-z]+}")
     fun pdf(
         @PathVariable manualId: ManualId,
     ): ResponseEntity<Resource> {
@@ -36,7 +36,7 @@ class ResourceController(
     }
 
     /** 특정 페이지 썸네일 PNG 이미지 반환 */
-    @GetMapping("/{manualId}/thumbnails/{pageNumber}")
+    @GetMapping("/{manualId:[0-9A-Za-z]+}/thumbnails/{pageNumber}")
     fun thumbnail(
         @PathVariable manualId: ManualId,
         @PathVariable pageNumber: Int,

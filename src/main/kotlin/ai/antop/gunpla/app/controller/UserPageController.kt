@@ -47,13 +47,17 @@ class UserPageController(
     @GetMapping("/")
     fun index() = "index"
 
-    /** 메뉴얼 직접 링크 진입 (/A, /1B 등 base62 ID). SEO 메타 태그 주입 후 JS가 동일 메뉴얼 로드 */
-    @GetMapping("/{id:[0-9A-Za-z]+}")
+    /**
+     * 메뉴얼 직접 링크 진입 (/A, /1B 등 base62 ID). SEO 메타 태그 주입 후 JS가 동일 메뉴얼 로드.
+     * id가 base62가 아니거나(한글 등) 존재하지 않는 메뉴얼이어도 페이지는 열리고 JS가 "찾을 수 없음"을 표시한다.
+     */
+    @GetMapping("/{id:[^.]+}")
     fun indexWithManual(
-        @PathVariable id: ManualId,
+        @PathVariable id: String,
         model: Model,
     ): String {
-        runCatching { manualAssemblyService.getManual(id, onlyPublished = true) }
+        runCatching { ManualId.fromB62(id) }
+            .mapCatching { manualAssemblyService.getManual(it, onlyPublished = true) }
             .onSuccess { manual ->
                 model.addAttribute("manual", manual)
                 model.addAttribute(

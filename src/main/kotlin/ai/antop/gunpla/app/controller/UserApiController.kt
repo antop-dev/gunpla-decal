@@ -23,7 +23,7 @@ class UserApiController(
     ): List<ManualSummaryDto> = manualAssemblyService.getManuals(q, true)
 
     /** 메뉴얼 단건 조회 (공개만, 데칼·썸네일 목록 포함) */
-    @GetMapping("/{manualId}")
+    @GetMapping("/{manualId:[0-9A-Za-z]+}")
     fun get(
         @PathVariable manualId: ManualId,
     ): ManualAssemblyDto = manualAssemblyService.getManual(manualId, onlyPublished = true, useCache = true)

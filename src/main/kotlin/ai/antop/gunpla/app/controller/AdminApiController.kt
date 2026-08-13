@@ -63,34 +63,34 @@ class AdminApiController(
     }
 
     /** 메뉴얼 정보 수정 (등급·제품명) */
-    @PutMapping("/manuals/{manualId}")
+    @PutMapping("/manuals/{manualId:[0-9A-Za-z]+}")
     fun update(
         @PathVariable manualId: ManualId,
         @RequestBody request: ManualUpdateRequestDto,
     ) = adminService.updateManual(manualId, request)
 
     /** 메뉴얼 단건 조회 (미공개 포함, 관리자 전용) */
-    @GetMapping("/manuals/{manualId}")
+    @GetMapping("/manuals/{manualId:[0-9A-Za-z]+}")
     fun getManual(
         @PathVariable manualId: ManualId,
     ): ManualAssemblyDto = adminService.getManual(manualId)
 
     /** 공개 여부 설정 */
-    @PatchMapping("/{manualId}/published")
+    @PatchMapping("/{manualId:[0-9A-Za-z]+}/published")
     fun togglePublished(
         @PathVariable manualId: ManualId,
         @RequestParam published: Boolean,
     ) = adminService.updatePublished(manualId, published)
 
     /** 메뉴얼 삭제 (연관 데칼 및 PDF·썸네일 파일 함께 제거) */
-    @DeleteMapping("/manuals/{manualId}")
+    @DeleteMapping("/manuals/{manualId:[0-9A-Za-z]+}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     fun delete(
         @PathVariable manualId: ManualId,
     ) = adminService.deleteManual(manualId)
 
     /** 데칼 등록 (PDF 페이지 내 좌표 지정) */
-    @PostMapping("/manuals/{manualId}/decals")
+    @PostMapping("/manuals/{manualId:[0-9A-Za-z]+}/decals")
     @ResponseStatus(HttpStatus.CREATED)
     fun addDecal(
         @PathVariable manualId: ManualId,
@@ -116,7 +116,7 @@ class AdminApiController(
     fun getJapaneseTop20(): List<String> = adminService.getJapaneseTop20()
 
     /** AI(GPT-4o mini)로 전달받은 크롭 이미지에서 데칼 번호 인식 */
-    @PostMapping("/manuals/{manualId}/recognize")
+    @PostMapping("/manuals/{manualId:[0-9A-Za-z]+}/recognize")
     fun recognize(
         @PathVariable manualId: ManualId,
         @RequestBody request: DecalRecognizeRequest,
@@ -126,7 +126,7 @@ class AdminApiController(
     }
 
     /** ONNX 모델로 전달받은 크롭 이미지에서 데칼 번호 인식 */
-    @PostMapping("/manuals/{manualId}/recognize-onnx")
+    @PostMapping("/manuals/{manualId:[0-9A-Za-z]+}/recognize-onnx")
     fun recognizeOnnx(
         @PathVariable manualId: ManualId,
         @RequestBody request: DecalRecognizeRequest,
@@ -136,7 +136,7 @@ class AdminApiController(
     }
 
     /** AI(GPT-4o mini)로 전달받은 크롭 이미지에서 데칼 주요 색상 인식 */
-    @PostMapping("/manuals/{manualId}/recognize-color")
+    @PostMapping("/manuals/{manualId:[0-9A-Za-z]+}/recognize-color")
     fun recognizeColor(
         @PathVariable manualId: ManualId,
         @RequestBody request: DecalRecognizeRequest,
