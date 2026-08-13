@@ -77,6 +77,7 @@ class SecurityConfig {
                         "/captcha",
                         "/css/**",
                         "/js/**",
+                        "/images/**",
                         "/vendor/**",
                         "/favicon/**",
                         "/api/user/**",

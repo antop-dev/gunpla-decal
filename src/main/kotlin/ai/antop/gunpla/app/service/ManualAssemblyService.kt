@@ -27,7 +27,7 @@ class ManualAssemblyService(
     /**
      * 메뉴얼 단건 조회 (데칼·썸네일 목록 포함).
      * useCache=true(사용자)이면 Caffeine 캐시를 적용하고, false(관리자)이면 항상 DB를 조회한다.
-     * onlyPublished=true이면 비공개 메뉴얼을 404로 처리한다.
+     * onlyPublished=true이면 존재하지 않는 메뉴얼은 404, 비공개 메뉴얼은 403으로 처리한다.
      */
     @Cacheable(cacheNames = [CacheName.MANUAL], key = "#manualId", condition = "#useCache")
     fun getManual(
@@ -37,7 +37,7 @@ class ManualAssemblyService(
     ): ManualAssemblyDto {
         val manual = manualService.getManual(manualId) ?: throw ResponseStatusException(HttpStatus.NOT_FOUND)
         if (onlyPublished && !manual.published) {
-            throw ResponseStatusException(HttpStatus.NOT_FOUND)
+            throw ResponseStatusException(HttpStatus.FORBIDDEN)
         }
         val decals = decalService.getDecalsByManualId(manual.id)
         val thumbnails = thumbnailService.getThumbnails(manual.id)

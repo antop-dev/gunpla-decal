@@ -222,9 +222,14 @@ async function selectManual(b62id, push = true) {
       document.getElementById('zoom-overlay').style.display = 'none';
       document.getElementById('right-sidebar').style.display = 'none';
       thumbStrip.innerHTML = `<div class="strip-inner"><span class="text-gray-500 text-xs select-none">${window.i18n.manualSelect}</span></div>`;
-      noPdf.innerHTML = `<div class="text-center">
-        <i class="fas fa-file-pdf text-5xl mb-3 opacity-40"></i>
-        <p class="text-sm">${window.i18n.manualNotFound}</p>
+      // 403: 메뉴얼은 존재하지만 아직 게시되지 않음 → "준비중" 안내, 404: 존재하지 않음
+      const isForbidden = res.status === 403;
+      noPdf.style.backgroundImage = `url('${window.contextPath}/images/${isForbidden ? 'rx-78-2-preparing' : 'rx-78-2-not-found'}.png')`;
+      noPdf.style.backgroundSize = 'cover';
+      noPdf.style.backgroundPosition = 'center';
+      noPdf.style.backgroundRepeat = 'no-repeat';
+      noPdf.innerHTML = `<div class="bg-black/50 py-6 px-8 text-center rounded">
+        <p class="text-white text-2xl font-bold">${isForbidden ? window.i18n.manualPreparing : window.i18n.manualNotFound}</p>
       </div>`;
       noPdf.style.display = 'flex';
       return;
