@@ -125,6 +125,21 @@ function fmtDateTime(v) {
   return v.slice(0, 16).replace('T', ' ');
 }
 
+/* ── Day.js 초기화 ── */
+// 서버가 내려주는 LocalDateTime에는 오프셋이 없어 브라우저 타임존으로 오해석되므로 KST로 고정 해석한다
+const SERVER_TZ = 'Asia/Seoul';
+
+dayjs.extend(dayjs_plugin_utc);
+dayjs.extend(dayjs_plugin_timezone);
+dayjs.extend(dayjs_plugin_relativeTime);
+dayjs.locale('ko');
+
+// 서버 시각을 "1일 전" 형태의 상대시간으로 변환
+function fmtRelative(v) {
+  if (!v) return '';
+  return dayjs.tz(v, SERVER_TZ).fromNow();
+}
+
 // 메뉴얼 공개 URL을 클립보드에 복사하고 버튼에 잠시 체크 아이콘을 표시
 async function copyManualLink(id, btn) {
   await navigator.clipboard.writeText(`${location.origin}${window.contextPath}/${id}`);
@@ -168,8 +183,16 @@ const gridColumnDefs = [
       ? `<a href="${esc(p.value)}" target="_blank" rel="noopener" class="grid-link" title="${esc(p.value)}"><i class="fas fa-arrow-up-right-from-square"></i></a>`
       : '',
   },
-  { headerName: '등록일시', field: 'createdAt', width: 150, valueFormatter: p => fmtDateTime(p.value) },
-  { headerName: '수정일시', field: 'updatedAt', width: 150, valueFormatter: p => fmtDateTime(p.value) },
+  {
+    headerName: '등록일시', field: 'createdAt', width: 110,
+    valueFormatter: p => fmtRelative(p.value),
+    tooltipValueGetter: p => fmtDateTime(p.value),
+  },
+  {
+    headerName: '수정일시', field: 'updatedAt', width: 110,
+    valueFormatter: p => fmtRelative(p.value),
+    tooltipValueGetter: p => fmtDateTime(p.value),
+  },
   {
     headerName: '관리', width: 150, sortable: false,
     headerClass: 'header-center', cellClass: 'cell-center',
@@ -192,6 +215,11 @@ const gridApi = agGrid.createGrid(document.getElementById('manual-grid'), {
   rowHeight: 34,
   headerHeight: 36,
   defaultColDef: { resizable: true, sortable: true },
+  // 셀 텍스트를 드래그로 선택·복사할 수 있게 한다 (ensureDomOrder는 선택 순서가 화면 순서와 일치하도록 보장)
+  enableCellTextSelection: true,
+  ensureDomOrder: true,
+  // 기본 지연이 2초라 일시 툴팁이 안 뜨는 것처럼 보인다
+  tooltipShowDelay: 300,
   loading: true,
   overlayNoRowsTemplate: '<span style="color:#9ca3af;font-size:12px;">표시할 메뉴얼이 없습니다</span>',
   overlayLoadingTemplate: '<span style="color:#9ca3af;font-size:12px;">불러오는 중…</span>',
@@ -1402,19 +1430,23 @@ document.querySelectorAll('input[name="decal-shape"], input[name="edit-shape"]')
 applyModelNumValidation(document.getElementById('inp-model'));
 applyModelNumValidation(document.getElementById('edit-inp-model'));
 
-// 검색은 항상 서버 조회. 텍스트 입력은 500ms 디바운스, 셀렉트 변경은 즉시
+// 검색은 항상 서버 조회. 텍스트 입력은 500ms 디바운스(Enter는 즉시), 셀렉트 변경은 즉시
 let searchTimer = null;
-['f-model', 'f-name'].forEach(id =>
-  document.getElementById(id).addEventListener('input', () => {
+['f-model', 'f-name'].forEach(id => {
+  const el = document.getElementById(id);
+  el.addEventListener('input', () => {
     clearTimeout(searchTimer);
     searchTimer = setTimeout(loadManuals, 500);
-  }));
+  });
+  el.addEventListener('keydown', e => {
+    // IME 조합 확정용 Enter는 검색으로 처리하지 않는다
+    if (e.key !== 'Enter' || e.isComposing) return;
+    clearTimeout(searchTimer);
+    loadManuals();
+  });
+});
 ['f-grade', 'f-published'].forEach(id =>
   document.getElementById(id).addEventListener('change', loadManuals));
-document.getElementById('btn-search').addEventListener('click', () => {
-  clearTimeout(searchTimer);
-  loadManuals();
-});
 document.getElementById('btn-reset').addEventListener('click', resetSearch);
 
 loadManuals();

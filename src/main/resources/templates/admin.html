@@ -11,6 +11,11 @@
   <script th:src="@{/vendor/pdfjs/pdf.min.js}"></script>
   <script th:src="@{/vendor/tagify/tagify.min.js}"></script>
   <script th:src="@{/vendor/ag-grid/ag-grid-community.min.js}"></script>
+  <script th:src="@{/vendor/dayjs/dayjs.min.js}"></script>
+  <script th:src="@{/vendor/dayjs/relativeTime.js}"></script>
+  <script th:src="@{/vendor/dayjs/utc.js}"></script>
+  <script th:src="@{/vendor/dayjs/timezone.js}"></script>
+  <script th:src="@{/vendor/dayjs/ko.js}"></script>
   <link rel="stylesheet" th:href="@{/css/common.css}">
 </head>
 <body class="page-admin bg-gray-900">
@@ -24,9 +29,9 @@
     <div class="flex-1"></div>
     <form th:action="@{/logout}" method="post" style="display:contents;">
       <button type="submit"
-        class="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded hover:bg-gray-700 text-gray-400 hover:text-red-400"
+        class="flex-shrink-0 h-7 px-3 border border-gray-600 hover:bg-gray-700 text-gray-300 hover:text-red-400 rounded flex items-center gap-1.5 text-xs"
         title="로그아웃">
-        <i class="fas fa-right-from-bracket text-xs"></i>
+        <i class="fas fa-right-from-bracket text-xs"></i> 로그아웃
       </button>
     </form>
   </div>
@@ -64,14 +69,10 @@
     <label for="f-name" class="text-xs text-gray-400">제품명</label>
     <input id="f-name" type="text" autocomplete="off" class="search-input" style="width:180px;" placeholder="제품명">
 
-    <button id="btn-search"
-      class="flex-shrink-0 h-7 px-3 bg-gray-600 hover:bg-gray-500 text-white rounded flex items-center gap-1.5 text-xs">
-      <i class="fas fa-magnifying-glass text-xs"></i> 검색
-    </button>
     <button id="btn-reset"
-      class="flex-shrink-0 w-7 h-7 flex items-center justify-center rounded hover:bg-gray-700 text-gray-400 hover:text-white"
-      title="초기화">
-      <i class="fas fa-rotate-right text-xs"></i>
+      class="flex-shrink-0 h-7 px-3 border border-gray-600 hover:bg-gray-700 text-gray-300 hover:text-white rounded flex items-center gap-1.5 text-xs"
+      title="검색 조건 초기화">
+      <i class="fas fa-rotate-right text-xs"></i> 새로고침
     </button>
   </div>
 
