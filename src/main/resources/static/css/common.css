@@ -42,28 +42,8 @@ body { height: 100vh; overflow: hidden; min-width: 1000px; }
 #zoom-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 13px; height: 13px; border-radius: 50%; background: #fff; cursor: pointer; }
 #zoom-slider::-moz-range-thumb { width: 13px; height: 13px; border-radius: 50%; background: #fff; border: none; cursor: pointer; }
 
-/* ── 게시 버튼 (zoom-overlay 내) ── */
-#publish-btn {
-  display: flex; align-items: center; gap: 4px;
-  background: none; border: none; padding: 0 2px; cursor: pointer;
-}
-#publish-btn i,
-#publish-btn span { font-size: 12px; color: rgba(255,255,255,0.4); transition: color 0.15s; }
-#publish-btn:hover i,
-#publish-btn:hover span { color: #fff; }
-#publish-btn.published i,
-#publish-btn.published span { color: #4ade80; }
-
 /* ── Tippy 툴팁 ── */
 .tippy-box { font-size: 12px; }
-
-/* ── 링크 복사 버튼 ── */
-#copy-link-btn {
-  display: flex; align-items: center;
-  background: none; border: none; padding: 0 2px; cursor: pointer;
-}
-#copy-link-btn i { font-size: 12px; color: rgba(255,255,255,0.4); transition: color 0.15s; }
-#copy-link-btn:hover i { color: #fff; }
 
 /* ── 가로/세로 맞춤 버튼 ── */
 #fit-width-btn, #fit-height-btn {
@@ -211,8 +191,50 @@ body { height: 100vh; overflow: hidden; min-width: 1000px; }
 .grade-HG  { background: #e5e7eb; color: #374151; }
 .grade-RG  { background: #dcfce7; color: #15803d; }
 .grade-MG  { background: #dbeafe; color: #1d4ed8; }
+.grade-MGEX { background: #cffafe; color: #0e7490; }
 .grade-PG  { background: #f3e8ff; color: #7e22ce; }
 .grade-ETC { background: #fef3c7; color: #92400e; }
+
+/* ── 관리자 페이지: 검색 영역 입력 ── */
+.search-input {
+  height: 28px; padding: 0 8px; font-size: 12px;
+  background: #374151; color: #e5e7eb;
+  border: 1px solid #4b5563; border-radius: 4px; outline: none;
+}
+.search-input:focus { border-color: #60a5fa; }
+.search-input::placeholder { color: #6b7280; }
+
+/* ── 관리자 페이지: 메뉴얼 목록 그리드 ── */
+#manual-grid .ag-cell { display: flex; align-items: center; gap: 6px; }
+#manual-grid .cell-action { cursor: pointer; }
+/* 버튼 열은 좁은 폭에 맞춰 셀 좌우 여백을 줄인다 */
+#manual-grid .cell-center { justify-content: center; padding-left: 4px; padding-right: 4px; }
+#manual-grid .header-center .ag-header-cell-label { justify-content: center; }
+
+/* 편집·수정·삭제 버튼 (편집: 파랑, 수정: 무채색, 삭제: 빨강) */
+.grid-btn {
+  display: inline-flex; align-items: center; gap: 4px;
+  height: 22px; padding: 0 8px; border-radius: 4px; border: none;
+  background: #2563eb; color: #fff; font-size: 11px; cursor: pointer;
+}
+.grid-btn:hover { background: #1d4ed8; }
+.grid-btn + .grid-btn { margin-left: 6px; }
+.grid-btn-plain { background: transparent; border: 1px solid #6b7280; color: #d1d5db; }
+.grid-btn-plain:hover { background: rgba(107,114,128,0.25); }
+.grid-btn-danger { background: #dc2626; }
+.grid-btn-danger:hover { background: #b91c1c; }
+
+/* 게시 상태 뱃지 */
+.pub-badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  height: 20px; padding: 0 7px; border-radius: 10px; font-size: 11px;
+}
+.pub-on  { background: rgba(74,222,128,0.15); color: #4ade80; }
+.pub-off { background: rgba(156,163,175,0.15); color: #9ca3af; }
+
+/* 참조 열 외부 링크 아이콘 */
+.grid-link { color: #60a5fa; font-size: 12px; }
+.grid-link:hover { color: #93c5fd; }
 
 /* ── 관리자 페이지: 십자선 가이드 (클릭 위치 가이드) ── */
 #ch-h { position: absolute; left: 0; right: 0; height: 1px; background: rgba(40,40,40,0.4); pointer-events: none; z-index: 15; display: none; }

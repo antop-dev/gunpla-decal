@@ -264,7 +264,7 @@ function toggleSidebar() {
   // 트랜지션(200ms) 완료 후 pretty-scrollbar 재배치
   setTimeout(() => window.dispatchEvent(new Event('resize')), 220);
 }
-document.getElementById('sb-toggle').addEventListener('click', toggleSidebar);
+document.getElementById('sb-toggle')?.addEventListener('click', toggleSidebar);
 
 /* ──────────── 줌 슬라이더 ──────────── */
 document.getElementById('zoom-slider')?.addEventListener('input', e => {

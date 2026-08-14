@@ -67,6 +67,26 @@ class ManualService(
             }.map { it.toSummary() }
     }
 
+    /**
+     * 관리자 목록 검색 (미공개 포함). 각 조건은 null·빈 값이면 무시하며,
+     * 형식번호·제품명은 부분 일치(대소문자 무시)로 비교한다.
+     */
+    @Transactional(readOnly = true)
+    fun searchManuals(
+        grade: Grade?,
+        published: Boolean?,
+        modelNumber: String?,
+        productName: String?,
+    ): List<ManualSummaryDto> =
+        manualRepository
+            .findAllByOrderByIdDesc()
+            .filter { m ->
+                (grade == null || m.grade == grade) &&
+                    (published == null || m.published == published) &&
+                    (modelNumber.isNullOrBlank() || m.modelNumber.contains(modelNumber, ignoreCase = true)) &&
+                    (productName.isNullOrBlank() || m.productName.contains(productName, ignoreCase = true))
+            }.map { it.toSummary() }
+
     /** 메뉴얼 공개 여부 설정. published=true이면 ManualChangedEvent를 발행하여 캐시를 무효화한다 */
     fun updatePublished(
         manualId: ManualId,

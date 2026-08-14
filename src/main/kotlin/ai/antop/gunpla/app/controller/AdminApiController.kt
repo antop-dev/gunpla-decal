@@ -40,11 +40,14 @@ class AdminApiController(
     @GetMapping("/sse", produces = [MediaType.TEXT_EVENT_STREAM_VALUE])
     fun sse(): SseEmitter = sseService.connect()
 
-    /** 메뉴얼 전체 목록 반환 (q가 있으면 서버 필터링) */
+    /** 메뉴얼 목록 반환. 등급·게시여부·형식번호·제품명 조건은 서버에서 필터링한다 */
     @GetMapping("/manuals")
     fun manualList(
-        @RequestParam(required = false) q: String?,
-    ): List<ManualSummaryDto> = adminService.getManuals(q)
+        @RequestParam(required = false) grade: Grade?,
+        @RequestParam(required = false) published: Boolean?,
+        @RequestParam(required = false) modelNumber: String?,
+        @RequestParam(required = false) productName: String?,
+    ): List<ManualSummaryDto> = adminService.searchManuals(grade, published, modelNumber, productName)
 
     /** 메뉴얼 등록 요청 수신 후 즉시 202 반환. 실제 처리(PDF 저장·썸네일 생성)는 비동기로 진행되며 결과는 SSE로 전달된다 */
     @PostMapping("/manuals", consumes = [MediaType.MULTIPART_FORM_DATA_VALUE])

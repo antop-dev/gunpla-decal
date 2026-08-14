@@ -6,35 +6,24 @@
   <meta name="context-path" th:content="@{/}">
   <title>건담 메뉴얼 – 관리자</title>
   <link rel="stylesheet" th:href="@{/vendor/fontawesome/css/all.min.css}">
-  <link rel="stylesheet" th:href="@{/vendor/tippy/tippy.css}">
   <link rel="stylesheet" th:href="@{/vendor/tagify/tagify.css}">
   <script th:src="@{/vendor/tailwind/tailwind.min.js}"></script>
   <script th:src="@{/vendor/pdfjs/pdf.min.js}"></script>
-  <script th:src="@{/vendor/tippy/popper.min.js}"></script>
-  <script th:src="@{/vendor/tippy/tippy.min.js}"></script>
   <script th:src="@{/vendor/tagify/tagify.min.js}"></script>
+  <script th:src="@{/vendor/ag-grid/ag-grid-community.min.js}"></script>
   <link rel="stylesheet" th:href="@{/css/common.css}">
 </head>
-<body class="page-admin flex bg-gray-900">
+<body class="page-admin bg-gray-900">
 
-<!-- ── 왼쪽 사이드바 ── -->
-<aside id="sidebar" class="flex-shrink-0 bg-gray-900 text-white flex flex-col" style="width:220px;">
+<!-- ── 목록 화면 ── -->
+<div id="list-view" class="flex flex-col text-white" style="height:100vh;">
 
-  <!-- 헤더 -->
-  <div id="sb-header" class="flex items-center gap-2 px-2 bg-gray-800 border-b border-gray-700 flex-shrink-0" style="height:48px;">
-    <button id="sb-toggle"
-      class="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded hover:bg-gray-700 text-gray-400 hover:text-white"
-      title="접기">
-      <i id="sb-toggle-icon" class="fas fa-angles-left text-sm"></i>
-    </button>
-    <span id="sb-title" class="font-bold text-sm whitespace-nowrap flex-1 truncate">건담 메뉴얼</span>
-    <button id="sb-refresh"
-      class="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded hover:bg-gray-700 text-gray-400 hover:text-white"
-      title="새로고침">
-      <i class="fas fa-rotate-right text-xs"></i>
-    </button>
+  <!-- 타이틀 영역 -->
+  <div class="flex items-center px-3 bg-gray-800 border-b border-gray-700 flex-shrink-0" style="height:48px;">
+    <span class="font-bold text-sm whitespace-nowrap">건담 메뉴얼</span>
+    <div class="flex-1"></div>
     <form th:action="@{/logout}" method="post" style="display:contents;">
-      <button type="submit" id="sb-logout"
+      <button type="submit"
         class="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded hover:bg-gray-700 text-gray-400 hover:text-red-400"
         title="로그아웃">
         <i class="fas fa-right-from-bracket text-xs"></i>
@@ -42,36 +31,66 @@
     </form>
   </div>
 
-  <!-- 펼쳤을 때: 본문 -->
-  <div id="sb-content" class="flex flex-col flex-1 min-h-0">
-    <div class="px-2 py-1.5 border-b border-gray-500 flex-shrink-0 flex items-center gap-1.5">
-      <div class="flex-1 flex items-center gap-1 bg-gray-700 rounded px-2 py-1">
-        <i class="fas fa-magnifying-glass text-gray-500 text-xs"></i>
-        <input id="manual-search" type="text" placeholder="등급 또는 제품명 검색…" autocomplete="off" aria-label="메뉴얼 검색"
-          class="flex-1 bg-transparent text-xs outline-none text-gray-300 placeholder-gray-500">
-      </div>
-      <button id="btn-upload" title="메뉴얼 등록"
-        class="flex-shrink-0 w-7 self-stretch bg-blue-600 hover:bg-blue-700 text-white rounded flex items-center justify-center">
-        <i class="fas fa-plus text-xs"></i>
-      </button>
-    </div>
-    <div id="manual-list" class="flex-1 overflow-y-auto p-1.5">
-      <p class="text-gray-500 text-xs p-2">불러오는 중…</p>
-    </div>
-  </div>
+  <!-- 검색 영역 -->
+  <div class="flex items-center gap-2 px-3 py-2 border-b border-gray-700 flex-shrink-0">
+    <button id="btn-upload" title="메뉴얼 등록"
+      class="flex-shrink-0 h-7 px-3 bg-blue-600 hover:bg-blue-700 text-white rounded flex items-center gap-1.5 text-xs">
+      <i class="fas fa-plus text-xs"></i> 등록
+    </button>
 
-  <!-- 접었을 때: 아이콘 목록 -->
-  <div id="sb-icons" class="flex-1 flex-col items-center gap-0.5 overflow-y-auto" style="display:none;">
-    <button id="btn-upload-icon"
-      class="w-8 h-8 flex items-center justify-center rounded bg-blue-600 hover:bg-blue-700 text-white flex-shrink-0 my-1"
-      title="메뉴얼 등록">
-      <i class="fas fa-plus text-xs"></i>
+    <div class="flex-1"></div>
+
+    <label for="f-grade" class="text-xs text-gray-400">등급</label>
+    <select id="f-grade" class="search-input" style="width:100px;">
+      <option value="">전체</option>
+      <option value="HG">HG</option>
+      <option value="RG">RG</option>
+      <option value="MG">MG</option>
+      <option value="MGEX">MGEX</option>
+      <option value="PG">PG</option>
+      <option value="ETC">기타</option>
+    </select>
+
+    <label for="f-published" class="text-xs text-gray-400">게시</label>
+    <select id="f-published" class="search-input" style="width:90px;">
+      <option value="">전체</option>
+      <option value="true">게시</option>
+      <option value="false">미게시</option>
+    </select>
+
+    <label for="f-model" class="text-xs text-gray-400">형식번호</label>
+    <input id="f-model" type="text" autocomplete="off" class="search-input" style="width:140px;" placeholder="예) RX-78-2">
+
+    <label for="f-name" class="text-xs text-gray-400">제품명</label>
+    <input id="f-name" type="text" autocomplete="off" class="search-input" style="width:180px;" placeholder="제품명">
+
+    <button id="btn-search"
+      class="flex-shrink-0 h-7 px-3 bg-gray-600 hover:bg-gray-500 text-white rounded flex items-center gap-1.5 text-xs">
+      <i class="fas fa-magnifying-glass text-xs"></i> 검색
+    </button>
+    <button id="btn-reset"
+      class="flex-shrink-0 w-7 h-7 flex items-center justify-center rounded hover:bg-gray-700 text-gray-400 hover:text-white"
+      title="초기화">
+      <i class="fas fa-rotate-right text-xs"></i>
     </button>
   </div>
-</aside>
 
-<!-- 메인 -->
-<div class="flex-1 flex flex-col min-w-0">
+  <!-- 그리드 -->
+  <div id="manual-grid" class="flex-1 min-h-0"></div>
+</div>
+
+<!-- ── 편집 화면 (풀 팝업) ── -->
+<div id="editor-view" class="hidden fixed inset-0 z-40 flex flex-col bg-gray-900">
+
+  <!-- 헤더 -->
+  <div class="flex items-center gap-2 px-2 bg-gray-800 border-b border-gray-700 flex-shrink-0" style="height:36px;">
+    <button id="btn-editor-close"
+      class="flex items-center gap-1.5 h-7 px-2.5 rounded hover:bg-gray-700 text-gray-300 hover:text-white text-xs"
+      title="목록으로">
+      <i class="fas fa-arrow-left text-xs"></i> 목록
+    </button>
+    <span id="pdf-title"></span>
+  </div>
 
   <!-- 썸네일 스트립 -->
   <div id="thumb-strip" class="flex-shrink-0 bg-gray-800 overflow-x-auto" style="height:85px; border-bottom:1px solid #6b7280;">
@@ -98,14 +117,6 @@
       </div>
     </div>
     <div id="zoom-overlay">
-      <button id="publish-btn" title="게시 상태 전환">
-        <i id="publish-icon" class="fas fa-eye-slash"></i>
-        <span>게시</span>
-      </button>
-      <button id="copy-link-btn" title="링크 복사">
-        <i id="copy-link-icon" class="fas fa-link"></i>
-      </button>
-      <div class="zoom-divider"></div>
       <span id="zoom-label"></span>
       <input id="zoom-slider" type="range" min="10" max="500" step="1" value="100" aria-label="확대/축소">
       <button id="fit-width-btn" title="가로 맞춤">↔︎ 가로</button>
@@ -116,8 +127,6 @@
         <i class="fas fa-location-dot"></i>
         <span>마커</span>
       </label>
-      <div class="zoom-divider"></div>
-      <span id="pdf-title"></span>
     </div>
     <div id="marker-tooltip">
       <button id="tt-edit"   title="번호 수정"><i class="fas fa-pen"></i></button>
@@ -143,6 +152,7 @@
             <option value="HG">HG</option>
             <option value="RG" selected>RG</option>
             <option value="MG">MG</option>
+            <option value="MGEX">MGEX</option>
             <option value="PG">PG</option>
             <option value="ETC">기타</option>
           </select>
@@ -440,6 +450,7 @@
             <option value="HG">HG</option>
             <option value="RG">RG</option>
             <option value="MG">MG</option>
+            <option value="MGEX">MGEX</option>
             <option value="PG">PG</option>
             <option value="ETC">기타</option>
           </select>
@@ -492,7 +503,6 @@
   <div id="ai-tip-inner" class="text-xs rounded px-2 py-1.5 border shadow-md"></div>
 </div>
 
-<script th:src="@{/vendor/pretty-scroll/pretty-scroll.js}"></script>
 <script th:src="@{/js/common.js}"></script>
 <script th:inline="javascript">window.onnxAvailable = /*[[${hasOnnx}]]*/ false;</script>
 <script th:src="@{/js/admin.js}"></script>

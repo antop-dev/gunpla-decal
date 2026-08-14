@@ -1,5 +1,6 @@
 package ai.antop.gunpla.app.service
 
+import ai.antop.gunpla.app.domain.Grade
 import ai.antop.gunpla.app.domain.ManualId
 import ai.antop.gunpla.app.dto.DecalCreateRequestDto
 import ai.antop.gunpla.app.dto.DecalItemDto
@@ -22,9 +23,14 @@ class AdminService(
     private val onnxDecalService: OnnxDecalService,
     private val eventPublisher: ApplicationEventPublisher,
 ) {
-    /** 메뉴얼 전체 목록 반환 (미공개 포함). q가 있으면 서버 필터링 */
+    /** 메뉴얼 목록 검색 (미공개 포함). 각 조건은 null·빈 값이면 무시 */
     @Transactional(readOnly = true)
-    fun getManuals(q: String? = null): List<ManualSummaryDto> = manualService.getAllManuals(q, false)
+    fun searchManuals(
+        grade: Grade?,
+        published: Boolean?,
+        modelNumber: String?,
+        productName: String?,
+    ): List<ManualSummaryDto> = manualService.searchManuals(grade, published, modelNumber, productName)
 
     /** 메뉴얼 단건 조회 (미공개 포함, 캐시 미적용) */
     @Transactional(readOnly = true)

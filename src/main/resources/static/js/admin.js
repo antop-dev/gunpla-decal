@@ -117,69 +117,140 @@ container.addEventListener('mouseleave', () => {
   chH.style.display = chV.style.display = 'none';
 });
 
-/* ──────────── 메뉴얼 목록 ──────────── */
+/* ──────────── 메뉴얼 목록 그리드 ──────────── */
 
-function buildManualIconBtn(m) {
-  const btn = document.createElement('button');
-  btn.className = 'manual-icon-item sb-icon-tip w-8 h-8 flex items-center justify-center rounded hover:bg-gray-700 text-gray-400 hover:text-white';
-  btn.dataset.id  = m.id;
-  btn.dataset.tip = `[${m.grade}] ${m.modelNumber} ${m.productName}`;
-  btn.innerHTML   = '<i class="fas fa-file-pdf text-sm"></i>';
-  btn.addEventListener('click', () => selectManual(btn.dataset.id));
-  return btn;
+// ISO LocalDateTime 문자열("2026-08-14T10:48:00")을 "2026-08-14 10:48"로 변환
+function fmtDateTime(v) {
+  if (!v) return '';
+  return v.slice(0, 16).replace('T', ' ');
 }
 
-// 관리자 API에서 메뉴얼 목록 로드 후 현재 검색어로 필터링
+// 메뉴얼 공개 URL을 클립보드에 복사하고 버튼에 잠시 체크 아이콘을 표시
+async function copyManualLink(id, btn) {
+  await navigator.clipboard.writeText(`${location.origin}${window.contextPath}/${id}`);
+  if (!btn) return;
+  btn.innerHTML = '<i class="fas fa-check"></i> 복사';
+  setTimeout(() => { btn.innerHTML = '<i class="fas fa-link"></i> 복사'; }, 1500);
+}
+
+const gridColumnDefs = [
+  {
+    headerName: '등급', field: 'grade', width: 80,
+    headerClass: 'header-center', cellClass: 'cell-center',
+    cellRenderer: p => `<span class="grade-badge grade-${esc(p.value)}">${esc(p.value)}</span>`,
+  },
+  {
+    headerName: '편집', width: 80, sortable: false,
+    headerClass: 'header-center', cellClass: 'cell-center cell-action',
+    cellRenderer: () => '<button class="grid-btn" title="데칼 편집"><i class="fas fa-pen-to-square"></i> 편집</button>',
+    onCellClicked: p => openEditor(p.data.id),
+  },
+  {
+    headerName: '게시', field: 'published', width: 80,
+    headerClass: 'header-center', cellClass: 'cell-center cell-action',
+    cellRenderer: p => p.value
+      ? '<span class="pub-badge pub-on"><i class="fas fa-eye"></i> 게시</span>'
+      : '<span class="pub-badge pub-off"><i class="fas fa-eye-slash"></i> 미게시</span>',
+    onCellClicked: p => togglePublishedRow(p.data.id),
+  },
+  { headerName: '형식번호', field: 'modelNumber', width: 160 },
+  { headerName: '제품명', field: 'productName', flex: 1, minWidth: 220 },
+  {
+    headerName: '링크', width: 80, sortable: false,
+    headerClass: 'header-center', cellClass: 'cell-center cell-action',
+    cellRenderer: () => '<button class="grid-btn grid-btn-plain" title="메뉴얼 링크 복사"><i class="fas fa-link"></i> 복사</button>',
+    onCellClicked: p => copyManualLink(p.data.id, p.event.target.closest('button')),
+  },
+  {
+    headerName: '참조', field: 'link', width: 70, sortable: false,
+    headerClass: 'header-center', cellClass: 'cell-center',
+    cellRenderer: p => p.value
+      ? `<a href="${esc(p.value)}" target="_blank" rel="noopener" class="grid-link" title="${esc(p.value)}"><i class="fas fa-arrow-up-right-from-square"></i></a>`
+      : '',
+  },
+  { headerName: '등록일시', field: 'createdAt', width: 150, valueFormatter: p => fmtDateTime(p.value) },
+  { headerName: '수정일시', field: 'updatedAt', width: 150, valueFormatter: p => fmtDateTime(p.value) },
+  {
+    headerName: '관리', width: 150, sortable: false,
+    headerClass: 'header-center', cellClass: 'cell-center',
+    cellRenderer: () =>
+      '<button class="grid-btn grid-btn-plain" data-act="edit" title="메뉴얼 정보 수정"><i class="fas fa-pen"></i> 수정</button>' +
+      '<button class="grid-btn grid-btn-danger" data-act="del" title="삭제"><i class="fas fa-trash"></i> 삭제</button>',
+    onCellClicked: p => {
+      const act = p.event.target.closest('[data-act]')?.dataset.act;
+      if (act === 'edit') openManualEditModal(p.data.id);
+      if (act === 'del')  deleteManual(p.data.id);
+    },
+  },
+];
+
+const gridApi = agGrid.createGrid(document.getElementById('manual-grid'), {
+  theme: agGrid.themeQuartz.withPart(agGrid.colorSchemeDarkBlue),
+  columnDefs: gridColumnDefs,
+  rowData: [],
+  getRowId: p => p.data.id,
+  rowHeight: 34,
+  headerHeight: 36,
+  defaultColDef: { resizable: true, sortable: true },
+  loading: true,
+  overlayNoRowsTemplate: '<span style="color:#9ca3af;font-size:12px;">표시할 메뉴얼이 없습니다</span>',
+  overlayLoadingTemplate: '<span style="color:#9ca3af;font-size:12px;">불러오는 중…</span>',
+});
+
+// 그리드에 목록을 반영
+function renderGrid(list) {
+  manualList = list;
+  gridApi.setGridOption('rowData', list);
+  gridApi.setGridOption('loading', false);
+}
+
+// 검색 영역의 입력 요소 (전부 빈 값이면 조건 없음)
+const searchInputIds = ['f-grade', 'f-published', 'f-model', 'f-name'];
+
+// 검색 조건이 하나라도 지정되어 있는지 여부
+function hasSearchFilter() {
+  return searchInputIds.some(id => document.getElementById(id).value.trim());
+}
+
+// 검색 조건을 쿼리스트링으로 만들어 항상 서버에서 조회
 async function loadManuals() {
-  const manualsRes = await fetch('/api/admin/manuals');
-  manualList = await manualsRes.json();
-
-  // 아이콘 목록: 전체 표시
-  const iconEl = document.getElementById('sb-icons');
-  iconEl.querySelectorAll('.manual-icon-item').forEach(e => e.remove());
-  manualList.forEach(m => iconEl.appendChild(buildManualIconBtn(m)));
-
-  // 텍스트 목록: 현재 검색어 적용 (서버 사이드)
-  await searchManuals();
-
-  window.dispatchEvent(new Event('resize'));
+  const params = new URLSearchParams();
+  const grade       = document.getElementById('f-grade').value;
+  const published   = document.getElementById('f-published').value;
+  const modelNumber = document.getElementById('f-model').value.trim();
+  const productName = document.getElementById('f-name').value.trim();
+  if (grade)       params.set('grade', grade);
+  if (published)   params.set('published', published);
+  if (modelNumber) params.set('modelNumber', modelNumber);
+  if (productName) params.set('productName', productName);
+  const qs = params.toString();
+  renderGrid(await (await fetch(`/api/admin/manuals${qs ? '?' + qs : ''}`)).json());
 }
 
-// SSE로 수신된 메뉴얼을 목록 맨 위에 삽입하고 아이콘 목록에도 추가
+// 검색 조건을 모두 비우고 전체 목록을 다시 조회
+function resetSearch() {
+  searchInputIds.forEach(id => { document.getElementById(id).value = ''; });
+  loadManuals();
+}
+
+// 그리드의 특정 행 데이터를 부분 갱신
+function updateGridRow(id, patch) {
+  const row = gridApi.getRowNode(id);
+  if (!row) return;
+  Object.assign(row.data, patch);
+  gridApi.applyTransaction({ update: [row.data] });
+}
+
+// SSE로 수신된 메뉴얼을 그리드 맨 위에 삽입 (검색 조건이 있으면 목록을 다시 조회)
 function prependManualToList(manual) {
+  if (hasSearchFilter()) { loadManuals(); return; }
   manualList.unshift(manual);
-
-  const iconEl = document.getElementById('sb-icons');
-  const firstIcon = iconEl.querySelector('.manual-icon-item');
-  const btn = buildManualIconBtn(manual);
-  if (firstIcon) iconEl.insertBefore(btn, firstIcon); else iconEl.appendChild(btn);
-
-  const q = (document.getElementById('manual-search')?.value ?? '').trim();
-  if (!q) {
-    const listEl = document.getElementById('manual-list');
-    const emptyMsg = listEl.querySelector('p');
-    if (emptyMsg) emptyMsg.remove();
-    listEl.insertAdjacentHTML('afterbegin', buildManualItemHtml(manual));
-    const newItem = listEl.querySelector(`.manual-item[data-id="${manual.id}"]`);
-    newItem.addEventListener('click', e => {
-      if (e.target.closest('.btn-edit') || e.target.closest('.btn-del')) return;
-      selectManual(newItem.dataset.id);
-    });
-    newItem.querySelector('.btn-edit')?.addEventListener('click', () => openManualEditModal(manual.id));
-    newItem.querySelector('.btn-del')?.addEventListener('click', () => deleteManual(manual.id));
-  }
+  gridApi.applyTransaction({ add: [manual], addIndex: 0 });
 }
 
-// 등록된 메뉴얼 아이템을 duration(ms) 동안 노란색으로 하이라이트
+// 등록된 메뉴얼 행을 duration(ms) 동안 노란색으로 하이라이트
 function highlightManual(id, duration) {
-  const item = document.querySelector(`.manual-item[data-id="${id}"]`);
-  if (!item) return;
-  item.style.backgroundColor = 'rgba(234, 179, 8, 0.25)';
-  setTimeout(() => {
-    item.style.transition = 'background-color 1s ease';
-    item.style.backgroundColor = '';
-    setTimeout(() => { item.style.transition = ''; }, 1000);
-  }, duration);
+  gridApi.flashCells({ rowNodes: [gridApi.getRowNode(id)].filter(Boolean), flashDuration: duration });
 }
 
 // 화면 우하단에 빨간 토스트 메시지를 4.5초 표시
@@ -195,76 +266,15 @@ function showToast(message) {
   }, 4000);
 }
 
-// 현재 검색어로 서버에 요청해 텍스트 목록 렌더링 (manualList 캐시는 변경하지 않음)
-async function searchManuals() {
-  const q = (document.getElementById('manual-search')?.value ?? '').trim();
-  const list = q
-    ? await (await fetch(`/api/admin/manuals?q=${encodeURIComponent(q)}`)).json()
-    : manualList;
-  renderManualItems(list);
-}
+/* ──────────── 편집 화면 (풀 팝업) ──────────── */
 
-function buildManualItemHtml(m) {
-  return `
-    <div class="manual-item group px-2 py-1.5 rounded cursor-pointer hover:bg-gray-700 transition-colors${m.published ? '' : ' opacity-50'}" data-id="${m.id}">
-      <div class="flex items-center gap-1 mb-0.5">
-        <span class="grade-badge grade-${esc(m.grade)}">${esc(m.grade)}</span>
-        <span class="text-xs font-medium text-gray-200 leading-snug truncate flex-1">${esc(m.modelNumber)}</span>
-        <button class="btn-edit opacity-0 group-hover:opacity-100 flex-shrink-0 text-gray-500 hover:text-blue-400 w-5 h-5 flex items-center justify-center" data-id="${m.id}" title="수정">
-          <i class="fas fa-pen text-xs"></i>
-        </button>
-        <button class="btn-del opacity-0 group-hover:opacity-100 flex-shrink-0 text-gray-500 hover:text-red-400 w-5 h-5 flex items-center justify-center" data-id="${m.id}" title="삭제">
-          <i class="fas fa-trash text-xs"></i>
-        </button>
-      </div>
-      <div class="text-xs text-gray-400 leading-snug truncate">${esc(m.productName)}</div>
-    </div>`;
-}
-
-// 메뉴얼 목록 DOM 렌더링 및 이벤트 연결
-function renderManualItems(list) {
-  const el = document.getElementById('manual-list');
-  if (!list.length) {
-    const q = (document.getElementById('manual-search')?.value ?? '').trim();
-    el.innerHTML = q
-      ? '<p class="text-gray-500 text-xs p-2">검색 결과 없음</p>'
-      : '<p class="text-gray-500 text-xs p-2">등록된 메뉴얼이 없습니다</p>';
-    return;
-  }
-  el.innerHTML = list.map(buildManualItemHtml).join('');
-
-  if (currentManual) {
-    el.querySelector(`.manual-item[data-id="${currentManual.id}"]`)?.classList.add('bg-gray-600');
-  }
-
-  el.querySelectorAll('.manual-item').forEach(item =>
-    item.addEventListener('click', e => {
-      if (e.target.closest('.btn-edit') || e.target.closest('.btn-del')) return;
-      selectManual(item.dataset.id);
-    }));
-  el.querySelectorAll('.btn-edit').forEach(btn =>
-    btn.addEventListener('click', () => openManualEditModal(btn.dataset.id)));
-  el.querySelectorAll('.btn-del').forEach(btn =>
-    btn.addEventListener('click', () => deleteManual(btn.dataset.id)));
-}
-
-// 메뉴얼 선택: 목록 하이라이트 업데이트 후 PDF 로드
-async function selectManual(id) {
+// 편집 팝업을 열고 해당 메뉴얼의 PDF·데칼을 로드
+async function openEditor(id) {
   if (manualLoading) return;
   manualLoading = true;
   try {
-    document.querySelectorAll('.manual-item').forEach(e => e.classList.remove('bg-gray-600'));
-    document.querySelector(`.manual-item[data-id="${id}"]`)?.classList.add('bg-gray-600');
-
-    document.querySelectorAll('.manual-icon-item').forEach(e => {
-      e.classList.remove('bg-gray-600');
-      e.querySelector('i').className = 'fas fa-file-pdf text-sm';
-    });
-    const activeIcon = document.querySelector(`.manual-icon-item[data-id="${id}"]`);
-    if (activeIcon) {
-      activeIcon.classList.add('bg-gray-600');
-      activeIcon.querySelector('i').className = 'fas fa-file-pdf text-sm text-white';
-    }
+    // 팝업을 먼저 표시해야 fitToContainer가 컨테이너 치수를 계산할 수 있다
+    document.getElementById('editor-view').classList.remove('hidden');
 
     // 스켈레톤 표시 (pdfScroll은 visible — fitToContainer 치수 계산에 필요)
     noPdf.style.display = 'none';
@@ -285,13 +295,26 @@ async function selectManual(id) {
     // 스켈레톤 숨기고 PDF 공개
     document.getElementById('pdf-loading').style.display = '';
     document.getElementById('zoom-overlay').style.display = 'flex';
-    updatePublishOverlay();
 
     renderThumbnails(data.thumbnails);
   } finally {
     manualLoading = false;
   }
 }
+
+// 편집 팝업을 닫고 PDF 상태를 초기화
+function closeEditor() {
+  if (manualLoading) return;
+  document.getElementById('editor-view').classList.add('hidden');
+  currentManual = null; pdfDoc = null; currentPdfPage = null; allDecals = [];
+  pdfScroll.style.display = 'none';
+  noPdf.style.display = '';
+  hideTooltip();
+  updatePdfTitle(null);
+  thumbStrip.innerHTML = '<div class="strip-inner"><span class="text-gray-500 text-xs select-none">메뉴얼을 선택하세요</span></div>';
+}
+
+document.getElementById('btn-editor-close').addEventListener('click', closeEditor);
 
 /* ──────────── 데칼 오버레이 ──────────── */
 
@@ -1100,17 +1123,7 @@ document.getElementById('manual-edit-form').addEventListener('submit', async e =
       currentManual = { ...currentManual, grade, modelNumber, productName, link };
       updatePdfTitle(currentManual);
     }
-    const item = document.querySelector(`.manual-item[data-id="${editingManualId}"]`);
-    if (item) {
-      const gradeEl = item.querySelector('.grade-badge');
-      if (gradeEl) { gradeEl.className = `grade-badge grade-${grade}`; gradeEl.textContent = grade; }
-      const modelEl = item.querySelector('.text-gray-200.font-medium');
-      if (modelEl) modelEl.textContent = modelNumber;
-      const nameEl = item.querySelector('.text-xs.text-gray-400');
-      if (nameEl) nameEl.textContent = productName;
-    }
-    const icon = document.querySelector(`.manual-icon-item[data-id="${editingManualId}"]`);
-    if (icon) icon.dataset.tip = `[${grade}] ${modelNumber} ${productName}`;
+    updateGridRow(editingManualId, { grade, modelNumber, productName, link });
     await autoUnpublish();
     closeManualEditModal();
   } else {
@@ -1128,50 +1141,29 @@ document.getElementById('marker-visible').addEventListener('change', e => {
 
 /* ──────────── 게시 상태 ──────────── */
 
-function updatePublishOverlay() {
-  const btn = document.getElementById('publish-btn');
-  btn.classList.toggle('published', !!currentManual?.published);
-  document.getElementById('publish-icon').className =
-    `fas fa-${currentManual?.published ? 'eye' : 'eye-slash'}`;
+// 게시 상태를 서버에 반영하고 그리드 행을 갱신. 실패 시 false 반환
+async function setPublished(id, published) {
+  const res = await fetch(`/api/admin/${id}/published?published=${published}`, { method: 'PATCH' });
+  if (!res.ok) return false;
+  updateGridRow(id, { published });
+  return true;
 }
 
-async function togglePublished() {
-  if (!currentManual) return;
-  const newPublished = !currentManual.published;
-  const res = await fetch(
-    `/api/admin/${currentManual.id}/published?published=${newPublished}`,
-    { method: 'PATCH' },
-  );
-  if (!res.ok) return;
-  currentManual.published = newPublished;
-  const cached = manualList.find(x => x.id === currentManual.id);
-  if (cached) cached.published = newPublished;
-  updatePublishOverlay();
-  await searchManuals();
+// 목록 그리드의 게시 여부 셀 클릭 토글
+async function togglePublishedRow(id) {
+  const row = gridApi.getRowNode(id);
+  if (!row) return;
+  const newPublished = !row.data.published;
+  if (!(await setPublished(id, newPublished))) return;
+  if (currentManual?.id === id) currentManual.published = newPublished;
 }
 
+// 데칼·메뉴얼 정보가 변경되면 게시 상태를 자동으로 해제
 async function autoUnpublish() {
   if (!currentManual?.published) return;
-  await togglePublished();
+  if (!(await setPublished(currentManual.id, false))) return;
+  currentManual.published = false;
 }
-
-document.getElementById('publish-btn').addEventListener('click', togglePublished);
-
-const copyLinkTippy = tippy(document.getElementById('copy-link-btn'), {
-  content: '링크 복사됨',
-  placement: 'bottom',
-  trigger: 'manual',
-  hideOnClick: false,
-  duration: [0, 200],
-});
-
-document.getElementById('copy-link-btn').addEventListener('click', async () => {
-  if (!currentManual) return;
-  const url = `${location.origin}${window.contextPath}/${currentManual.id}`;
-  await navigator.clipboard.writeText(url);
-  copyLinkTippy.show();
-  setTimeout(() => copyLinkTippy.hide(), 1500);
-});
 
 /* ──────────── 메뉴얼 삭제 ──────────── */
 
@@ -1180,13 +1172,7 @@ async function deleteManual(id) {
   const label = m ? `[${m.grade}] ${m.modelNumber} ${m.productName}`.trim() : `ID ${id}`;
   if (!confirm(`"${label}" 메뉴얼을 삭제하시겠습니까?`)) return;
   await fetch(`/api/admin/manuals/${id}`, { method: 'DELETE' });
-  if (currentManual?.id === id) {
-    currentManual = null; pdfDoc = null; allDecals = [];
-    pdfScroll.style.display = 'none';
-    noPdf.style.display = '';
-    updatePdfTitle(null);
-    thumbStrip.innerHTML = '<div class="strip-inner"><span class="text-gray-500 text-xs select-none">메뉴얼을 선택하세요</span></div>';
-  }
+  if (currentManual?.id === id) closeEditor();
   loadManuals();
 }
 
@@ -1334,7 +1320,6 @@ function closeUploadModal() {
 }
 
 document.getElementById('btn-upload').addEventListener('click', openUploadModal);
-document.getElementById('btn-upload-icon').addEventListener('click', openUploadModal);
 document.getElementById('btn-upload-cancel').addEventListener('click', closeUploadModal);
 document.getElementById('pdf-tab-file').addEventListener('click',   () => setPdfMode('file'));
 document.getElementById('pdf-tab-url').addEventListener('click',    () => setPdfMode('url'));
@@ -1391,10 +1376,6 @@ document.getElementById('upload-form').addEventListener('submit', async e => {
 });
 
 
-/* ──────────── 새로고침 ──────────── */
-document.getElementById('sb-refresh').addEventListener('click', loadManuals);
-
-
 /* ──────────── 형식번호 유효성 검사 ──────────── */
 
 function sanitizeModelNumber(val) {
@@ -1421,13 +1402,20 @@ document.querySelectorAll('input[name="decal-shape"], input[name="edit-shape"]')
 applyModelNumValidation(document.getElementById('inp-model'));
 applyModelNumValidation(document.getElementById('edit-inp-model'));
 
-PrettyScroll('#manual-list', { barWidth: 6, barColor: 'rgba(156,163,175,0.5)', right: 2, autoHide: true });
-
+// 검색은 항상 서버 조회. 텍스트 입력은 500ms 디바운스, 셀렉트 변경은 즉시
 let searchTimer = null;
-document.getElementById('manual-search').addEventListener('input', () => {
+['f-model', 'f-name'].forEach(id =>
+  document.getElementById(id).addEventListener('input', () => {
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(loadManuals, 500);
+  }));
+['f-grade', 'f-published'].forEach(id =>
+  document.getElementById(id).addEventListener('change', loadManuals));
+document.getElementById('btn-search').addEventListener('click', () => {
   clearTimeout(searchTimer);
-  searchTimer = setTimeout(searchManuals, 150);
+  loadManuals();
 });
+document.getElementById('btn-reset').addEventListener('click', resetSearch);
 
 loadManuals();
 
