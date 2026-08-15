@@ -177,6 +177,14 @@ const gridColumnDefs = [
     onCellClicked: p => copyManualLink(p.data.id, p.event.target.closest('button')),
   },
   {
+    headerName: '다운로드', width: 110, sortable: false,
+    headerClass: 'header-center', cellClass: 'cell-center',
+    // 파일명은 서버가 Content-Disposition으로 지정한다
+    cellRenderer: p =>
+      `<a class="grid-btn grid-btn-plain" href="${window.contextPath}/api/admin/manuals/${p.data.id}/download"` +
+      ` title="PDF 다운로드"><i class="fas fa-download"></i> 다운로드</a>`,
+  },
+  {
     headerName: '참조', field: 'link', width: 70, sortable: false,
     headerClass: 'header-center', cellClass: 'cell-center',
     cellRenderer: p => p.value

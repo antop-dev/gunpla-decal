@@ -242,6 +242,18 @@ class ManualService(
         return FileSystemResource(path)
     }
 
+    /** 다운로드용 PDF 파일명 반환. "[등급] 형식번호 제품명.pdf" 형태이며 파일명에 쓸 수 없는 문자는 _로 치환한다 */
+    @Transactional(readOnly = true)
+    fun getPdfFileName(manualId: ManualId): String {
+        val manual = getManualEntity(manualId)
+        val name =
+            "[${manual.grade}] ${manual.modelNumber} ${manual.productName}"
+                .replace(Regex("\\s+"), " ")
+                .trim()
+                .replace(Regex("""[\\/:*?"<>|]"""), "_")
+        return "$name.pdf"
+    }
+
     /** 메뉴얼 단건 조회. 존재하지 않으면 null 반환 */
     fun getManual(manualId: ManualId): ManualItemDto? {
         val manual = manualRepository.findByIdOrNull(manualId.value)

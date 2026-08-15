@@ -11,8 +11,12 @@ import ai.antop.gunpla.app.dto.ManualUpdateRequestDto
 import ai.antop.gunpla.app.service.AdminService
 import ai.antop.gunpla.app.service.ManualTaskService
 import ai.antop.gunpla.app.service.SseService
+import org.springframework.core.io.Resource
+import org.springframework.http.ContentDisposition
+import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
+import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PatchMapping
@@ -26,6 +30,7 @@ import org.springframework.web.bind.annotation.ResponseStatus
 import org.springframework.web.bind.annotation.RestController
 import org.springframework.web.multipart.MultipartFile
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter
+import java.nio.charset.StandardCharsets
 import java.util.Base64
 
 /** 관리자 페이지 전용 CRUD API (메뉴얼·데칼 등록/수정/삭제) */
@@ -77,6 +82,26 @@ class AdminApiController(
     fun getManual(
         @PathVariable manualId: ManualId,
     ): ManualAssemblyDto = adminService.getManual(manualId)
+
+    /**
+     * PDF 다운로드 (관리자 전용). 브라우저는 Content-Disposition의 filename을 <a download> 속성보다
+     * 우선하므로 파일명을 여기서 "[등급] 형식번호 제품명.pdf"로 지정한다.
+     */
+    @GetMapping("/manuals/{manualId:[0-9A-Za-z]+}/download")
+    fun download(
+        @PathVariable manualId: ManualId,
+    ): ResponseEntity<Resource> {
+        val disposition =
+            ContentDisposition
+                .builder("attachment")
+                .filename(adminService.getPdfFileName(manualId), StandardCharsets.UTF_8)
+                .build()
+        return ResponseEntity
+            .ok()
+            .contentType(MediaType.APPLICATION_PDF)
+            .header(HttpHeaders.CONTENT_DISPOSITION, disposition.toString())
+            .body(adminService.getPdfResource(manualId))
+    }
 
     /** 공개 여부 설정 */
     @PatchMapping("/{manualId:[0-9A-Za-z]+}/published")

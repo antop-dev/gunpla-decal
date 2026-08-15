@@ -9,6 +9,7 @@ import ai.antop.gunpla.app.dto.ManualSummaryDto
 import ai.antop.gunpla.app.dto.ManualUpdateRequestDto
 import ai.antop.gunpla.app.event.ManualChangedEvent
 import org.springframework.context.ApplicationEventPublisher
+import org.springframework.core.io.Resource
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 
@@ -31,6 +32,12 @@ class AdminService(
         modelNumber: String?,
         productName: String?,
     ): List<ManualSummaryDto> = manualService.searchManuals(grade, published, modelNumber, productName)
+
+    /** 다운로드용 PDF 파일 리소스 반환 */
+    fun getPdfResource(manualId: ManualId): Resource = manualService.getPdfResource(manualId)
+
+    /** 다운로드용 PDF 파일명 반환 */
+    fun getPdfFileName(manualId: ManualId): String = manualService.getPdfFileName(manualId)
 
     /** 메뉴얼 단건 조회 (미공개 포함, 캐시 미적용) */
     @Transactional(readOnly = true)
