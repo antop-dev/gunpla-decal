@@ -16,7 +16,6 @@ import org.springframework.web.server.ResponseStatusException
 class ManualAssemblyService(
     private val manualService: ManualService,
     private val decalService: DecalService,
-    private val thumbnailService: ThumbnailService,
 ) {
     /** 메뉴얼 요약 목록 반환. onlyPublished=true이면 공개 메뉴얼만 반환 */
     fun getManuals(
@@ -40,7 +39,6 @@ class ManualAssemblyService(
             throw ResponseStatusException(HttpStatus.FORBIDDEN)
         }
         val decals = decalService.getDecalsByManualId(manual.id)
-        val thumbnails = thumbnailService.getThumbnails(manual.id)
         return ManualAssemblyDto(
             id = manual.id,
             grade = manual.grade,
@@ -48,7 +46,7 @@ class ManualAssemblyService(
             productName = manual.productName,
             published = manual.published,
             decals = decals,
-            thumbnails = thumbnails.map { "/resource/${manual.id}/thumbnails/${it.pageNumber}" },
+            thumbnails = (1..manual.pageCount).map { "/resource/${manual.id}/thumbnails/$it" },
             link = manual.link,
         )
     }

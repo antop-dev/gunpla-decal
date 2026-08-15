@@ -28,6 +28,9 @@ class Manual(
     /** 업로드된 PDF 파일명 (app.upload-dir 기준 상대 경로) */
     @Column(name = "pdf_path", nullable = false, columnDefinition = "TEXT")
     var pdfPath: String,
+    /** PDF 페이지 수. 썸네일 파일 경로를 유도하는 데 사용한다 */
+    @Column(name = "page_count", nullable = false)
+    var pageCount: Int = 0,
     /** 외부 링크 (선택, https://로 시작) */
     @Column(name = "link", nullable = true, columnDefinition = "TEXT")
     var link: String? = null,

@@ -122,6 +122,7 @@ class ManualService(
         modelNumber: String,
         productName: String,
         pdfPath: String,
+        pageCount: Int,
         link: String?,
     ): ManualItemDto {
         val manual =
@@ -130,6 +131,7 @@ class ManualService(
                 modelNumber = modelNumber,
                 productName = productName,
                 pdfPath = pdfPath,
+                pageCount = pageCount,
                 link = link?.takeIf { it.isNotBlank() },
             )
         return manualRepository.save(manual).toDto()
@@ -242,7 +244,7 @@ class ManualService(
         return FileSystemResource(path)
     }
 
-    /** 다운로드용 PDF 파일명 반환. "[등급] 형식번호 제품명.pdf" 형태이며 파일명에 쓸 수 없는 문자는 _로 치환한다 */
+    /** 다운로드용 PDF 파일명 반환. "&#91;등급&#93; 형식번호 제품명.pdf" 형태이며 파일명에 쓸 수 없는 문자는 _로 치환한다 */
     @Transactional(readOnly = true)
     fun getPdfFileName(manualId: ManualId): String {
         val manual = getManualEntity(manualId)
@@ -280,7 +282,7 @@ class ManualService(
     private fun Manual.toSummary() = ManualSummaryDto(ManualId(id), grade, modelNumber, productName, link, published, createdAt, updatedAt)
 
     private fun Manual.toDto() =
-        ManualItemDto(ManualId(id), grade, modelNumber, productName, pdfPath, link, published, createdAt, updatedAt)
+        ManualItemDto(ManualId(id), grade, modelNumber, productName, pdfPath, pageCount, link, published, createdAt, updatedAt)
 
     companion object {
         private val MANUAL_NUMBER_REGEX = Regex("^[0-9_]+$")

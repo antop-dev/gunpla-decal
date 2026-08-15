@@ -16,6 +16,8 @@ data class ManualItemDto(
     val productName: String,
     /** 업로드된 PDF 파일명 (app.upload-dir 기준 상대 경로) */
     val pdfPath: String,
+    /** PDF 페이지 수 */
+    val pageCount: Int,
     /** 외부 링크 (선택, https://로 시작) */
     val link: String?,
     /** 공개 여부 */
