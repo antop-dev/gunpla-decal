@@ -210,6 +210,8 @@ body { height: 100vh; overflow: hidden; min-width: 1000px; }
 /* 버튼 열은 좁은 폭에 맞춰 셀 좌우 여백을 줄인다 */
 #manual-grid .cell-center { justify-content: center; padding-left: 4px; padding-right: 4px; }
 #manual-grid .header-center .ag-header-cell-label { justify-content: center; }
+/* 긴 제품명은 말줄임 처리 (flex 셀에서는 text-overflow가 동작하지 않아 block으로 되돌린다) */
+#manual-grid .cell-ellipsis { display: block; overflow: hidden; text-overflow: ellipsis; }
 
 /* 편집·수정·삭제 버튼 (편집: 파랑, 수정: 무채색, 삭제: 빨강) */
 .grid-btn {

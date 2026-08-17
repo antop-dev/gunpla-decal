@@ -169,7 +169,7 @@ const gridColumnDefs = [
     onCellClicked: p => togglePublishedRow(p.data.id),
   },
   { headerName: '형식번호', field: 'modelNumber', width: 160 },
-  { headerName: '제품명', field: 'productName', flex: 1, minWidth: 220 },
+  { headerName: '제품명', field: 'productName', flex: 1, minWidth: 220, cellClass: 'cell-ellipsis', tooltipField: 'productName' },
   {
     headerName: '링크', width: 80, sortable: false,
     headerClass: 'header-center', cellClass: 'cell-center cell-action',
