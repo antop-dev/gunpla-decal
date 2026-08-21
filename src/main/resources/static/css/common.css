@@ -317,3 +317,30 @@ input[type="radio"]:checked + .shape-toggle .shape-check { display: block; color
   border-radius: 4px;
   animation: skeleton-pulse 1.2s ease-in-out infinite;
 }
+
+/* ── Donate 링크 무지개 효과 ── */
+#sb-github a.rainbow-link,
+#sb-github a.rainbow-link:hover,
+#sb-github-icon a.rainbow-link,
+#sb-github-icon a.rainbow-link:hover {
+  background: linear-gradient(90deg, #ff0000, #ff7f00, #ffff00, #00ff00, #00ffff, #0000ff, #8b00ff, #ff0000);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+  font-weight: 900;
+  animation: rainbow-flow 1s linear infinite;
+}
+
+@keyframes rainbow-flow {
+  0%   { background-position: 0 50%; }
+  100% { background-position: 200% 50%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #sb-github a.rainbow-link,
+  #sb-github-icon a.rainbow-link {
+    animation: none;
+  }
+}
