@@ -20,6 +20,12 @@ repositories {
 
 // extra["jackson-bom.version"] = libs.versions.jackson.get()
 
+dependencyManagement {
+    imports {
+        mavenBom(libs.spring.cloud.dependencies.get().toString())
+    }
+}
+
 dependencies {
     implementation(libs.spring.boot.starter.security)
     implementation(libs.easy.captcha)
@@ -41,6 +47,7 @@ dependencies {
     implementation(libs.rome)
     implementation(libs.onnxruntime)
     implementation(libs.validation.api)
+    implementation(libs.spring.cloud.starter.openfeign)
     runtimeOnly(libs.sqlite.jdbc)
     runtimeOnly(libs.hibernate.community.dialects)
     developmentOnly(libs.spring.boot.devtools)

@@ -3,10 +3,12 @@ package ai.antop.gunpla
 import org.springframework.boot.autoconfigure.SpringBootApplication
 import org.springframework.boot.context.properties.ConfigurationPropertiesScan
 import org.springframework.boot.runApplication
+import org.springframework.cloud.openfeign.EnableFeignClients
 
 /** 건담프라 데칼 관리 시스템 Spring Boot 진입점 */
 @SpringBootApplication
 @ConfigurationPropertiesScan
+@EnableFeignClients
 class GunplaDecalApplication
 
 /** 애플리케이션 실행 */

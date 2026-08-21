@@ -8,6 +8,7 @@ import ai.antop.gunpla.app.dto.ManualSummaryDto
 import ai.antop.gunpla.app.dto.ManualUpdateRequestDto
 import ai.antop.gunpla.app.event.ManualChangedEvent
 import ai.antop.gunpla.app.repository.ManualRepository
+import ai.antop.gunpla.common.shorty.ShortyUrlShortener
 import ai.antop.gunpla.config.AppProperties
 import jakarta.annotation.PostConstruct
 import org.apache.pdfbox.io.MemoryUsageSetting
@@ -35,6 +36,7 @@ class ManualService(
     private val manualRepository: ManualRepository,
     private val appProperties: AppProperties,
     private val eventPublisher: ApplicationEventPublisher,
+    private val shortyUrlShortener: ShortyUrlShortener,
 ) {
     /** 애플리케이션 시작 시 PDF 업로드 디렉터리가 없으면 생성 */
     @PostConstruct
@@ -132,7 +134,7 @@ class ManualService(
                 productName = productName,
                 pdfPath = pdfPath,
                 pageCount = pageCount,
-                link = link?.takeIf { it.isNotBlank() },
+                link = link?.takeIf { it.isNotBlank() }?.let { shortyUrlShortener.shorten(it) },
             )
         return manualRepository.save(manual).toDto()
     }
@@ -262,7 +264,7 @@ class ManualService(
         return manual?.toDto()
     }
 
-    /** 메뉴얼 정보 수정 (등급·형식번호·제품명·링크). null 링크는 변경하지 않음 */
+    /** 메뉴얼 정보 수정 (등급·형식번호·제품명·링크). null 링크는 변경하지 않고, 변경된 링크는 짧은 URL로 저장한다 */
     fun updateManual(
         manualId: ManualId,
         request: ManualUpdateRequestDto,
@@ -271,7 +273,11 @@ class ManualService(
         manual.grade = request.grade
         manual.modelNumber = request.modelNumber
         manual.productName = request.productName
-        request.link?.let { manual.link = it }
+        request.link?.let { newLink ->
+            if (newLink != manual.link) {
+                manual.link = if (newLink.isBlank()) newLink else shortyUrlShortener.shorten(newLink)
+            }
+        }
     }
 
     /** 서비스 간 호출용: Manual 엔티티 단건 조회. 존재하지 않으면 404 예외 발생 */

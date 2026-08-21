@@ -28,3 +28,7 @@ app:
   onnx:
     model: ./assets/onnx/decal.onnx
     labels: ./assets/onnx/labels.json
+
+shorty:
+  url: http://localhost:30001
+  client-key: shorty_sk_un5XABNvrNpc7AXgzjXjQv5DxQRMnKRAr9hcIGDBsqc

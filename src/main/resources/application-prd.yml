@@ -17,3 +17,7 @@ app:
 decorator:
   datasource:
     enabled: false
+
+shorty:
+  url: https://p.antop.ai
+  client-key: ${SHORTY_CLIENT_KEY}

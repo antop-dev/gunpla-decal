@@ -51,3 +51,12 @@ app:
 
 openai:
   api-key: ${OPENAI_KEY:}
+
+shorty:
+  url:
+  client-key:
+
+# Shorty 호출이 지연되어도 요청 스레드가 오래 묶이지 않도록 타임아웃을 짧게 둔다
+spring.cloud.openfeign.client.config.shorty:
+  connect-timeout: 1000
+  read-timeout: 1000
