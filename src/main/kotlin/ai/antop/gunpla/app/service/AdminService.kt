@@ -48,14 +48,12 @@ class AdminService(
             useCache = false,
         )
 
-    /** 메뉴얼 정보 수정 (등급·형식번호·제품명, null 필드는 변경하지 않음) */
+    /** 메뉴얼 정보 수정 (등급·형식번호·제품명·링크). 링크는 짧은 URL로 저장되므로 저장된 결과를 반환한다 */
     @Transactional
     fun updateManual(
         manualId: ManualId,
         request: ManualUpdateRequestDto,
-    ) {
-        manualService.updateManual(manualId, request)
-    }
+    ): ManualSummaryDto = manualService.updateManual(manualId, request)
 
     /** 공개 여부 설정. published=true이면 캐시 무효화 이벤트가 발행된다 */
     @Transactional

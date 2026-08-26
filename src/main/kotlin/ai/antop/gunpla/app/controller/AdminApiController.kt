@@ -70,12 +70,12 @@ class AdminApiController(
         manualTaskService.createManual(grade, modelNumber, productName, pdfBytes, pdfUrl, pdfNumbers, link)
     }
 
-    /** 메뉴얼 정보 수정 (등급·제품명) */
+    /** 메뉴얼 정보 수정 (등급·제품명). 링크는 짧은 URL로 저장되므로 저장된 결과를 응답한다 */
     @PutMapping("/manuals/{manualId:[0-9A-Za-z]+}")
     fun update(
         @PathVariable manualId: ManualId,
         @RequestBody request: ManualUpdateRequestDto,
-    ) = adminService.updateManual(manualId, request)
+    ): ManualSummaryDto = adminService.updateManual(manualId, request)
 
     /** 메뉴얼 단건 조회 (미공개 포함, 관리자 전용) */
     @GetMapping("/manuals/{manualId:[0-9A-Za-z]+}")

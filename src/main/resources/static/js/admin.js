@@ -1153,13 +1153,16 @@ document.getElementById('manual-edit-form').addEventListener('submit', async e =
     body: JSON.stringify({ grade, modelNumber, productName, link }),
   });
   if (res.ok) {
+    // 링크는 서버에서 짧은 URL로 변환되어 저장되므로 응답 값으로 갱신한다
+    const savedLink = (await res.json()).link ?? null;
+    document.getElementById('edit-inp-link').value = savedLink ?? '';
     const cached = manualList.find(x => x.id === editingManualId);
-    if (cached) { cached.grade = grade; cached.modelNumber = modelNumber; cached.productName = productName; cached.link = link; }
+    if (cached) { cached.grade = grade; cached.modelNumber = modelNumber; cached.productName = productName; cached.link = savedLink; }
     if (currentManual?.id === editingManualId) {
-      currentManual = { ...currentManual, grade, modelNumber, productName, link };
+      currentManual = { ...currentManual, grade, modelNumber, productName, link: savedLink };
       updatePdfTitle(currentManual);
     }
-    updateGridRow(editingManualId, { grade, modelNumber, productName, link });
+    updateGridRow(editingManualId, { grade, modelNumber, productName, link: savedLink });
     await autoUnpublish();
     closeManualEditModal();
   } else {

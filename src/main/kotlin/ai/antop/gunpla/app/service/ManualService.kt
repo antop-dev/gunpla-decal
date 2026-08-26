@@ -264,20 +264,20 @@ class ManualService(
         return manual?.toDto()
     }
 
-    /** 메뉴얼 정보 수정 (등급·형식번호·제품명·링크). null 링크는 변경하지 않고, 변경된 링크는 짧은 URL로 저장한다 */
+    /** 메뉴얼 정보 수정 (등급·형식번호·제품명·링크). 링크가 null·빈 값이면 제거하고, 변경된 링크는 짧은 URL로 저장한다 */
     fun updateManual(
         manualId: ManualId,
         request: ManualUpdateRequestDto,
-    ) {
+    ): ManualSummaryDto {
         val manual = getManualEntity(manualId)
         manual.grade = request.grade
         manual.modelNumber = request.modelNumber
         manual.productName = request.productName
-        request.link?.let { newLink ->
-            if (newLink != manual.link) {
-                manual.link = if (newLink.isBlank()) newLink else shortyUrlShortener.shorten(newLink)
-            }
+        val newLink = request.link?.takeIf { it.isNotBlank() }
+        if (newLink != manual.link) {
+            manual.link = newLink?.let { shortyUrlShortener.shorten(it) }
         }
+        return manual.toSummary()
     }
 
     /** 서비스 간 호출용: Manual 엔티티 단건 조회. 존재하지 않으면 404 예외 발생 */
