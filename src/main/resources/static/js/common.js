@@ -240,31 +240,26 @@ function buildDecalMarkerHtml(d, textLen) {
 
 let sbOpen = true; // 왼쪽 사이드바 펼침(true) / 접힘(false) 상태
 
-// 사이드바를 접거나 펼침. 접힌 상태에서는 아이콘 목록만 표시
+// 사이드바를 접거나 펼침. 접으면 폭 0으로 완전히 숨기고 펼치기 핸들만 표시
 function toggleSidebar() {
   sbOpen = !sbOpen;
-  const h = document.getElementById('sb-header');
-  document.getElementById('sidebar').style.width = sbOpen ? '220px' : '44px';
-  document.getElementById('sb-content').style.display     = sbOpen ? '' : 'none';
-  document.getElementById('sb-icons').style.display       = sbOpen ? 'none' : 'flex';
-  document.getElementById('sb-title').style.display       = sbOpen ? '' : 'none';
-  document.getElementById('sb-refresh').style.display     = sbOpen ? '' : 'none';
-  const sbLogout = document.getElementById('sb-logout');
-  if (sbLogout) sbLogout.parentElement.style.display = sbOpen ? '' : 'none';
-  const sbGithub = document.getElementById('sb-github');
-  const sbGithubIcon = document.getElementById('sb-github-icon');
-  if (sbGithub) sbGithub.style.display           = sbOpen ? '' : 'none';
-  if (sbGithubIcon) sbGithubIcon.style.display   = sbOpen ? 'none' : 'flex';
-  document.getElementById('sb-toggle-icon').className =
-    sbOpen ? 'fas fa-angles-left text-sm' : 'fas fa-angles-right text-sm';
-  h.style.justifyContent = sbOpen ? '' : 'center';
-  h.style.paddingLeft    = sbOpen ? '' : '0';
-  h.style.paddingRight   = sbOpen ? '' : '0';
-  h.style.gap            = sbOpen ? '' : '0';
-  // 트랜지션(200ms) 완료 후 pretty-scrollbar 재배치
-  setTimeout(() => window.dispatchEvent(new Event('resize')), 220);
+  const sidebar = document.getElementById('sidebar');
+  sidebar.style.width = sbOpen ? '250px' : '0';
+  sidebar.style.borderRightWidth = sbOpen ? '' : '0';
+  document.getElementById('sb-expand').style.display = sbOpen ? 'none' : 'flex';
+  syncSidebarScrollbar();
+  localStorage.setItem('sidebarOpen', sbOpen);
+  // pretty-scrollbar 재배치
+  window.dispatchEvent(new Event('resize'));
+}
+// 메뉴얼 목록 스크롤바는 body 직속이라 사이드바를 접어도 남는다.
+// 목록을 다시 그리면 스크롤바도 다시 만들어지므로 그때마다 호출해야 한다.
+function syncSidebarScrollbar() {
+  const bar = window.manualScroll?.barWrapper;
+  if (bar) bar.style.display = sbOpen ? '' : 'none';
 }
 document.getElementById('sb-toggle')?.addEventListener('click', toggleSidebar);
+document.getElementById('sb-expand')?.addEventListener('click', toggleSidebar);
 
 /* ──────────── 줌 슬라이더 ──────────── */
 document.getElementById('zoom-slider')?.addEventListener('input', e => {

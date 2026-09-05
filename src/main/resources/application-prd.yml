@@ -1,8 +1,3 @@
-server:
-  port: 10001
-  servlet:
-    context-path: /gunpla-decal
-
 management:
   endpoints:
     access:

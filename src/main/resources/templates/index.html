@@ -66,14 +66,14 @@
 <!-- ── 왼쪽 사이드바 ── -->
 <aside id="sidebar" aria-labelledby="왼쪽 사이드바"
   class="flex-shrink-0 bg-gray-900 text-white flex flex-col"
-  style="width:220px;">
+  style="width:250px;">
 
   <!-- 헤더 -->
   <div id="sb-header" class="flex items-center gap-2 px-2 bg-gray-800 border-b border-gray-700 flex-shrink-0" style="height:48px;">
     <button id="sb-toggle"
       class="gtm-sidebar-toggle flex-shrink-0 w-8 h-8 flex items-center justify-center rounded hover:bg-gray-700 text-gray-400 hover:text-white"
       th:title="#{sidebar.collapse}">
-      <i id="sb-toggle-icon" class="fas fa-angles-left text-sm"></i>
+      <i class="fas fa-angles-left text-sm"></i>
     </button>
     <span id="sb-title" class="font-bold text-sm whitespace-nowrap flex-1" th:text="#{site.title}">Gundam Manual</span>
     <button id="sb-refresh"
@@ -98,21 +98,17 @@
     </div>
   </div>
 
-  <!-- 접었을 때: 아이콘 목록 -->
-  <div id="sb-icons" class="flex-1 flex-col items-center gap-0.5 py-1.5 overflow-y-auto" style="display:none;">
-  </div>
-
-  <!-- GitHub + 이메일 링크 (펼침) -->
+  <!-- GitHub + 의견 링크 (펼침) -->
   <div id="sb-github" class="flex-shrink-0 border-t border-gray-500 px-2 py-2 flex justify-evenly">
     <a href="https://github.com/antop-dev/gunpla-decal" target="_blank" rel="noopener"
        class="gtm-github-link flex items-center gap-2 text-gray-400 hover:text-white text-xs rounded px-1 py-1 hover:bg-gray-700">
       <i class="fab fa-github text-sm flex-shrink-0"></i>
       <span>GitHub</span>
     </a>
-    <a href="mailto:antop@kakao.com"
-       class="gtm-email-link flex items-center gap-2 text-gray-400 hover:text-white text-xs rounded px-1 py-1 hover:bg-gray-700">
-      <i class="fas fa-envelope text-sm flex-shrink-0"></i>
-      <span th:text="#{contact.email}">Email</span>
+    <a href="https://p.antop.ai/supports" target="_blank" rel="noopener"
+       class="gtm-feedback-link flex items-center gap-2 text-gray-400 hover:text-white text-xs rounded px-1 py-1 hover:bg-gray-700">
+      <i class="fas fa-comment-dots text-sm flex-shrink-0"></i>
+      <span th:text="#{contact.feedback}">Feedback</span>
     </a>
     <a href="https://ko-fi.com/antop?hidefeed=true&widget=true" target="_blank" rel="noopener"
        class="gtm-kofi-link rainbow-link flex items-center gap-2 text-gray-400 hover:text-white text-xs rounded px-1 py-1 hover:bg-gray-700">
@@ -120,25 +116,15 @@
       <span th:text="#{contact.donate}">Donate</span>
     </a>
   </div>
-  <!-- GitHub + 이메일 링크 (접힘) -->
-  <div id="sb-github-icon" class="flex-shrink-0 border-t border-gray-500 flex flex-col items-center gap-0.5 py-2" style="display:none;">
-    <a href="https://github.com/antop-dev/gunpla-decal" target="_blank" rel="noopener"
-       class="gtm-github-link w-8 h-8 flex items-center justify-center rounded hover:bg-gray-700 text-gray-400 hover:text-white"
-       title="GitHub">
-      <i class="fab fa-github text-sm"></i>
-    </a>
-    <a href="mailto:antop@kakao.com"
-       class="gtm-email-link w-8 h-8 flex items-center justify-center rounded hover:bg-gray-700 text-gray-400 hover:text-white"
-       title="antop@kakao.com">
-      <i class="fas fa-envelope text-sm"></i>
-    </a>
-    <a href="https://ko-fi.com/antop?hidefeed=true&widget=true" target="_blank" rel="noopener"
-       class="gtm-kofi-link rainbow-link w-8 h-8 flex items-center justify-center rounded hover:bg-gray-700 text-gray-400 hover:text-white"
-       th:title="#{contact.donate}">
-      <i class="fas fa-mug-hot text-sm"></i>
-    </a>
-  </div>
 </aside>
+
+<!-- 사이드바 펼치기 핸들 (접힘 상태에서만 표시) -->
+<button id="sb-expand"
+  class="gtm-sidebar-toggle fixed left-0 top-1/2 z-40 w-5 h-14 items-center justify-center rounded-r bg-gray-700 hover:bg-gray-600 text-gray-300 hover:text-white shadow-lg"
+  style="display:none; transform:translateY(-50%);"
+  th:title="#{sidebar.expand}">
+  <i class="fas fa-angle-right text-xs"></i>
+</button>
 
 <!-- ── 메인 ── -->
 <div class="flex-1 flex flex-col min-w-0 bg-gray-100">

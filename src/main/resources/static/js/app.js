@@ -140,41 +140,8 @@ async function loadManuals(q = '') {
     }
   }
 
-  // 접힌 사이드바용 아이콘 목록 렌더링
-  const iconEl = document.getElementById('sb-icons');
-  iconEl.innerHTML = allManuals.map(m => `
-    <button class="gtm-manual-select manual-icon-item sb-icon-tip w-8 h-8 flex items-center justify-center rounded hover:bg-gray-700 text-gray-400 hover:text-white"
-            data-id="${m.id}"
-            data-tip="[${esc(m.grade)}] ${esc(m.modelNumber)} ${esc(m.productName)}"
-            data-gtm-id="${m.id}" data-gtm-grade="${esc(m.grade)}" data-gtm-model="${esc(m.modelNumber)}" data-gtm-source="icon">
-      <i class="fas fa-file-pdf text-sm"></i>
-    </button>`).join('');
-  iconEl.querySelectorAll('.manual-icon-item').forEach(icon =>
-    icon.addEventListener('click', () => selectManual(icon.dataset.id)));
-
-  // 아이콘 툴팁: sidebar overflow:hidden 회피를 위해 position:fixed 기반 JS 툴팁 사용
-  const iconTip = document.getElementById('manual-item-tip');
-  iconEl.querySelectorAll('.manual-icon-item').forEach(icon => {
-    icon.addEventListener('mouseenter', () => {
-      const r = icon.getBoundingClientRect();
-      iconTip.textContent = icon.dataset.tip;
-      iconTip.style.left = (r.right + 8) + 'px';
-      iconTip.style.top = (r.top + r.height / 2) + 'px';
-      iconTip.style.transform = 'translateY(-50%)';
-      iconTip.style.display = 'block';
-    });
-    icon.addEventListener('mouseleave', () => { iconTip.style.display = 'none'; });
-  });
-
-  // 아이콘 목록에도 현재 선택 상태 반영
-  if (currentManual) {
-    const activeIcon = iconEl.querySelector(`.manual-icon-item[data-id="${currentManual.id}"]`);
-    if (activeIcon) {
-      activeIcon.classList.add('bg-gray-600');
-      activeIcon.querySelector('i').className = 'fas fa-file-pdf text-sm text-white';
-    }
-  }
   window.dispatchEvent(new Event('resize'));
+  syncSidebarScrollbar();
 }
 
 // 메뉴얼 선택: 목록 하이라이트 업데이트 후 PDF·데칼 로드.
@@ -185,16 +152,6 @@ async function selectManual(b62id, push = true) {
   try {
     document.querySelectorAll('.manual-item').forEach(e => e.classList.remove('bg-gray-600'));
     document.querySelector(`.manual-item[data-id="${b62id}"]`)?.classList.add('bg-gray-600');
-
-    document.querySelectorAll('.manual-icon-item').forEach(e => {
-      e.classList.remove('bg-gray-600');
-      e.querySelector('i').className = 'fas fa-file-pdf text-sm';
-    });
-    const activeIcon = document.querySelector(`.manual-icon-item[data-id="${b62id}"]`);
-    if (activeIcon) {
-      activeIcon.classList.add('bg-gray-600');
-      activeIcon.querySelector('i').className = 'fas fa-file-pdf text-sm text-white';
-    }
 
     if (push) history.pushState({ b62id }, '', `${window.contextPath}/${b62id}`);
 
@@ -443,7 +400,8 @@ function toggleRightSidebar() {
   h.style.paddingLeft    = rsOpen ? '' : '0';
   h.style.paddingRight   = rsOpen ? '' : '0';
   h.style.gap            = rsOpen ? '' : '0';
-  setTimeout(() => window.dispatchEvent(new Event('resize')), 220);
+  localStorage.setItem('rightSidebarOpen', rsOpen);
+  window.dispatchEvent(new Event('resize'));
 }
 document.getElementById('rs-toggle').addEventListener('click', toggleRightSidebar);
 
@@ -505,8 +463,12 @@ document.addEventListener('keydown', e => {
 /* ──────────── 초기화 ── */
 const DARK_SCROLL  = { barWidth: 10, defaultWrapperWidth: 11, barColor: 'rgba(156,163,175,0.5)', right: 1, autoHide: true };
 const LIGHT_SCROLL = { barWidth: 6, barColor: 'rgba(107,114,128,0.5)', right: 2, autoHide: true };
-PrettyScroll('#manual-list', DARK_SCROLL);
+window.manualScroll = PrettyScroll('#manual-list', DARK_SCROLL);
 PrettyScroll('#decal-list',  LIGHT_SCROLL);
+
+// 사이드바 접힘 상태 복원. 스크롤바 생성 후에 호출해야 접힌 상태에서 스크롤바도 함께 숨겨짐
+if (localStorage.getItem('sidebarOpen') === 'false') toggleSidebar();
+if (localStorage.getItem('rightSidebarOpen') === 'false') toggleRightSidebar();
 
 (async () => {
   const initB62 = location.pathname.slice(window.contextPath.length + 1);

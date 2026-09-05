@@ -6,11 +6,11 @@ body { height: 100vh; overflow: hidden; min-width: 1000px; }
 #manual-list { background: #111827; padding-right: 15px; }
 #decal-list  { background: #ffffff; }
 
-/* 왼쪽 사이드바 접기/펼치기 너비 트랜지션 */
-#sidebar { transition: width 0.2s ease; overflow: hidden; border-right: 1px solid #6b7280; }
+/* 왼쪽 사이드바 */
+#sidebar { overflow: hidden; min-width: 0; border-right: 1px solid #6b7280; }
 
-/* 사용자 페이지 오른쪽 사이드바 트랜지션 */
-#right-sidebar { transition: width 0.2s ease; overflow: hidden; border-left: 1px solid #6b7280; }
+/* 사용자 페이지 오른쪽 사이드바 */
+#right-sidebar { overflow: hidden; border-left: 1px solid #6b7280; }
 
 /* 데칼 마커 절대 위치 기준 오버레이 */
 #decal-overlay { position: absolute; inset: 0; pointer-events: none; }
@@ -146,18 +146,6 @@ body { height: 100vh; overflow: hidden; min-width: 1000px; }
   font-size: 9px; text-align: center; padding: 1px 0;
 }
 .strip-inner { display: flex; align-items: center; gap: 4px; height: 100%; padding: 0 8px; }
-
-/* ── 왼쪽 사이드바: 아이콘 모드 툴팁 (오른쪽으로 표시) ── */
-.sb-icon-tip { position: relative; }
-.sb-icon-tip:hover::after {
-  content: attr(data-tip);
-  position: absolute; left: calc(100% + 8px); top: 50%;
-  transform: translateY(-50%);
-  background: rgba(17,24,39,0.95); color: #fff;
-  font-size: 11px; white-space: pre; padding: 4px 8px;
-  border-radius: 4px; pointer-events: none; z-index: 100;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-}
 
 /* ── 사용자 페이지: 오른쪽 사이드바 아이콘 모드 툴팁 (왼쪽으로 표시) ── */
 .rs-icon-tip { position: relative; }
@@ -320,9 +308,7 @@ input[type="radio"]:checked + .shape-toggle .shape-check { display: block; color
 
 /* ── Donate 링크 무지개 효과 ── */
 #sb-github a.rainbow-link,
-#sb-github a.rainbow-link:hover,
-#sb-github-icon a.rainbow-link,
-#sb-github-icon a.rainbow-link:hover {
+#sb-github a.rainbow-link:hover {
   background: linear-gradient(90deg, #ff0000, #ff7f00, #ffff00, #00ff00, #00ffff, #0000ff, #8b00ff, #ff0000);
   background-size: 200% auto;
   -webkit-background-clip: text;
@@ -339,8 +325,7 @@ input[type="radio"]:checked + .shape-toggle .shape-check { display: block; color
 }
 
 @media (prefers-reduced-motion: reduce) {
-  #sb-github a.rainbow-link,
-  #sb-github-icon a.rainbow-link {
+  #sb-github a.rainbow-link {
     animation: none;
   }
 }
