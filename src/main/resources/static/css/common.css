@@ -180,6 +180,7 @@ body { height: 100vh; overflow: hidden; min-width: 1000px; }
 .grade-RG  { background: #dcfce7; color: #15803d; }
 .grade-MG  { background: #dbeafe; color: #1d4ed8; }
 .grade-MGEX { background: #cffafe; color: #0e7490; }
+.grade-MGSD { background: #fce7f3; color: #be185d; }
 .grade-PG  { background: #f3e8ff; color: #7e22ce; }
 .grade-ETC { background: #fef3c7; color: #92400e; }
 
