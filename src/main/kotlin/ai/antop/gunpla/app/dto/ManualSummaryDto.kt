@@ -14,6 +14,10 @@ data class ManualSummaryDto(
     val modelNumber: String,
     /** 제품명 */
     val productName: String,
+    /** PDF 페이지 수 */
+    val pageCount: Int = 0,
+    /** PDF 파일 크기 (바이트) */
+    val fileSize: Long = 0,
     /** 외부 링크 (선택, https://로 시작) */
     val link: String? = null,
     /** 공개 여부 */

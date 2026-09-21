@@ -73,6 +73,8 @@ class ManualTaskService(
             grade = grade,
             modelNumber = modelNumber,
             productName = productName,
+            pageCount = pageCount,
+            fileSize = fileSize,
             link = link,
             published = published,
             resourceVersion = resourceVersion,

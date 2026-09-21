@@ -141,6 +141,14 @@ function fmtRelative(v) {
   return dayjs.tz(v, SERVER_TZ).fromNow();
 }
 
+// PDF 용량(바이트)을 KB/MB로 표시. 0은 아직 크기를 기록하지 않은 메뉴얼이라 빈 칸으로 둔다
+function fmtFileSize(v) {
+  if (!v) return '';
+  return v < 1024 * 1024
+    ? `${Math.round(v / 1024)} KB`
+    : `${(v / 1024 / 1024).toFixed(1)} MB`;
+}
+
 // 메뉴얼 공개 URL을 클립보드에 복사하고 버튼에 잠시 체크 아이콘을 표시
 async function copyManualLink(id, btn) {
   await navigator.clipboard.writeText(`${location.origin}${window.contextPath}/${id}`);
@@ -184,6 +192,15 @@ const gridColumnDefs = [
     cellRenderer: p =>
       `<a class="grid-btn grid-btn-plain" href="${window.contextPath}/api/admin/manuals/${p.data.id}/download"` +
       ` title="PDF 다운로드"><i class="fas fa-download"></i> 다운로드</a>`,
+  },
+  {
+    headerName: '페이지수', field: 'pageCount', width: 90,
+    headerClass: 'header-right', cellClass: 'cell-right',
+  },
+  {
+    headerName: '용량', field: 'fileSize', width: 90,
+    headerClass: 'header-right', cellClass: 'cell-right',
+    valueFormatter: p => fmtFileSize(p.value),
   },
   {
     headerName: '참조', field: 'link', width: 70, sortable: false,
@@ -425,7 +442,8 @@ document.getElementById('btn-page-delete').addEventListener('click', async () =>
       showToast(body?.message || '페이지 삭제에 실패했습니다.');
       return;
     }
-    updateGridRow(id, { published: false });
+    // 미게시 전환·페이지수·용량이 모두 바뀌므로 서버가 돌려준 값으로 행을 갱신한다
+    updateGridRow(id, await res.json());
     // 오버레이를 유지한 채 편집 화면을 다시 로드해 중간 상태가 보이지 않게 한다
     await openEditor(id);
   } finally {

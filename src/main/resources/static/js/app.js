@@ -207,14 +207,7 @@ async function selectManual(b62id, push = true) {
 
     pdfDoc = await pdfjsLib.getDocument(`${window.contextPath}/resource/${currentManual.id}?v=${currentManual.version}`).promise;
 
-    // 데칼이 가장 많은 페이지로 이동
-    if (allDecals.length) {
-      const cnt = {};
-      allDecals.forEach(d => { cnt[d.page] = (cnt[d.page] || 0) + 1; });
-      currentPage = +Object.keys(cnt).reduce((a, b) => cnt[+a] >= cnt[+b] ? a : b);
-    } else {
-      currentPage = 1;
-    }
+    currentPage = 1;
 
     await renderPage(currentPage, true);
 

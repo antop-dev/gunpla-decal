@@ -78,12 +78,13 @@ class AdminService(
     /**
      * 메뉴얼의 선택한 페이지 삭제. 메뉴얼을 미게시로 전환한 뒤 썸네일·데칼·PDF를 순서대로 정리한다.
      * 썸네일 정리는 pageCount가 갱신되기 전의 페이지 수를 사용해야 하므로 PDF 편집보다 먼저 수행한다.
+     * 목록 그리드를 갱신할 수 있도록 변경된 메뉴얼 요약을 반환한다.
      */
     @Transactional
     fun deleteManualPages(
         manualId: ManualId,
         pages: List<Int>,
-    ) {
+    ): ManualSummaryDto {
         val manual = manualService.getManualEntity(manualId)
         val targets = pages.distinct().sorted()
         if (targets.isEmpty()) {
@@ -99,8 +100,9 @@ class AdminService(
         manual.published = false
         thumbnailService.deletePageThumbnails(manual.pdfPath, manual.pageCount, targets)
         decalService.deleteDecalsByPages(manualId, targets)
-        manualService.deletePdfPages(manualId, targets)
+        val summary = manualService.deletePdfPages(manualId, targets)
         eventPublisher.publishEvent(ManualChangedEvent(manualId))
+        return summary
     }
 
     /** 데칼 등록 (PDF 페이지 내 좌표 지정) */

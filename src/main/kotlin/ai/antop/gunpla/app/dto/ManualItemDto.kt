@@ -18,6 +18,8 @@ data class ManualItemDto(
     val pdfPath: String,
     /** PDF 페이지 수 */
     val pageCount: Int,
+    /** PDF 파일 크기 (바이트) */
+    val fileSize: Long,
     /** 외부 링크 (선택, https://로 시작) */
     val link: String?,
     /** 공개 여부 */

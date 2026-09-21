@@ -31,6 +31,9 @@ class Manual(
     /** PDF 페이지 수. 썸네일 파일 경로를 유도하는 데 사용한다 */
     @Column(name = "page_count", nullable = false)
     var pageCount: Int = 0,
+    /** PDF 파일 크기(바이트). PDF가 저장되거나 페이지 삭제로 다시 쓰인 뒤 파일에서 읽어 갱신한다 */
+    @Column(name = "file_size", nullable = false)
+    var fileSize: Long = 0,
     /** 외부 링크 (선택, https://로 시작) */
     @Column(name = "link", nullable = true, columnDefinition = "TEXT")
     var link: String? = null,

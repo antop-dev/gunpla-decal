@@ -135,6 +135,7 @@ class ManualService(
                 productName = productName,
                 pdfPath = pdfPath,
                 pageCount = pageCount,
+                fileSize = pdfFileSize(pdfPath),
                 link = link?.takeIf { it.isNotBlank() }?.let { shortyUrlShortener.shorten(it) },
             )
         return manualRepository.save(manual).toDto()
@@ -230,19 +231,24 @@ class ManualService(
     }
 
     /**
-     * PDF에서 지정한 페이지들을 삭제하고 남은 페이지 수를 pageCount에 반영한다.
+     * PDF에서 지정한 페이지들을 삭제하고 남은 페이지 수·파일 크기를 반영한 뒤 갱신된 요약을 반환한다.
      * 썸네일·데칼 동기화는 AdminService에서 처리한다.
      */
     fun deletePdfPages(
         manualId: ManualId,
         pages: List<Int>,
-    ) {
+    ): ManualSummaryDto {
         val manual = getManualEntity(manualId)
         val pdfPath = Paths.get(appProperties.uploadDir, manual.pdfPath).toAbsolutePath()
         manual.pageCount = pdfPageRemovalService.removePages(pdfPath, pages)
+        manual.fileSize = pdfFileSize(manual.pdfPath)
         // PDF·썸네일 파일이 실제로 바뀌었으므로 버전을 올려 브라우저 캐시를 무효화한다
         manual.resourceVersion++
+        return manual.toSummary()
     }
+
+    /** 업로드 디렉터리에 저장된 PDF 파일의 실제 크기(바이트)를 읽는다 */
+    private fun pdfFileSize(pdfPath: String): Long = Files.size(Paths.get(appProperties.uploadDir, pdfPath))
 
     /** 메뉴얼 삭제: DB 레코드와 업로드된 PDF 파일 제거 (썸네일 삭제는 AdminService에서 처리) */
     fun deleteManual(manualId: ManualId) {
@@ -302,7 +308,19 @@ class ManualService(
         manualRepository.findByIdOrNull(manualId.value) ?: throw ResponseStatusException(HttpStatus.NOT_FOUND)
 
     private fun Manual.toSummary() =
-        ManualSummaryDto(ManualId(id), grade, modelNumber, productName, link, published, resourceVersion, createdAt, updatedAt)
+        ManualSummaryDto(
+            ManualId(id),
+            grade,
+            modelNumber,
+            productName,
+            pageCount,
+            fileSize,
+            link,
+            published,
+            resourceVersion,
+            createdAt,
+            updatedAt,
+        )
 
     private fun Manual.toDto() =
         ManualItemDto(
@@ -312,6 +330,7 @@ class ManualService(
             productName,
             pdfPath,
             pageCount,
+            fileSize,
             link,
             published,
             resourceVersion,
