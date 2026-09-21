@@ -21,4 +21,6 @@ data class ManualAssemblyDto(
     val link: String? = null,
     /** 공개 여부 (관리자 페이지에서 게시 상태 표시에 사용) */
     val published: Boolean = false,
+    /** PDF·썸네일 URL의 브라우저 캐시 무효화용 버전 값 (manual.resource_version) */
+    val version: Int = 0,
 )

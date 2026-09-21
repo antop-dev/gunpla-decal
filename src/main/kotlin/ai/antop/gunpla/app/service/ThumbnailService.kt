@@ -14,6 +14,7 @@ import org.springframework.web.server.ResponseStatusException
 import java.awt.image.BufferedImage
 import java.nio.file.Files
 import java.nio.file.Paths
+import java.nio.file.StandardCopyOption
 import javax.imageio.ImageIO
 
 private val log = KotlinLogging.logger {}
@@ -83,6 +84,32 @@ class ThumbnailService(
         val manual = manualService.getManualEntity(manualId)
         (1..manual.pageCount).forEach { pageNumber ->
             Files.deleteIfExists(Paths.get(appProperties.uploadDir, thumbnailFileName(manual.pdfPath, pageNumber)))
+        }
+    }
+
+    /**
+     * 지정한 페이지들의 썸네일 파일을 삭제하고, 남은 썸네일의 페이지 번호를 1부터 다시 매긴다.
+     * pageCount는 삭제 전 페이지 수여야 한다. 새 번호는 항상 기존 번호 이하이므로 이름 충돌이 발생하지 않는다.
+     */
+    fun deletePageThumbnails(
+        pdfFileName: String,
+        pageCount: Int,
+        pages: List<Int>,
+    ) {
+        val deleted = pages.toSet()
+        deleted.forEach { pageNumber ->
+            Files.deleteIfExists(Paths.get(appProperties.uploadDir, thumbnailFileName(pdfFileName, pageNumber)))
+        }
+        var newPageNumber = 1
+        (1..pageCount).filterNot { it in deleted }.forEach { oldPageNumber ->
+            if (oldPageNumber != newPageNumber) {
+                Files.move(
+                    Paths.get(appProperties.uploadDir, thumbnailFileName(pdfFileName, oldPageNumber)),
+                    Paths.get(appProperties.uploadDir, thumbnailFileName(pdfFileName, newPageNumber)),
+                    StandardCopyOption.REPLACE_EXISTING,
+                )
+            }
+            newPageNumber++
         }
     }
 

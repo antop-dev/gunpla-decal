@@ -37,7 +37,7 @@ class ManualTaskService(
             taskLog.info { "[2/5] JPX 이미지 검증/정규화 시작" }
             val converted =
                 try {
-                    pdfJpxNormalizationService.normalize(pdfPath.toFile())
+                    pdfJpxNormalizationService.normalize(pdfPath)
                 } catch (e: Exception) {
                     Files.deleteIfExists(pdfPath)
                     throw e
@@ -75,6 +75,7 @@ class ManualTaskService(
             productName = productName,
             link = link,
             published = published,
+            resourceVersion = resourceVersion,
             createdAt = createdAt,
             updatedAt = updatedAt,
         )

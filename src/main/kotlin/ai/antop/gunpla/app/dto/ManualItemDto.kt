@@ -22,6 +22,8 @@ data class ManualItemDto(
     val link: String?,
     /** 공개 여부 */
     val published: Boolean,
+    /** PDF·썸네일 파일의 버전 (브라우저 캐시 무효화용) */
+    val resourceVersion: Int,
     /** 레코드 생성 일시 */
     val createdAt: LocalDateTime,
     /** 레코드 최종 수정 일시 */

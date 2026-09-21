@@ -1,0 +1,1 @@
+ALTER TABLE manual ADD COLUMN resource_version INTEGER NOT NULL DEFAULT 0;

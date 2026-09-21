@@ -95,6 +95,7 @@ async function loadManuals(q = '') {
           <button class="gtm-pdf-download pdf-dl-btn opacity-0 group-hover:opacity-100 flex-shrink-0 text-gray-500 hover:text-white w-5 h-5 flex items-center justify-center"
                   data-id="${m.id}"
                   data-filename="${esc(m.grade)}_${esc(m.modelNumber)}_${esc(m.productName)}.pdf"
+                  data-v="${m.resourceVersion}"
                   data-gtm-id="${m.id}" data-gtm-grade="${esc(m.grade)}" data-gtm-model="${esc(m.modelNumber)}"
                   title="${window.i18n.manualPdfDownload}">
             <i class="fas fa-download text-xs"></i>
@@ -125,7 +126,7 @@ async function loadManuals(q = '') {
     el.querySelectorAll('.pdf-dl-btn').forEach(btn =>
       btn.addEventListener('click', async e => {
         e.stopPropagation();
-        const res = await fetch(`/resource/${btn.dataset.id}`);
+        const res = await fetch(`/resource/${btn.dataset.id}?v=${btn.dataset.v}`);
         const blob = await res.blob();
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -204,7 +205,7 @@ async function selectManual(b62id, push = true) {
       window.dispatchEvent(new Event('resize'));
     }
 
-    pdfDoc = await pdfjsLib.getDocument(`${window.contextPath}/resource/${currentManual.id}`).promise;
+    pdfDoc = await pdfjsLib.getDocument(`${window.contextPath}/resource/${currentManual.id}?v=${currentManual.version}`).promise;
 
     // 데칼이 가장 많은 페이지로 이동
     if (allDecals.length) {

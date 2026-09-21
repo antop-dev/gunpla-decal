@@ -92,6 +92,11 @@
       <i class="fas fa-arrow-left text-xs"></i> 목록
     </button>
     <span id="pdf-title"></span>
+    <button id="btn-page-delete" disabled
+      class="ml-auto flex items-center gap-1.5 h-7 px-2.5 rounded bg-red-600 hover:bg-red-500 text-white text-xs disabled:bg-gray-700 disabled:text-gray-500 disabled:cursor-not-allowed"
+      title="선택한 페이지 삭제">
+      <i class="fas fa-trash text-xs"></i> 삭제
+    </button>
   </div>
 
   <!-- 썸네일 스트립 -->
@@ -135,6 +140,12 @@
       <button id="tt-delete" title="데칼 삭제"><i class="fas fa-trash"></i></button>
     </div>
   </div>
+</div>
+
+<!-- ── 처리 중 화면 잠금 오버레이 ── -->
+<div id="processing-overlay">
+  <i class="fas fa-circle-notch fa-spin text-3xl"></i>
+  <span id="processing-text"></span>
 </div>
 
 <!-- 메뉴얼 등록 모달 -->

@@ -12,8 +12,8 @@ import org.apache.pdfbox.pdmodel.graphics.image.PDImageXObject
 import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Service
 import org.springframework.web.server.ResponseStatusException
-import java.io.File
 import java.nio.file.Files
+import java.nio.file.Path
 import java.nio.file.StandardCopyOption
 
 private val log = KotlinLogging.logger {}
@@ -27,25 +27,20 @@ class PdfJpxNormalizationService {
     private val jpegQuality = 0.9f
 
     /** PDF 파일을 안전한 형태로 정규화(원본 경로에 덮어쓰기)한다. JPX 이미지를 하나라도 변환했으면 true 반환 */
-    fun normalize(pdfFile: File): Boolean {
+    fun normalize(pdfPath: Path): Boolean {
         var converted = false
 
-        Loader.loadPDF(pdfFile).use { doc ->
+        Loader.loadPDF(pdfPath.toFile()).use { doc ->
             for (page in doc.pages) {
                 converted = normalizeResources(doc, page.resources) || converted
             }
             if (converted) {
-                val tempFile = File.createTempFile("jpx-normalized-", ".pdf", pdfFile.parentFile)
+                val tempFile = Files.createTempFile(pdfPath.parent, "jpx-normalized-", ".pdf")
                 try {
-                    doc.save(tempFile)
-                    Files.move(
-                        tempFile.toPath(),
-                        pdfFile.toPath(),
-                        StandardCopyOption.ATOMIC_MOVE,
-                        StandardCopyOption.REPLACE_EXISTING,
-                    )
+                    Files.newOutputStream(tempFile).buffered().use { doc.save(it) }
+                    Files.move(tempFile, pdfPath, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING)
                 } finally {
-                    tempFile.delete()
+                    Files.deleteIfExists(tempFile)
                 }
             }
         }

@@ -10,8 +10,10 @@ import ai.antop.gunpla.app.dto.ManualUpdateRequestDto
 import ai.antop.gunpla.app.event.ManualChangedEvent
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.core.io.Resource
+import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import org.springframework.web.server.ResponseStatusException
 
 /** 관리자 페이지 비즈니스 로직. 메뉴얼·데칼·썸네일 CRUD를 조율한다 */
 @Service
@@ -70,6 +72,34 @@ class AdminService(
         decalService.deleteDecals(manualId)
         thumbnailService.deleteThumbnails(manualId)
         manualService.deleteManual(manualId)
+        eventPublisher.publishEvent(ManualChangedEvent(manualId))
+    }
+
+    /**
+     * 메뉴얼의 선택한 페이지 삭제. 메뉴얼을 미게시로 전환한 뒤 썸네일·데칼·PDF를 순서대로 정리한다.
+     * 썸네일 정리는 pageCount가 갱신되기 전의 페이지 수를 사용해야 하므로 PDF 편집보다 먼저 수행한다.
+     */
+    @Transactional
+    fun deleteManualPages(
+        manualId: ManualId,
+        pages: List<Int>,
+    ) {
+        val manual = manualService.getManualEntity(manualId)
+        val targets = pages.distinct().sorted()
+        if (targets.isEmpty()) {
+            throw ResponseStatusException(HttpStatus.BAD_REQUEST, "삭제할 페이지를 선택해주세요")
+        }
+        if (targets.any { it !in 1..manual.pageCount }) {
+            throw ResponseStatusException(HttpStatus.BAD_REQUEST, "존재하지 않는 페이지입니다")
+        }
+        if (targets.size >= manual.pageCount) {
+            throw ResponseStatusException(HttpStatus.BAD_REQUEST, "모든 페이지를 삭제할 수 없습니다")
+        }
+
+        manual.published = false
+        thumbnailService.deletePageThumbnails(manual.pdfPath, manual.pageCount, targets)
+        decalService.deleteDecalsByPages(manualId, targets)
+        manualService.deletePdfPages(manualId, targets)
         eventPublisher.publishEvent(ManualChangedEvent(manualId))
     }
 

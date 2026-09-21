@@ -83,7 +83,8 @@ class DecalService(
     /** 메뉴얼에 속한 데칼 전체 삭제 (메뉴얼 삭제 시 호출) */
     @Transactional
     fun deleteDecals(manualId: ManualId) {
-        decalRepository.findByManualIdOrderByDecalNumber(manualId.value)
+        decalRepository
+            .findByManualIdOrderByDecalNumber(manualId.value)
             .filter { it.decalNumber.isJapanese() }
             .groupingBy { it.decalNumber }
             .eachCount()
@@ -91,9 +92,35 @@ class DecalService(
         decalRepository.deleteDecalsByManualIdQuery(manualId.value)
     }
 
+    /**
+     * 지정한 페이지들의 데칼을 삭제하고, 남은 데칼의 페이지 번호를 삭제된 페이지 수만큼 앞당긴다.
+     * (메뉴얼 페이지 삭제 시 호출)
+     */
+    @Transactional
+    fun deleteDecalsByPages(
+        manualId: ManualId,
+        pages: List<Int>,
+    ) {
+        val deleted = pages.toSet()
+        val (removed, remaining) =
+            decalRepository
+                .findByManualIdOrderByDecalNumber(manualId.value)
+                .partition { it.pageNumber in deleted }
+        removed
+            .filter { it.decalNumber.isJapanese() }
+            .groupingBy { it.decalNumber }
+            .eachCount()
+            .forEach { (char, cnt) -> decrementCount(char, cnt) }
+        decalRepository.deleteAll(removed)
+        remaining.forEach { decal ->
+            decal.pageNumber -= deleted.count { it < decal.pageNumber }
+        }
+    }
+
     /** 많이 사용된 일본어 문자 상위 20개 반환 (사용 횟수 내림차순) */
     fun getJapaneseTop20(): List<String> =
-        japaneseCharUsageRepository.findTop20ByCountGreaterThanOrderByCountDesc(0)
+        japaneseCharUsageRepository
+            .findTop20ByCountGreaterThanOrderByCountDesc(0)
             .map { it.character }
 
     /** 데칼 엔티티 단건 조회. 존재하지 않으면 404 예외 발생 */

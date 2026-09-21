@@ -16,6 +16,7 @@ let manualList      = [];    // 로드된 메뉴얼 목록 캐시 (삭제 confir
 let editingManualId = null;  // 수정 중인 메뉴얼 ID
 let lastManualGrade = 'RG'; // 마지막으로 선택한 메뉴얼 등급
 let manualLoading   = false; // PDF 로드 중 중복 선택 방지 플래그
+let pageDeleting    = false; // 페이지 삭제 요청 진행 중 (연타로 인한 중복 요청 방지)
 
 // 드래그 상태 추적 (pdfScroll 패닝 + 단순 클릭 구분)
 let mouseDown   = false;
@@ -318,13 +319,14 @@ async function openEditor(id) {
     document.getElementById('zoom-overlay').style.display = 'none';
     document.getElementById('pdf-loading').style.display = 'flex';
     thumbStrip.innerHTML = '<div class="strip-inner"><span class="text-gray-500 text-xs select-none">로딩 중…</span></div>';
+    updatePageDeleteButton();
 
     const data = await (await fetch(`/api/admin/manuals/${id}`)).json();
     currentManual = data; allDecals = data.decals;
     updatePdfTitle(data);
     lastDecalStyle = { color: '#ffffff', shape: 'CIRCLE', num: '' };
 
-    pdfDoc = await pdfjsLib.getDocument(`${window.contextPath}/resource/${id}`).promise;
+    pdfDoc = await pdfjsLib.getDocument(`${window.contextPath}/resource/${id}?v=${data.version}`).promise;
     currentPage = 1;
     await renderPage(currentPage, true);
 
@@ -333,6 +335,7 @@ async function openEditor(id) {
     document.getElementById('zoom-overlay').style.display = 'flex';
 
     renderThumbnails(data.thumbnails);
+    addThumbnailCheckboxes();
   } finally {
     manualLoading = false;
   }
@@ -348,9 +351,88 @@ function closeEditor() {
   hideTooltip();
   updatePdfTitle(null);
   thumbStrip.innerHTML = '<div class="strip-inner"><span class="text-gray-500 text-xs select-none">메뉴얼을 선택하세요</span></div>';
+  updatePageDeleteButton();
 }
 
 document.getElementById('btn-editor-close').addEventListener('click', closeEditor);
+
+/* ──────────── 페이지 삭제 ──────────── */
+
+// 썸네일마다 좌측 상단에 페이지 선택 체크박스를 추가
+function addThumbnailCheckboxes() {
+  thumbStrip.querySelectorAll('.thumb-item').forEach(item => {
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.className = 'thumb-check';
+    cb.dataset.page = item.dataset.page;
+    // 체크박스 클릭이 썸네일 클릭(페이지 이동)으로 전파되지 않도록 막는다
+    cb.addEventListener('click', e => e.stopPropagation());
+    cb.addEventListener('change', updatePageDeleteButton);
+    item.appendChild(cb);
+  });
+  updatePageDeleteButton();
+}
+
+// 체크된 페이지 번호 목록 반환 (오름차순)
+function checkedPages() {
+  return [...thumbStrip.querySelectorAll('.thumb-check:checked')].map(cb => +cb.dataset.page).sort((a, b) => a - b);
+}
+
+// 하나 이상 선택되고 전체 선택이 아닐 때만 삭제 버튼을 활성화 (모든 페이지는 삭제할 수 없음)
+function updatePageDeleteButton() {
+  const total   = thumbStrip.querySelectorAll('.thumb-check').length;
+  const checked = thumbStrip.querySelectorAll('.thumb-check:checked').length;
+  document.getElementById('btn-page-delete').disabled = checked === 0 || checked === total;
+}
+
+// 화면 전체를 덮어 조작을 막는 처리 중 오버레이 표시/숨김
+function showProcessing(message) {
+  document.getElementById('processing-text').textContent = message;
+  document.getElementById('processing-overlay').style.display = 'flex';
+}
+
+function hideProcessing() {
+  document.getElementById('processing-overlay').style.display = 'none';
+}
+
+// 처리 중에는 키보드 단축키도 막는다. 캡처 단계에서 가로채야 common.js·모달의 keydown 핸들러보다 먼저 실행된다.
+// 요청이 지연될 때 새로고침까지 막히지 않도록 수정자 키가 눌린 조합은 브라우저에 넘긴다.
+document.addEventListener('keydown', e => {
+  if (!pageDeleting) return;
+  if (e.ctrlKey || e.metaKey || e.altKey) return;
+  e.stopImmediatePropagation();
+  e.preventDefault();
+}, true);
+
+document.getElementById('btn-page-delete').addEventListener('click', async () => {
+  // 요청이 끝나기 전에 다시 눌리면 이미 지워진 뒤의 페이지 번호로 엉뚱한 페이지가 삭제된다
+  if (pageDeleting || !currentManual) return;
+  const pages = checkedPages();
+  if (!pages.length) return;
+  if (!confirm(`선택한 ${pages.length}개 페이지(${pages.join(', ')})를 삭제하시겠습니까?\n삭제 후 메뉴얼은 미게시 상태가 됩니다.`)) return;
+
+  const id = currentManual.id;
+  pageDeleting = true;
+  showProcessing('페이지 삭제 중…');
+  try {
+    const res = await fetch(`/api/admin/manuals/${id}/pages`, {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pages }),
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => null);
+      showToast(body?.message || '페이지 삭제에 실패했습니다.');
+      return;
+    }
+    updateGridRow(id, { published: false });
+    // 오버레이를 유지한 채 편집 화면을 다시 로드해 중간 상태가 보이지 않게 한다
+    await openEditor(id);
+  } finally {
+    hideProcessing();
+    pageDeleting = false;
+  }
+});
 
 /* ──────────── 데칼 오버레이 ──────────── */
 

@@ -37,6 +37,7 @@ class ManualService(
     private val appProperties: AppProperties,
     private val eventPublisher: ApplicationEventPublisher,
     private val shortyUrlShortener: ShortyUrlShortener,
+    private val pdfPageRemovalService: PdfPageRemovalService,
 ) {
     /** 애플리케이션 시작 시 PDF 업로드 디렉터리가 없으면 생성 */
     @PostConstruct
@@ -228,6 +229,21 @@ class ManualService(
         return read == PDF_MAGIC.size && header.contentEquals(PDF_MAGIC)
     }
 
+    /**
+     * PDF에서 지정한 페이지들을 삭제하고 남은 페이지 수를 pageCount에 반영한다.
+     * 썸네일·데칼 동기화는 AdminService에서 처리한다.
+     */
+    fun deletePdfPages(
+        manualId: ManualId,
+        pages: List<Int>,
+    ) {
+        val manual = getManualEntity(manualId)
+        val pdfPath = Paths.get(appProperties.uploadDir, manual.pdfPath).toAbsolutePath()
+        manual.pageCount = pdfPageRemovalService.removePages(pdfPath, pages)
+        // PDF·썸네일 파일이 실제로 바뀌었으므로 버전을 올려 브라우저 캐시를 무효화한다
+        manual.resourceVersion++
+    }
+
     /** 메뉴얼 삭제: DB 레코드와 업로드된 PDF 파일 제거 (썸네일 삭제는 AdminService에서 처리) */
     fun deleteManual(manualId: ManualId) {
         val manual = getManualEntity(manualId)
@@ -285,10 +301,23 @@ class ManualService(
     fun getManualEntity(manualId: ManualId): Manual =
         manualRepository.findByIdOrNull(manualId.value) ?: throw ResponseStatusException(HttpStatus.NOT_FOUND)
 
-    private fun Manual.toSummary() = ManualSummaryDto(ManualId(id), grade, modelNumber, productName, link, published, createdAt, updatedAt)
+    private fun Manual.toSummary() =
+        ManualSummaryDto(ManualId(id), grade, modelNumber, productName, link, published, resourceVersion, createdAt, updatedAt)
 
     private fun Manual.toDto() =
-        ManualItemDto(ManualId(id), grade, modelNumber, productName, pdfPath, pageCount, link, published, createdAt, updatedAt)
+        ManualItemDto(
+            ManualId(id),
+            grade,
+            modelNumber,
+            productName,
+            pdfPath,
+            pageCount,
+            link,
+            published,
+            resourceVersion,
+            createdAt,
+            updatedAt,
+        )
 
     companion object {
         private val MANUAL_NUMBER_REGEX = Regex("^[0-9_]+$")

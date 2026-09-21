@@ -13,8 +13,9 @@ import org.springframework.stereotype.Service
 import java.awt.RenderingHints
 import java.awt.image.BufferedImage
 import java.io.ByteArrayInputStream
-import java.io.File
 import java.nio.FloatBuffer
+import java.nio.file.Files
+import java.nio.file.Paths
 import javax.imageio.ImageIO
 
 private val log = KotlinLogging.logger {}
@@ -44,19 +45,19 @@ class OnnxDecalService(
             log.info { "app.onnx.labels 미설정 — ONNX 서비스 비활성" }
             return
         }
-        val onnxFile = File(onnxPath)
-        val labelsFile = File(labelsPath)
-        if (!onnxFile.exists()) {
+        val onnxFilePath = Paths.get(onnxPath)
+        val labelsFilePath = Paths.get(labelsPath)
+        if (!Files.exists(onnxFilePath)) {
             log.warn { "ONNX 모델 파일 없음: $onnxPath" }
             return
         }
-        if (!labelsFile.exists()) {
+        if (!Files.exists(labelsFilePath)) {
             log.warn { "레이블 파일 없음: $labelsPath" }
             return
         }
         env = OrtEnvironment.getEnvironment()
-        session = env!!.createSession(onnxFile.absolutePath)
-        labels = jacksonObjectMapper().readValue<List<String>>(labelsFile)
+        session = env!!.createSession(onnxFilePath.toAbsolutePath().toString())
+        labels = Files.newInputStream(labelsFilePath).use { jacksonObjectMapper().readValue<List<String>>(it) }
         log.info { "ONNX 모델 로드 완료: path=$onnxPath, classes=${labels.size}" }
     }
 

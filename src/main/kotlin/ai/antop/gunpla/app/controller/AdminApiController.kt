@@ -6,6 +6,7 @@ import ai.antop.gunpla.app.dto.DecalCreateRequestDto
 import ai.antop.gunpla.app.dto.DecalItemDto
 import ai.antop.gunpla.app.dto.DecalUpdateRequestDto
 import ai.antop.gunpla.app.dto.ManualAssemblyDto
+import ai.antop.gunpla.app.dto.ManualPageDeleteRequestDto
 import ai.antop.gunpla.app.dto.ManualSummaryDto
 import ai.antop.gunpla.app.dto.ManualUpdateRequestDto
 import ai.antop.gunpla.app.service.AdminService
@@ -116,6 +117,14 @@ class AdminApiController(
     fun delete(
         @PathVariable manualId: ManualId,
     ) = adminService.deleteManual(manualId)
+
+    /** 선택한 페이지 삭제. PDF·썸네일·데칼을 함께 정리하고 메뉴얼을 미게시로 전환한다 */
+    @DeleteMapping("/manuals/{manualId:[0-9A-Za-z]+}/pages")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    fun deletePages(
+        @PathVariable manualId: ManualId,
+        @RequestBody request: ManualPageDeleteRequestDto,
+    ) = adminService.deleteManualPages(manualId, request.pages)
 
     /** 데칼 등록 (PDF 페이지 내 좌표 지정) */
     @PostMapping("/manuals/{manualId:[0-9A-Za-z]+}/decals")

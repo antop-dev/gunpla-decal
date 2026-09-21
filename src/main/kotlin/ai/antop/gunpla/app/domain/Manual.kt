@@ -37,6 +37,12 @@ class Manual(
     /** 공개 여부 (false: 미공개, true: 공개) */
     @Column(nullable = false)
     var published: Boolean = false,
+    /**
+     * PDF·썸네일 파일의 버전. 파일 내용이 실제로 바뀔 때만 증가시켜 브라우저 캐시를 무효화한다.
+     * 등급·제품명 등 메타데이터만 수정되면 파일은 그대로이므로 증가시키지 않는다.
+     */
+    @Column(name = "resource_version", nullable = false)
+    var resourceVersion: Int = 0,
     /** 레코드 생성 일시 (변경 불가) */
     @Column(nullable = false, updatable = false)
     var createdAt: LocalDateTime = LocalDateTime.now(),

@@ -39,6 +39,8 @@ class ManualAssemblyService(
             throw ResponseStatusException(HttpStatus.FORBIDDEN)
         }
         val decals = decalService.getDecalsByManualId(manual.id)
+        // PDF·썸네일은 365일 캐시로 서빙되므로 파일이 바뀌면 버전 값으로 브라우저 캐시를 무효화한다
+        val version = manual.resourceVersion
         return ManualAssemblyDto(
             id = manual.id,
             grade = manual.grade,
@@ -46,8 +48,9 @@ class ManualAssemblyService(
             productName = manual.productName,
             published = manual.published,
             decals = decals,
-            thumbnails = (1..manual.pageCount).map { "/resource/${manual.id}/thumbnails/$it" },
+            thumbnails = (1..manual.pageCount).map { "/resource/${manual.id}/thumbnails/$it?v=$version" },
             link = manual.link,
+            version = version,
         )
     }
 }
