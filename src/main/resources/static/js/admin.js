@@ -167,7 +167,7 @@ const gridColumnDefs = [
     headerName: '편집', width: 80, sortable: false,
     headerClass: 'header-center', cellClass: 'cell-center cell-action',
     cellRenderer: () => '<button class="grid-btn" title="데칼 편집"><i class="fas fa-pen-to-square"></i> 편집</button>',
-    onCellClicked: p => openEditor(p.data.id),
+    onCellClicked: p => openManualTab(p.data.id, p.data.productName),
   },
   {
     headerName: '게시', field: 'published', width: 80,
@@ -320,11 +320,127 @@ function showToast(message) {
   }, 4000);
 }
 
+/* ──────────── 상단 탭 (탭 = 페이지) ──────────── */
+
+// 열린 탭 목록. 첫 번째는 항상 메뉴얼 목록(id = null)이며 닫을 수 없다 (상단 바의 타이틀을 겸한다)
+const pageTabs = [{ id: null, label: '건담 메뉴얼' }];
+let activeTabId = null; // null = 메뉴얼 목록 탭
+const tabHome = document.getElementById('tab-home'); // 스크롤되지 않는 첫 번째 탭 자리
+const tabBar = document.getElementById('tab-bar');
+const tabScrollLeft  = document.getElementById('tab-scroll-left');
+const tabScrollRight = document.getElementById('tab-scroll-right');
+
+// 현재 URL에서 메뉴얼 ID 추출 (/admin/{id} → id, /admin → null)
+function manualIdFromPath() {
+  return location.pathname.match(/\/admin\/([0-9A-Za-z]+)\/?$/)?.[1] ?? null;
+}
+
+// 탭에 대응하는 페이지 URL
+function tabUrl(id) {
+  return id === null ? `${window.contextPath}/admin` : `${window.contextPath}/admin/${id}`;
+}
+
+// 탭 하나의 HTML. 풀 네임은 title 속성으로 노출한다
+function tabHtml(t) {
+  return `<button type="button" class="admin-tab${t.id === null ? ' admin-tab-home' : ''}${t.id === activeTabId ? ' active' : ''}" data-id="${esc(t.id ?? '')}" title="${esc(t.label)}">` +
+    (t.id === null ? '<i class="admin-tab-icon fas fa-list-ul"></i>' : '') +
+    `<span class="admin-tab-label">${esc(t.label)}</span>` +
+    (t.id === null ? '' : '<span class="admin-tab-close" data-close="1"><i class="fas fa-xmark"></i></span>') +
+    '</button>';
+}
+
+// 탭 목록을 다시 그린다. 첫 번째 탭은 스크롤 영역 밖에 고정한다
+function renderTabs() {
+  tabHome.innerHTML = tabHtml(pageTabs[0]);
+  tabBar.innerHTML  = pageTabs.slice(1).map(tabHtml).join('');
+  // 넘친 영역에 가려진 탭이 활성화될 수 있으므로 보이는 위치로 끌어온다
+  tabBar.querySelector('.admin-tab.active')?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+  updateTabScrollButtons();
+}
+
+// 탭이 넘칠 때만 좌우 화살표를 표시한다
+function updateTabScrollButtons() {
+  const maxScroll = tabBar.scrollWidth - tabBar.clientWidth;
+  tabScrollLeft.style.display  = tabBar.scrollLeft > 0 ? 'flex' : 'none';
+  tabScrollRight.style.display = tabBar.scrollLeft < maxScroll - 1 ? 'flex' : 'none';
+}
+
+tabBar.addEventListener('scroll', updateTabScrollButtons);
+window.addEventListener('resize', updateTabScrollButtons);
+tabScrollLeft.addEventListener('click', () => tabBar.scrollBy({ left: -128, behavior: 'smooth' }));
+tabScrollRight.addEventListener('click', () => tabBar.scrollBy({ left: 128, behavior: 'smooth' }));
+
+// 탭 이름(제품명)을 갱신
+function updateTabLabel(id, label) {
+  const tab = pageTabs.find(t => t.id === id);
+  if (!tab || tab.label === label) return;
+  tab.label = label;
+  renderTabs();
+}
+
+// 탭을 활성화하고 URL을 동기화한다 (탭 클릭 = 페이지 이동)
+function goToTab(id) {
+  // 직접 URL 진입·같은 주소 재선택은 히스토리를 늘리지 않는다
+  if (tabUrl(id) === location.pathname) history.replaceState({ id }, '', tabUrl(id));
+  else history.pushState({ id }, '', tabUrl(id));
+  activateTab(id);
+}
+
+// 탭 내용(목록/편집 화면)을 전환한다
+async function activateTab(id) {
+  // PDF 로딩 중에 전환하면 활성 탭과 화면이 어긋나므로 무시하고 URL을 현재 탭으로 되돌린다
+  if (manualLoading) {
+    history.replaceState({ id: activeTabId }, '', tabUrl(activeTabId));
+    return;
+  }
+  activeTabId = id;
+  renderTabs();
+  if (id === null) {
+    closeEditor();
+    return;
+  }
+  // 없는 ID로 직접 들어온 경우 탭을 닫아 목록으로 되돌린다
+  if (!(await openEditor(id))) closeTab(id);
+}
+
+// 메뉴얼 탭을 열고(없으면 추가) 활성화한다
+function openManualTab(id, label) {
+  if (!pageTabs.some(t => t.id === id)) pageTabs.push({ id, label });
+  goToTab(id);
+}
+
+// 탭을 닫는다. 활성 탭이었다면 왼쪽 탭으로 이동한다 (목록 탭은 닫을 수 없다)
+function closeTab(id) {
+  const i = pageTabs.findIndex(t => t.id === id);
+  if (i <= 0) return;
+  pageTabs.splice(i, 1);
+  if (activeTabId === id) goToTab(pageTabs[i - 1].id);
+  else renderTabs();
+}
+
+function onTabClick(e) {
+  const tab = e.target.closest('.admin-tab');
+  if (!tab) return;
+  const id = tab.dataset.id || null;
+  if (e.target.closest('[data-close]')) closeTab(id);
+  else if (id !== activeTabId) goToTab(id);
+}
+
+tabHome.addEventListener('click', onTabClick);
+tabBar.addEventListener('click', onTabClick);
+
+// 뒤로/앞으로 — 히스토리의 메뉴얼이 닫힌 탭이면 다시 열어준다
+window.addEventListener('popstate', () => {
+  const id = manualIdFromPath();
+  if (id && !pageTabs.some(t => t.id === id)) pageTabs.push({ id, label: id });
+  activateTab(id);
+});
+
 /* ──────────── 편집 화면 (풀 팝업) ──────────── */
 
-// 편집 팝업을 열고 해당 메뉴얼의 PDF·데칼을 로드
+// 편집 화면을 열고 해당 메뉴얼의 PDF·데칼을 로드. 메뉴얼을 찾지 못하면 false 반환
 async function openEditor(id) {
-  if (manualLoading) return;
+  if (manualLoading) return true;
   manualLoading = true;
   try {
     // 팝업을 먼저 표시해야 fitToContainer가 컨테이너 치수를 계산할 수 있다
@@ -338,8 +454,14 @@ async function openEditor(id) {
     thumbStrip.innerHTML = '<div class="strip-inner"><span class="text-gray-500 text-xs select-none">로딩 중…</span></div>';
     updatePageDeleteButton();
 
-    const data = await (await fetch(`/api/admin/manuals/${id}`)).json();
+    const res = await fetch(`/api/admin/manuals/${id}`);
+    if (!res.ok) {
+      showToast('메뉴얼을 찾을 수 없습니다.');
+      return false;
+    }
+    const data = await res.json();
     currentManual = data; allDecals = data.decals;
+    updateTabLabel(id, data.productName);
     updatePdfTitle(data);
     lastDecalStyle = { color: '#ffffff', shape: 'CIRCLE', num: '' };
 
@@ -353,6 +475,7 @@ async function openEditor(id) {
 
     renderThumbnails(data.thumbnails);
     addThumbnailCheckboxes();
+    return true;
   } finally {
     manualLoading = false;
   }
@@ -371,7 +494,6 @@ function closeEditor() {
   updatePageDeleteButton();
 }
 
-document.getElementById('btn-editor-close').addEventListener('click', closeEditor);
 
 /* ──────────── 페이지 삭제 ──────────── */
 
@@ -1263,6 +1385,7 @@ document.getElementById('manual-edit-form').addEventListener('submit', async e =
       updatePdfTitle(currentManual);
     }
     updateGridRow(editingManualId, { grade, modelNumber, productName, link: savedLink });
+    updateTabLabel(editingManualId, productName);
     await autoUnpublish();
     closeManualEditModal();
   } else {
@@ -1311,7 +1434,7 @@ async function deleteManual(id) {
   const label = m ? `[${m.grade}] ${m.modelNumber} ${m.productName}`.trim() : `ID ${id}`;
   if (!confirm(`"${label}" 메뉴얼을 삭제하시겠습니까?`)) return;
   await fetch(`/api/admin/manuals/${id}`, { method: 'DELETE' });
-  if (currentManual?.id === id) closeEditor();
+  closeTab(id);
   loadManuals();
 }
 
@@ -1561,6 +1684,12 @@ let searchTimer = null;
 document.getElementById('btn-reset').addEventListener('click', resetSearch);
 
 loadManuals();
+
+// URL에 메뉴얼 ID가 있으면 "메뉴얼 목록" + 해당 메뉴얼 두 탭을 열고 후자를 활성화한다.
+// 탭 이름은 상세 조회 응답의 제품명으로 갱신되므로 우선 ID를 표시한다
+const initialManualId = manualIdFromPath();
+renderTabs();
+if (initialManualId) openManualTab(initialManualId, initialManualId);
 
 /* ──────────── SSE: 메뉴얼 등록 결과 수신 ──────────── */
 const sseSource = new EventSource(`${window.contextPath}/api/admin/sse`);

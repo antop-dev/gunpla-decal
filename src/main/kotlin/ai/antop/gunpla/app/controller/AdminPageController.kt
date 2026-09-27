@@ -20,4 +20,8 @@ class AdminPageController(
 
     @GetMapping("/admin")
     fun admin() = "admin"
+
+    /** 편집 탭 직접 진입 URL. 탭 구성은 프론트에서 처리하므로 목록과 같은 템플릿을 반환한다 */
+    @GetMapping("/admin/{manualId:[0-9A-Za-z]+}")
+    fun adminManual() = "admin"
 }

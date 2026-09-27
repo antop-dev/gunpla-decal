@@ -322,7 +322,9 @@ function esc(s) {
   return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
-// 줌 오버레이 좌측에 "등급 | 상품명" 표시
+// 상단 타이틀에 등급 뱃지와 제품명 표시
 function updatePdfTitle(manual) {
-  document.getElementById('pdf-title').textContent = manual ? `${manual.grade} | ${manual.productName}` : '';
+  document.getElementById('pdf-title').innerHTML = manual
+    ? `<span class="grade-badge grade-${esc(manual.grade)}">${esc(manual.grade)}</span>${esc(manual.productName)}`
+    : '';
 }

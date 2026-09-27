@@ -11,10 +11,14 @@ import org.springframework.security.authentication.BadCredentialsException
 import org.springframework.security.core.Authentication
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter
 import org.springframework.security.web.context.HttpSessionSecurityContextRepository
+import org.springframework.security.web.savedrequest.HttpSessionRequestCache
 
 class CaptchaAuthenticationFilter(
     authenticationManager: AuthenticationManager,
 ) : UsernamePasswordAuthenticationFilter(authenticationManager) {
+    /** ExceptionTranslationFilter가 세션에 저장한 로그인 전 요청을 읽기 위한 캐시 */
+    private val requestCache = HttpSessionRequestCache()
+
     init {
         setRequiresAuthenticationRequestMatcher { request ->
             request.method == HttpMethod.POST.name() && request.servletPath == "/login"
@@ -22,8 +26,11 @@ class CaptchaAuthenticationFilter(
         // formLogin() 미사용 시 기본값이 NullSecurityContextRepository여서 세션에 저장되지 않음
         setSecurityContextRepository(HttpSessionSecurityContextRepository())
         setAuthenticationSuccessHandler { request, response, _ ->
+            // 로그인 전에 접근하려던 URL(/admin/{id} 등)로 돌려보낸다
+            val savedUrl = requestCache.getRequest(request, response)?.redirectUrl
+            requestCache.removeRequest(request, response)
             response.status = HttpServletResponse.SC_OK
-            response.setHeader(HttpHeaders.LOCATION, "${request.contextPath}/admin")
+            response.setHeader(HttpHeaders.LOCATION, savedUrl ?: "${request.contextPath}/admin")
         }
         setAuthenticationFailureHandler { _, response, exception ->
             response.contentType = MediaType.APPLICATION_JSON_VALUE

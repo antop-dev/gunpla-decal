@@ -20,21 +20,27 @@
 </head>
 <body class="page-admin bg-gray-900">
 
-<!-- ── 목록 화면 ── -->
-<div id="list-view" class="flex flex-col text-white" style="height:100vh;">
+<!-- ── 상단 바: 탭 영역 | 로그아웃 (첫 번째 탭이 타이틀을 대체한다) ── -->
+<div class="flex items-center gap-2 px-3 bg-gray-800 border-b border-gray-700" style="height:48px;">
+  <div id="tab-home" class="flex items-stretch self-stretch flex-shrink-0"></div>
+  <button type="button" id="tab-scroll-left" class="tab-scroll" title="이전 탭 보기">
+    <i class="fas fa-chevron-left"></i>
+  </button>
+  <div id="tab-bar" class="flex items-stretch self-stretch gap-2 flex-1 min-w-0 overflow-x-auto"></div>
+  <button type="button" id="tab-scroll-right" class="tab-scroll" title="다음 탭 보기">
+    <i class="fas fa-chevron-right"></i>
+  </button>
+  <form th:action="@{/logout}" method="post" style="display:contents;">
+    <button type="submit"
+      class="flex-shrink-0 h-7 px-3 border border-gray-600 hover:bg-gray-700 text-gray-300 hover:text-red-400 rounded flex items-center gap-1.5 text-xs"
+      title="로그아웃">
+      <i class="fas fa-right-from-bracket text-xs"></i> 로그아웃
+    </button>
+  </form>
+</div>
 
-  <!-- 타이틀 영역 -->
-  <div class="flex items-center px-3 bg-gray-800 border-b border-gray-700 flex-shrink-0" style="height:48px;">
-    <span class="font-bold text-sm whitespace-nowrap">건담 메뉴얼</span>
-    <div class="flex-1"></div>
-    <form th:action="@{/logout}" method="post" style="display:contents;">
-      <button type="submit"
-        class="flex-shrink-0 h-7 px-3 border border-gray-600 hover:bg-gray-700 text-gray-300 hover:text-red-400 rounded flex items-center gap-1.5 text-xs"
-        title="로그아웃">
-        <i class="fas fa-right-from-bracket text-xs"></i> 로그아웃
-      </button>
-    </form>
-  </div>
+<!-- ── 목록 화면 ── -->
+<div id="list-view" class="flex flex-col text-white" style="height:calc(100vh - 48px);">
 
   <!-- 검색 영역 -->
   <div class="flex items-center gap-2 px-3 py-2 border-b border-gray-700 flex-shrink-0">
@@ -82,15 +88,10 @@
 </div>
 
 <!-- ── 편집 화면 (풀 팝업) ── -->
-<div id="editor-view" class="hidden fixed inset-0 z-40 flex flex-col bg-gray-900">
+<div id="editor-view" class="hidden fixed inset-x-0 bottom-0 z-40 flex flex-col bg-gray-900" style="top:48px;">
 
   <!-- 헤더 -->
   <div class="flex items-center gap-2 px-2 bg-gray-800 border-b border-gray-700 flex-shrink-0" style="height:36px;">
-    <button id="btn-editor-close"
-      class="flex items-center gap-1.5 h-7 px-2.5 rounded hover:bg-gray-700 text-gray-300 hover:text-white text-xs"
-      title="목록으로">
-      <i class="fas fa-arrow-left text-xs"></i> 목록
-    </button>
     <span id="pdf-title"></span>
     <button id="btn-page-delete" disabled
       class="ml-auto flex items-center gap-1.5 h-7 px-2.5 rounded bg-red-600 hover:bg-red-500 text-white text-xs disabled:bg-gray-700 disabled:text-gray-500 disabled:cursor-not-allowed"

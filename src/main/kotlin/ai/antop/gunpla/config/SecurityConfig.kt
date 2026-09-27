@@ -56,7 +56,7 @@ class SecurityConfig {
     /**
      * HTTP 보안 필터 체인 구성.
      * - 공개 경로: /, /login, /captcha, /css/{all}, /js/{all}, /vendor/{all}, /favicon/{all}, /api/user/{all}, /resource/{all}, /actuator/{all}
-     * - /admin: 인증 필요
+     * - /admin, /admin/{id}: 인증 필요
      * - Base62 단축 URL: 인증 불필요
      * - API 경로: CSRF 검증 제외
      * - 캡차 인증 필터를 UsernamePasswordAuthenticationFilter 위치에 삽입
@@ -84,8 +84,8 @@ class SecurityConfig {
                         "/resource/**",
                         "/actuator/**",
                     ).permitAll()
-                // /admin은 인증 필요 — 아래 /* 와일드카드보다 먼저 평가되어야 함
-                auth.requestMatchers("/admin").authenticated()
+                // /admin, /admin/{id}는 인증 필요 — 아래 /* 와일드카드보다 먼저 평가되어야 함
+                auth.requestMatchers("/admin", "/admin/**").authenticated()
                 // base62 메뉴얼 직접 링크 (/4S 등) 허용
                 auth.requestMatchers("/*").permitAll()
                 auth.anyRequest().authenticated()
