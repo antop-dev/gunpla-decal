@@ -52,7 +52,10 @@
   - 데칼 수정·삭제 시 공개 메뉴얼 자동 비공개 전환
 - AI 데칼 번호 자동 인식
   - **OpenAI GPT-4o mini** — 버튼 클릭 시 클릭 영역 이미지를 GPT에 전송하여 인식
-  - **ONNX (EfficientNet-B0)** — PDF 클릭 위치 주변 이미지를 서버에서 직접 추론, 등록 팝업 오픈 시 자동 실행. 신뢰도(softmax 확률)가 임계값 미만이면 결과를 반환하지 않음
+  - **ONNX (EfficientNet-B0)** — PDF 클릭 위치 주변 이미지를 서버에서 직접 추론해 번호와 도형(원/네모/다이아)을 인식, 등록 팝업 오픈 시 자동 실행. 신뢰도(softmax 확률)가 임계값 미만이면 결과를 반환하지 않음
+- 데칼 위치 모두 찾기
+  - **ONNX (ResNet18 + FPN 히트맵)** — 현재 페이지 전체에서 데칼 위치를 찾아 후보 마커로 표시. 후보마다 위 ONNX 분류기로 번호·도형을 미리 인식. 후보 클릭 시 등록 팝업, '수락'으로 번호를 찾은 후보 일괄 저장, '거절'로 남은 후보 제거
+  - 학습: `./scripts/train_detect_onnx.sh` → `assets/onnx/detect.onnx`
 
 ## 실행 방법
 
@@ -100,6 +103,8 @@
 | `ONNX_MODEL` | ONNX 모델 파일 경로 (미설정 시 ONNX 인식 비활성) | — |
 | `ONNX_LABELS` | 클래스 레이블 JSON 파일 경로 | — |
 | `ONNX_THRESHOLD` | ONNX 추론 신뢰도 임계값 (0.0 ~ 1.0, 미만이면 결과 미반환) | `0.9` |
+| `ONNX_DETECT_MODEL` | 데칼 위치 탐지 ONNX 모델 파일 경로 (미설정 시 '모두 찾기' 비활성) | — |
+| `ONNX_DETECT_THRESHOLD` | 데칼 위치 탐지 신뢰도 임계값 (0.0 ~ 1.0, 미만이면 후보에서 제외) | `0.3` |
 
 ### 프로덕션 프로파일 (`prd`)
 
@@ -145,6 +150,7 @@ SPRING_PROFILES_ACTIVE=prd ./gradlew bootRun
 | `DELETE` | `/api/admin/decals/{decalId}` | 데칼 삭제 |
 | `POST` | `/api/admin/manuals/{id}/recognize` | AI(GPT) 데칼 번호 인식 |
 | `POST` | `/api/admin/manuals/{id}/recognize-onnx` | ONNX 데칼 번호 인식 (body: `{page, x, y}`) |
+| `POST` | `/api/admin/manuals/{id}/detect-decals` | ONNX 데칼 위치 탐지 (body: `{image}` — 짧은 변 1536px 페이지 PNG) |
 
 ### SEO
 

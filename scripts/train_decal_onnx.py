@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
-"""데칼 번호 분류 ONNX 모델 학습 스크립트.
+"""데칼 번호·모양 분류 ONNX 모델 학습 스크립트.
 
-assets/db/gunpla.db 의 decal 테이블에 저장된 (pdf, 페이지, x%, y%, 번호) 를 이용해
+assets/db/gunpla.db 의 decal 테이블에 저장된 (pdf, 페이지, x%, y%, 번호, 모양) 을 이용해
 각 데칼 위치를 PDF 에서 정사각형으로 잘라내고, 그 크롭 이미지를 입력으로
-decal_number 를 맞추는 EfficientNet-B0 분류기를 학습한 뒤
+decal_number 와 shape 을 함께 맞추는 EfficientNet-B0 분류기(출력 두 개)를 학습한 뒤
 assets/onnx/decal.onnx / assets/onnx/labels.json 을 생성한다.
+모양 클래스 순서는 SHAPES 로 고정되어 있다 (labels.json 에는 번호만 들어간다).
 
 크롭 방식은 추론 시점(common.js 의 captureCrop, admin.js 의 CROP_RADIUS_ONNX_PT)과
 동일하게 맞춰져 있다: 클릭 지점 ± radius(pt) 정사각 영역을 output_size 픽셀로 렌더링.
@@ -45,6 +46,9 @@ DEFAULT_OUTPUT_PX = 224
 IMAGENET_MEAN = [0.485, 0.456, 0.406]
 IMAGENET_STD = [0.229, 0.224, 0.225]
 
+# 모양 출력의 클래스 순서. Kotlin DecalShape enum 의 선언 순서와 같아야 한다
+SHAPES = ["CIRCLE", "SQUARE", "DIAMOND"]
+
 
 def format_duration(seconds: float) -> str:
     """초를 "3분 12초" 형태로 바꾼다."""
@@ -58,14 +62,14 @@ def elapsed(started: float) -> str:
 
 
 def load_decals(db_path: Path, min_samples: int):
-    """DB에서 (pdf 파일명, 페이지, x%, y%, 라벨, 데칼 id) 목록을 읽는다.
+    """DB에서 (데칼 id, pdf 파일명, 페이지, x%, y%, 라벨, 모양) 목록을 읽는다.
 
     min_samples 미만인 라벨은 학습에서 제외한다.
     """
     con = sqlite3.connect(db_path)
     rows = con.execute(
         """
-        SELECT d.id, m.pdf_path, d.page_number, d.x, d.y, d.decal_number
+        SELECT d.id, m.pdf_path, d.page_number, d.x, d.y, d.decal_number, d.shape
         FROM decal d
         JOIN manual m ON m.id = d.manual_id
         ORDER BY m.pdf_path, d.page_number
@@ -74,7 +78,7 @@ def load_decals(db_path: Path, min_samples: int):
     con.close()
 
     counts = {}
-    for _, _, _, _, _, label in rows:
+    for _, _, _, _, _, label, _ in rows:
         counts[label] = counts.get(label, 0) + 1
 
     kept = [r for r in rows if counts[r[5]] >= min_samples]
@@ -102,7 +106,7 @@ def extract_crops(rows, uploads_dir: Path, cache_dir: Path, radius_pt: float, ou
     page_rect = None
 
     started = time.time()
-    for processed, (decal_id, pdf_name, page_number, x_pct, y_pct, label) in enumerate(rows, start=1):
+    for processed, (decal_id, pdf_name, page_number, x_pct, y_pct, label, _) in enumerate(rows, start=1):
         if processed % 2000 == 0:
             log.info("크롭 %d/%d (%.0f%%) — 생성 %d개, 경과 %s", processed, len(rows),
                      processed / len(rows) * 100, made, elapsed(started))
@@ -162,20 +166,20 @@ def extract_crops(rows, uploads_dir: Path, cache_dir: Path, radius_pt: float, ou
 
 
 def build_samples(rows, cache_dir: Path):
-    """(이미지 경로, 라벨) 목록과 라벨 목록을 만든다."""
-    found = [(crop_path(cache_dir, r[5], r[0]), r[5]) for r in rows]
-    found = [(path, label) for path, label in found if path.exists()]
+    """(이미지 경로, (라벨 인덱스, 모양 인덱스)) 목록과 라벨 목록을 만든다."""
+    found = [(crop_path(cache_dir, r[5], r[0]), r[5], SHAPES.index(r[6])) for r in rows]
+    found = [(path, label, shape) for path, label, shape in found if path.exists()]
 
-    labels = sorted({label for _, label in found})
+    labels = sorted({label for _, label, _ in found})
     index = {label: i for i, label in enumerate(labels)}
-    return [(path, index[label]) for path, label in found], labels
+    return [(path, (index[label], shape)) for path, label, shape in found], labels
 
 
 def split_samples(samples, val_ratio: float, seed: int):
     """라벨별로 동일 비율을 떼어내 검증 세트를 만든다(라벨당 최소 1개)."""
     by_label = {}
     for path, target in samples:
-        by_label.setdefault(target, []).append((path, target))
+        by_label.setdefault(target[0], []).append((path, target))
 
     rng = random.Random(seed)
     train, val = [], []
@@ -189,7 +193,7 @@ def split_samples(samples, val_ratio: float, seed: int):
 
 
 class CropDataset:
-    """(이미지 경로, 라벨 인덱스) 목록을 읽어 학습 텐서를 돌려준다.
+    """(이미지 경로, (라벨 인덱스, 모양 인덱스)) 목록을 읽어 (이미지 텐서, 라벨 인덱스, 모양 인덱스) 를 돌려준다.
 
     macOS 의 DataLoader 워커는 spawn 방식이라 데이터셋이 피클링 가능해야 하므로 모듈 최상위에 둔다.
     """
@@ -202,9 +206,9 @@ class CropDataset:
         return len(self.items)
 
     def __getitem__(self, i):
-        path, target = self.items[i]
+        path, (target, shape) = self.items[i]
         with Image.open(path) as img:
-            return self.transform(img.convert("RGB")), target
+            return self.transform(img.convert("RGB")), target, shape
 
 
 def load_checkpoint(path: Path, model, optimizer, scheduler, labels, device):
@@ -215,7 +219,7 @@ def load_checkpoint(path: Path, model, optimizer, scheduler, labels, device):
         return 1, -1.0
 
     ckpt = torch.load(path, map_location=device, weights_only=False)
-    if ckpt["labels"] != labels:
+    if ckpt["labels"] != labels or ckpt.get("shapes") != SHAPES:
         log.warning("체크포인트의 클래스 구성이 달라 무시하고 처음부터 학습한다: %s", path)
         return 1, -1.0
 
@@ -226,13 +230,34 @@ def load_checkpoint(path: Path, model, optimizer, scheduler, labels, device):
     return ckpt["epoch"] + 1, ckpt["best_acc"]
 
 
+def build_model(num_labels: int):
+    """EfficientNet-B0 백본 + 번호 헤드 + 모양 헤드. forward 는 (번호 로짓, 모양 로짓) 을 돌려준다."""
+    from torch import nn
+    from torchvision.models import EfficientNet_B0_Weights, efficientnet_b0
+
+    class DecalNet(nn.Module):
+        def __init__(self):
+            super().__init__()
+            backbone = efficientnet_b0(weights=EfficientNet_B0_Weights.IMAGENET1K_V1)
+            in_features = backbone.classifier[1].in_features
+            backbone.classifier = nn.Dropout(0.2)
+            self.backbone = backbone
+            self.number_head = nn.Linear(in_features, num_labels)
+            self.shape_head = nn.Linear(in_features, len(SHAPES))
+
+        def forward(self, x):
+            f = self.backbone(x)
+            return self.number_head(f), self.shape_head(f)
+
+    return DecalNet()
+
+
 def train(samples, labels, args):
-    """EfficientNet-B0 을 학습하고, 검증 정확도 최고 기록을 갱신할 때마다 ONNX 로 내보낸다."""
+    """EfficientNet-B0 을 학습하고, 검증 정확도(번호·모양 평균) 최고 기록을 갱신할 때마다 ONNX 로 내보낸다."""
     import torch
     from torch import nn
     from torch.utils.data import DataLoader
     from torchvision import transforms
-    from torchvision.models import EfficientNet_B0_Weights, efficientnet_b0
 
     torch.manual_seed(args.seed)
 
@@ -276,9 +301,7 @@ def train(samples, labels, args):
         num_workers=args.workers,
     )
 
-    model = efficientnet_b0(weights=EfficientNet_B0_Weights.IMAGENET1K_V1)
-    model.classifier[1] = nn.Linear(model.classifier[1].in_features, len(labels))
-    model = model.to(device)
+    model = build_model(len(labels)).to(device)
 
     criterion = nn.CrossEntropyLoss(label_smoothing=0.05)
     optimizer = torch.optim.AdamW(model.parameters(), lr=args.lr, weight_decay=1e-4)
@@ -292,10 +315,11 @@ def train(samples, labels, args):
         started = time.time()
         model.train()
         total_loss = 0.0
-        for batch, (images, targets) in enumerate(train_loader, start=1):
-            images, targets = images.to(device), targets.to(device)
+        for batch, (images, targets, shapes) in enumerate(train_loader, start=1):
+            images, targets, shapes = images.to(device), targets.to(device), shapes.to(device)
             optimizer.zero_grad()
-            loss = criterion(model(images), targets)
+            number_logits, shape_logits = model(images)
+            loss = criterion(number_logits, targets) + criterion(shape_logits, shapes)
             loss.backward()
             optimizer.step()
             total_loss += loss.item() * images.size(0)
@@ -312,15 +336,19 @@ def train(samples, labels, args):
 
         log.info("epoch %d/%d — 검증 중 (%d개)", epoch, args.epochs, len(val_items))
         model.eval()
-        correct = 0
+        correct = shape_correct = 0
         with torch.no_grad():
-            for images, targets in val_loader:
-                images, targets = images.to(device), targets.to(device)
-                correct += (model(images).argmax(1) == targets).sum().item()
-        acc = correct / len(val_items) if val_items else 0.0
+            for images, targets, shapes in val_loader:
+                images, targets, shapes = images.to(device), targets.to(device), shapes.to(device)
+                number_logits, shape_logits = model(images)
+                correct += (number_logits.argmax(1) == targets).sum().item()
+                shape_correct += (shape_logits.argmax(1) == shapes).sum().item()
+        number_acc = correct / len(val_items) if val_items else 0.0
+        shape_acc = shape_correct / len(val_items) if val_items else 0.0
+        acc = (number_acc + shape_acc) / 2
         log.info(
-            "epoch %d/%d 완료 — loss=%.4f val_acc=%.4f (%s)",
-            epoch, args.epochs, total_loss / len(train_items), acc, elapsed(started),
+            "epoch %d/%d 완료 — loss=%.4f val_acc(번호)=%.4f val_acc(모양)=%.4f (%s)",
+            epoch, args.epochs, total_loss / len(train_items), number_acc, shape_acc, elapsed(started),
         )
 
         # 최고 기록을 갱신할 때마다 바로 내보낸다 — 학습이 중간에 끊겨도 그 시점의 최고 모델은 남는다
@@ -333,6 +361,7 @@ def train(samples, labels, args):
                 "epoch": epoch,
                 "best_acc": best_acc,
                 "labels": labels,
+                "shapes": SHAPES,
                 "model": model.state_dict(),
                 "optimizer": optimizer.state_dict(),
                 "scheduler": scheduler.state_dict(),
@@ -344,7 +373,7 @@ def train(samples, labels, args):
 
 
 def export_onnx(model, labels, args):
-    """Kotlin(OnnxDecalService)이 기대하는 형태 — 입력 이름 input, 출력은 로짓 — 로 내보낸다."""
+    """Kotlin(OnnxDecalService)이 기대하는 형태 — 입력 이름 input, 출력은 번호 로짓 output · 모양 로짓 shape — 로 내보낸다."""
     import torch
 
     args.model_out.parent.mkdir(parents=True, exist_ok=True)
@@ -355,7 +384,7 @@ def export_onnx(model, labels, args):
         dummy,
         str(args.model_out),
         input_names=["input"],
-        output_names=["output"],
+        output_names=["output", "shape"],
         opset_version=18,
         # 기본값(True)이면 가중치가 decal.onnx.data 로 분리돼 파일 두 개를 같이 배포해야 한다.
         # 서버 설정(app.onnx.model)은 .onnx 경로 하나만 받으므로 단일 파일로 내보낸다.

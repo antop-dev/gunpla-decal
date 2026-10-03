@@ -1,5 +1,7 @@
 package ai.antop.gunpla.app.service
 
+import ai.antop.gunpla.app.domain.DecalShape
+import ai.antop.gunpla.app.dto.DecalOnnxResultDto
 import ai.antop.gunpla.config.AppProperties
 import ai.onnxruntime.OnnxTensor
 import ai.onnxruntime.OrtEnvironment
@@ -20,7 +22,7 @@ import javax.imageio.ImageIO
 
 private val log = KotlinLogging.logger {}
 
-/** ONNX EfficientNet-B0 모델을 이용한 데칼 번호 분류 서비스 */
+/** ONNX EfficientNet-B0 모델을 이용한 데칼 번호·모양 분류 서비스 */
 @Service
 class OnnxDecalService(
     private val appProperties: AppProperties,
@@ -68,10 +70,10 @@ class OnnxDecalService(
     }
 
     /**
-     * 크롭 이미지를 ONNX 모델로 분류하여 데칼 번호 반환.
+     * 크롭 이미지를 ONNX 모델로 분류하여 데칼 번호·모양 반환.
      * 모델 미로드 또는 추론 실패 시 null 반환.
      */
-    fun recognizeDecalNumber(imageBytes: ByteArray): String? {
+    fun recognizeDecal(imageBytes: ByteArray): DecalOnnxResultDto? {
         val sess = session ?: return null
         val env = env ?: return null
         if (labels.isEmpty()) return null
@@ -80,18 +82,32 @@ class OnnxDecalService(
             val image = decodeAndResize(imageBytes) ?: return null
             toTensor(env, image).use { tensor ->
                 sess.run(mapOf("input" to tensor)).use { output ->
-                    @Suppress("UNCHECKED_CAST")
-                    val logits = (output[0].value as Array<FloatArray>)[0]
-                    val probs = softmax(logits)
-                    val idx = probs.indices.maxByOrNull { probs[it] } ?: return null
-                    if (probs[idx] < appProperties.onnx.threshold) return null
-                    labels.getOrNull(idx)
+                    val number = argmaxAboveThreshold(output[0].value)?.let { labels.getOrNull(it) }
+                    // 모양 출력은 번호·모양을 함께 학습한 모델에만 있다
+                    val shape =
+                        output
+                            .get("shape")
+                            .orElse(null)
+                            ?.let { argmaxAboveThreshold(it.value) }
+                            ?.let { DecalShape.entries.getOrNull(it) }
+                    DecalOnnxResultDto(number, shape)
                 }
             }
         } catch (e: Exception) {
             log.error(e) { "ONNX 추론 실패" }
             null
         }
+    }
+
+    /** [1, N] 로짓에서 softmax 확률이 가장 높은 인덱스. 그 확률이 임계값 미만이면 null */
+    private fun argmaxAboveThreshold(value: Any): Int? {
+        @Suppress("UNCHECKED_CAST")
+        val probs = softmax((value as Array<FloatArray>)[0])
+        val idx = probs.indices.maxByOrNull { probs[it] } ?: return null
+        if (probs[idx] < appProperties.onnx.threshold) {
+            return null
+        }
+        return idx
     }
 
     val isAvailable: Boolean

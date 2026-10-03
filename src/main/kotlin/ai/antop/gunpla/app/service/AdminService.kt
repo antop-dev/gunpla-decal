@@ -4,7 +4,9 @@ import ai.antop.gunpla.app.domain.Grade
 import ai.antop.gunpla.app.domain.ManualId
 import ai.antop.gunpla.app.dto.DecalCreateRequestDto
 import ai.antop.gunpla.app.dto.DecalItemDto
+import ai.antop.gunpla.app.dto.DecalOnnxResultDto
 import ai.antop.gunpla.app.dto.DecalUpdateRequestDto
+import ai.antop.gunpla.app.dto.DetectedDecalDto
 import ai.antop.gunpla.app.dto.ManualSummaryDto
 import ai.antop.gunpla.app.dto.ManualUpdateRequestDto
 import ai.antop.gunpla.app.event.ManualChangedEvent
@@ -24,6 +26,7 @@ class AdminService(
     private val thumbnailService: ThumbnailService,
     private val openAiService: OpenAiService,
     private val onnxDecalService: OnnxDecalService,
+    private val onnxDetectService: OnnxDetectService,
     private val eventPublisher: ApplicationEventPublisher,
 ) {
     /** 메뉴얼 목록 검색 (미공개 포함). 각 조건은 null·빈 값이면 무시 */
@@ -132,10 +135,16 @@ class AdminService(
     fun recognizeDecalNumber(imageBytes: ByteArray): String? = openAiService.recognizeDecalNumber(imageBytes)
 
     /**
-     * ONNX EfficientNet-B0 모델을 이용하여 전달받은 크롭 이미지에서 데칼 번호 인식.
+     * ONNX EfficientNet-B0 모델을 이용하여 전달받은 크롭 이미지에서 데칼 번호·모양 인식.
      * 모델 미로드 또는 인식 실패 시 null 반환.
      */
-    fun recognizeDecalNumberOnnx(imageBytes: ByteArray): String? = onnxDecalService.recognizeDecalNumber(imageBytes)
+    fun recognizeDecalOnnx(imageBytes: ByteArray): DecalOnnxResultDto? = onnxDecalService.recognizeDecal(imageBytes)
+
+    /**
+     * ONNX 히트맵 모델을 이용하여 전달받은 페이지 이미지에서 데칼 위치 탐지.
+     * 모델 미로드 또는 탐지 실패 시 빈 목록 반환.
+     */
+    fun detectDecals(imageBytes: ByteArray): List<DetectedDecalDto> = onnxDetectService.detect(imageBytes)
 
     /**
      * AI(GPT-4o mini)를 이용하여 전달받은 크롭 이미지에서 주요 색상(HEX) 인식.

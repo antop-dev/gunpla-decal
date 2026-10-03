@@ -1,10 +1,12 @@
 package ai.antop.gunpla.app.controller
 
+import ai.antop.gunpla.app.domain.DecalShape
 import ai.antop.gunpla.app.domain.Grade
 import ai.antop.gunpla.app.domain.ManualId
 import ai.antop.gunpla.app.dto.DecalCreateRequestDto
 import ai.antop.gunpla.app.dto.DecalItemDto
 import ai.antop.gunpla.app.dto.DecalUpdateRequestDto
+import ai.antop.gunpla.app.dto.DetectedDecalDto
 import ai.antop.gunpla.app.dto.ManualAssemblyDto
 import ai.antop.gunpla.app.dto.ManualPageDeleteRequestDto
 import ai.antop.gunpla.app.dto.ManualSummaryDto
@@ -161,15 +163,22 @@ class AdminApiController(
         return DecalRecognizeResponse(character != null, character)
     }
 
-    /** ONNX 모델로 전달받은 크롭 이미지에서 데칼 번호 인식 */
+    /** ONNX 모델로 전달받은 크롭 이미지에서 데칼 번호·모양 인식 */
     @PostMapping("/manuals/{manualId:[0-9A-Za-z]+}/recognize-onnx")
     fun recognizeOnnx(
         @PathVariable manualId: ManualId,
         @RequestBody request: DecalRecognizeRequest,
     ): DecalRecognizeResponse {
-        val character = adminService.recognizeDecalNumberOnnx(Base64.getDecoder().decode(request.image))
-        return DecalRecognizeResponse(character != null, character)
+        val result = adminService.recognizeDecalOnnx(Base64.getDecoder().decode(request.image))
+        return DecalRecognizeResponse(result?.number != null, result?.number, result?.shape)
     }
+
+    /** ONNX 탐지 모델로 전달받은 페이지 이미지에서 데칼 위치 탐지 */
+    @PostMapping("/manuals/{manualId:[0-9A-Za-z]+}/detect-decals")
+    fun detectDecals(
+        @PathVariable manualId: ManualId,
+        @RequestBody request: DecalRecognizeRequest,
+    ): List<DetectedDecalDto> = adminService.detectDecals(Base64.getDecoder().decode(request.image))
 
     /** AI(GPT-4o mini)로 전달받은 크롭 이미지에서 데칼 주요 색상 인식 */
     @PostMapping("/manuals/{manualId:[0-9A-Za-z]+}/recognize-color")
@@ -188,6 +197,8 @@ data class DecalRecognizeResponse(
     val found: Boolean,
     /** 인식된 데칼 번호 문자열. found=false이면 null */
     val character: String?,
+    /** 인식된 데칼 도형 (ONNX 인식에서만, 신뢰도 미달이면 null) */
+    val shape: DecalShape? = null,
 )
 
 /** AI 데칼 색상 인식 결과 응답 */

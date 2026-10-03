@@ -27,5 +27,9 @@ data class AppProperties(
         val labels: String? = null,
         /** 인식 신뢰도 임계값 — 최대 확률이 이 값 미만이면 null 반환 (app.onnx.threshold) */
         val threshold: Double = 0.9,
+        /** 데칼 위치 탐지 ONNX 모델 파일 경로 (app.onnx.detect-model, 미설정 시 '모두 찾기' 비활성) */
+        val detectModel: String? = null,
+        /** 탐지 신뢰도 임계값 — 히트맵 봉우리 값이 이 값 미만이면 후보에서 제외 (app.onnx.detect-threshold) */
+        val detectThreshold: Double = 0.3,
     )
 }

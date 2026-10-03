@@ -28,6 +28,7 @@ app:
   onnx:
     model: ./assets/onnx/decal.onnx
     labels: ./assets/onnx/labels.json
+    detect-model: ./assets/onnx/detect.onnx
 
 shorty:
   url: http://localhost:30001

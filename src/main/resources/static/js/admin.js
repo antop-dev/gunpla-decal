@@ -29,6 +29,8 @@ let markersVisible  = true;  // 마커 보이기/숨기기 상태
 let tooltipDecalId  = null; // 현재 툴팁이 표시된 데칼 ID
 let pendingPos      = null; // 데칼 등록 모달에서 사용할 클릭 위치 {x, y, page}
 let editingDecalId  = null; // 수정 모달에서 편집 중인 데칼 ID
+let candidates      = [];   // '찾기'로 찾은 데칼 위치 후보 [{page, x, y, number, shape}] — number: undefined=인식 중, null=인식 실패 / shape: null=인식 실패
+let candidateSaving = false; // '수락' 저장 요청 진행 중 (연타로 인한 중복 저장 방지)
 
 // 데칼 인식용 크롭 반경(pt)·출력 해상도(px) — 서버가 예전에 scale=3.0 렌더 기준으로 쓰던
 // crop 반경(20~25px)을 pt로 환산한 값(20/3≈7, 25/3≈9)이라 인식 품질이 기존과 비슷하다.
@@ -38,6 +40,8 @@ const CROP_RADIUS_NUMBER_PT = 7;
 const CROP_OUTPUT_NUMBER_PX = 160;
 const CROP_RADIUS_COLOR_PT  = 9;
 const CROP_OUTPUT_COLOR_PX  = 160;
+// 데칼 위치 탐지용 페이지 렌더링 크기 — 짧은 변(px). scripts/train_detect_onnx.py 의 PAGE_SHORT_SIDE_PX 와 같아야 한다
+const DETECT_SHORT_SIDE_PX  = 1536;
 let lastDecalStyle  = { color: '#ffffff', shape: 'CIRCLE', num: '' }; // 마지막으로 사용한 데칼 스타일
 
 // 일본어 문자 선택기 상태
@@ -55,7 +59,7 @@ const tooltip = document.getElementById('marker-tooltip');
 // mousedown: 마커·툴팁·모달·줌 오버레이 영역 외에서만 드래그/클릭 시작
 container.addEventListener('mousedown', e => {
   if (e.button !== 0) return;
-  if (e.target.closest('.decal-marker') || e.target.closest('#marker-tooltip')) return;
+  if (e.target.closest('.decal-marker') || e.target.closest('.decal-candidate') || e.target.closest('#marker-tooltip')) return;
   if (e.target.closest('#zoom-overlay')) return;
   if (!document.getElementById('decal-modal').classList.contains('hidden')) return;
   if (!document.getElementById('edit-modal').classList.contains('hidden')) return;
@@ -88,6 +92,7 @@ window.addEventListener('mouseup', e => {
   container.classList.remove('dragging');
   if (!wasDragging && pdfDoc
       && !e.target.closest('.decal-marker')
+      && !e.target.closest('.decal-candidate')
       && !e.target.closest('#marker-tooltip')
       && !e.target.closest('#zoom-overlay')) {
     // 클릭 좌표를 PDF 캔버스 기준 백분율(%)로 변환
@@ -460,7 +465,7 @@ async function openEditor(id) {
       return false;
     }
     const data = await res.json();
-    currentManual = data; allDecals = data.decals;
+    currentManual = data; allDecals = data.decals; candidates = [];
     updateTabLabel(id, data.productName);
     updatePdfTitle(data);
     lastDecalStyle = { color: '#ffffff', shape: 'CIRCLE', num: '' };
@@ -485,7 +490,7 @@ async function openEditor(id) {
 function closeEditor() {
   if (manualLoading) return;
   document.getElementById('editor-view').classList.add('hidden');
-  currentManual = null; pdfDoc = null; currentPdfPage = null; allDecals = [];
+  currentManual = null; pdfDoc = null; currentPdfPage = null; allDecals = []; candidates = [];
   pdfScroll.style.display = 'none';
   noPdf.style.display = '';
   hideTooltip();
@@ -596,8 +601,202 @@ function renderOverlay() {
       openEditModal(e.clientX, e.clientY);
     }));
 
+  pageCandidates().forEach(c => {
+    const el = document.createElement('div');
+    el.className = 'decal-candidate';
+    el.style.left = c.x + '%';
+    el.style.top  = c.y + '%';
+    // 테두리는 인식한 모양(모르면 원)으로 그린다. 다이아는 테두리만 돌려 번호는 바로 세운다
+    const frameClass = { SQUARE: 'square', DIAMOND: 'diamond' }[c.shape] ?? 'circle';
+    const label = c.number === undefined ? '<i class="fas fa-spinner fa-spin"></i>'
+                : c.number === null      ? '?'
+                : esc(c.number.slice(0, 4));
+    el.innerHTML = `<div class="cand-frame ${frameClass}"></div><span class="cand-label">${label}</span>`;
+    // 마우스를 올리면 나타나는 × 버튼: 이 후보만 제거
+    const remove = document.createElement('button');
+    remove.className = 'cand-remove';
+    remove.title = '후보 제거';
+    remove.innerHTML = '<i class="fas fa-xmark"></i>';
+    remove.addEventListener('click', e => {
+      e.stopPropagation();
+      candidates = candidates.filter(x => x !== c);
+      renderOverlay();
+    });
+    el.appendChild(remove);
+    // 후보 클릭: 그 위치로 등록 모달을 열고 인식한 번호를 미리 채운다
+    el.addEventListener('click', e => {
+      e.stopPropagation();
+      openDecalModal(c.x, c.y, e.clientX, e.clientY);
+      if (c.number) document.getElementById('inp-decal-num').value = c.number;
+      if (c.shape) checkDecalShape(c.shape);
+    });
+    overlay.appendChild(el);
+  });
+  updateCandidateButtons();
+
   overlay.style.display = markersVisible ? '' : 'none';
 }
+
+// 현재 페이지의 후보 중 아직 데칼이 등록되지 않은 자리만 (후보 위치로 등록하면 그 후보는 사라진다)
+function pageCandidates() {
+  const pageDecals = allDecals.filter(d => d.page === currentPage);
+  return candidates.filter(c => c.page === currentPage && !pageDecals.some(d => isNearDecal(c, d)));
+}
+
+// 수락: 인식 중인 후보가 없고 번호를 찾은 후보가 하나 이상일 때 / 거절: 후보가 하나 이상일 때
+function updateCandidateButtons() {
+  const acceptBtn = document.getElementById('cand-accept-btn');
+  const rejectBtn = document.getElementById('cand-reject-btn');
+  if (!acceptBtn || !rejectBtn) return;
+  const list = pageCandidates();
+  acceptBtn.disabled = candidateSaving || list.some(c => c.number === undefined) || !list.some(c => c.number);
+  rejectBtn.disabled = candidateSaving || !list.length;
+}
+
+// 두 위치가 같은 데칼을 가리킬 만큼 가까운지 (페이지 짧은 변의 1.2% — 약 9pt 이내)
+function isNearDecal(a, b) {
+  const dx = (a.x - b.x) / 100 * basePdfWidth;
+  const dy = (a.y - b.y) / 100 * basePdfHeight;
+  return Math.hypot(dx, dy) < Math.min(basePdfWidth, basePdfHeight) * 0.012;
+}
+
+/* ──────────── 모두 찾기 (데칼 위치 탐지) ──────────── */
+
+// 위치 주변을 잘라 ONNX 분류기로 번호·모양을 인식해 {number, shape} 로 반환.
+// 분류기가 없거나 인식 실패·형식 불일치인 값은 null
+async function recognizeOnnxAt(page, x, y) {
+  const none = { number: null, shape: null };
+  if (!window.onnxAvailable || !currentManual) return none;
+  try {
+    const image = await captureCrop(page, x, y, CROP_RADIUS_ONNX_PT, CROP_OUTPUT_ONNX_PX);
+    const res = await fetch(`/api/admin/manuals/${currentManual.id}/recognize-onnx`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ image }),
+    });
+    if (!res.ok) return none;
+    const data = await res.json();
+    return {
+      number: data.found && data.character && isValidDecalNum(data.character) ? data.character : null,
+      shape: data.shape ?? null,
+    };
+  } catch {
+    return none;
+  }
+}
+
+// 데칼 등록 모달의 도형 라디오 선택
+function checkDecalShape(shape) {
+  const shapeIdMap = { CIRCLE: 'inp-decal-shape-circle', SQUARE: 'inp-decal-shape-square', DIAMOND: 'inp-decal-shape-diamond' };
+  const radio = document.getElementById(shapeIdMap[shape]);
+  if (radio) radio.checked = true;
+}
+
+// 후보마다 번호를 인식해 채운다. 요청을 4개씩 동시에 보낸다
+async function recognizeCandidates(list) {
+  let next = 0;
+  const worker = async () => {
+    while (next < list.length) {
+      const c = list[next++];
+      const { number, shape } = await recognizeOnnxAt(c.page, c.x, c.y);
+      // 기다리는 동안 거절·제거·다시 찾기로 빠진 후보는 무시
+      if (!candidates.includes(c)) continue;
+      c.number = number;
+      c.shape  = shape;
+      if (c.page === currentPage) renderOverlay();
+    }
+  };
+  await Promise.all(Array.from({ length: 4 }, worker));
+}
+
+// 현재 페이지 전체를 짧은 변 DETECT_SHORT_SIDE_PX 크기로 렌더링해 base64 PNG(프리픽스 제외) 문자열로 반환
+async function capturePage() {
+  const raw = currentPdfPage.getViewport({ scale: 1 });
+  const viewport = currentPdfPage.getViewport({ scale: DETECT_SHORT_SIDE_PX / Math.min(raw.width, raw.height) });
+  const pageCanvas = document.createElement('canvas');
+  pageCanvas.width  = Math.round(viewport.width);
+  pageCanvas.height = Math.round(viewport.height);
+  await currentPdfPage.render({ canvasContext: pageCanvas.getContext('2d'), viewport }).promise;
+  return pageCanvas.toDataURL('image/png').split(',')[1];
+}
+
+document.getElementById('find-all-btn')?.addEventListener('click', async e => {
+  if (!currentManual || !currentPdfPage) return;
+  const btn = e.currentTarget;
+  const icon = btn.querySelector('i');
+  const manualId = currentManual.id;
+  const page = currentPage;
+  btn.disabled = true;
+  icon.className = 'fas fa-spinner fa-spin';
+  try {
+    const image = await capturePage();
+    const res = await fetch(`/api/admin/manuals/${manualId}/detect-decals`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ image }),
+    });
+    if (!res.ok) {
+      showToast('데칼 위치 찾기에 실패했습니다.');
+      return;
+    }
+    const found = await res.json();
+    // 기다리는 동안 다른 메뉴얼로 바뀌었으면 결과를 버린다
+    if (currentManual?.id !== manualId) return;
+    // 이미 데칼이 등록된 자리는 후보로 만들지 않는다
+    const pageDecals = allDecals.filter(d => d.page === page);
+    const fresh = found.filter(f => !pageDecals.some(d => isNearDecal(f, d))).map(f => ({ page, x: f.x, y: f.y, number: undefined, shape: null }));
+    candidates = candidates.filter(c => c.page !== page).concat(fresh);
+    renderOverlay();
+    showToast(`${page}페이지에서 새 후보 ${fresh.length}개를 찾았습니다.`);
+    recognizeCandidates(fresh);
+  } catch {
+    showToast('데칼 위치 찾기에 실패했습니다.');
+  } finally {
+    btn.disabled = false;
+    icon.className = 'fas fa-wand-magic-sparkles';
+  }
+});
+
+// 수락: 번호를 찾은 후보만 저장. 도형은 인식한 모양(못 찾으면 마지막으로 사용한 도형), 색상은 마지막으로 사용한 색상.
+// 번호를 못 찾은 후보는 그대로 남긴다
+document.getElementById('cand-accept-btn')?.addEventListener('click', async () => {
+  if (candidateSaving || !currentManual) return;
+  const list = pageCandidates().filter(c => c.number);
+  if (!list.length) return;
+  candidateSaving = true;
+  updateCandidateButtons();
+  const manualId = currentManual.id;
+  const { color, shape } = lastDecalStyle;
+  let saved = 0;
+  try {
+    for (const c of list) {
+      const res = await fetch(`/api/admin/manuals/${manualId}/decals`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pageNumber: c.page, decalNumber: c.number, x: c.x, y: c.y, color, shape: c.shape ?? shape }),
+      });
+      if (!res.ok) continue;
+      if (currentManual?.id !== manualId) return;
+      allDecals.push(await res.json());
+      candidates = candidates.filter(x => x !== c);
+      saved++;
+    }
+    if (saved) await autoUnpublish();
+    if (saved < list.length) showToast(`${list.length}개 중 ${list.length - saved}개를 저장하지 못했습니다.`);
+  } catch {
+    showToast('후보 저장 중 오류가 발생했습니다.');
+  } finally {
+    candidateSaving = false;
+    if (currentManual?.id === manualId) renderOverlay();
+  }
+});
+
+// 거절: 현재 페이지에 남은 후보를 모두 제거
+document.getElementById('cand-reject-btn')?.addEventListener('click', () => {
+  if (candidateSaving) return;
+  candidates = candidates.filter(c => c.page !== currentPage);
+  renderOverlay();
+});
 
 /* ──────────── 마커 툴팁 ──────────── */
 
@@ -1033,6 +1232,7 @@ async function doOnnxRecognize(btnEl, page, x, y) {
     if (res.ok && !document.getElementById('decal-modal').classList.contains('hidden')) {
       const data = await res.json();
       if (data.found && data.character) recognizedValue = data.character;
+      if (data.shape) checkDecalShape(data.shape);
     }
   } catch {
     // 인식 실패는 조용히 무시

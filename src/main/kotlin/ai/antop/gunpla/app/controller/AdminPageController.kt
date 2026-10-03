@@ -1,6 +1,7 @@
 package ai.antop.gunpla.app.controller
 
 import ai.antop.gunpla.app.service.OnnxDecalService
+import ai.antop.gunpla.app.service.OnnxDetectService
 import ai.antop.gunpla.config.AppProperties
 import org.springframework.stereotype.Controller
 import org.springframework.web.bind.annotation.GetMapping
@@ -11,12 +12,16 @@ import org.springframework.web.bind.annotation.ModelAttribute
 class AdminPageController(
     private val appProperties: AppProperties,
     private val onnxDecalService: OnnxDecalService,
+    private val onnxDetectService: OnnxDetectService,
 ) {
     @ModelAttribute("hasAi")
     fun hasAi(): Boolean = !appProperties.openAiKey.isNullOrBlank()
 
     @ModelAttribute("hasOnnx")
     fun hasOnnx(): Boolean = onnxDecalService.isAvailable
+
+    @ModelAttribute("hasOnnxDetect")
+    fun hasOnnxDetect(): Boolean = onnxDetectService.isAvailable
 
     @GetMapping("/admin")
     fun admin() = "admin"

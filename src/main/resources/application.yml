@@ -50,6 +50,8 @@ app:
     model: ${ONNX_MODEL:}
     labels: ${ONNX_LABELS:}
     threshold: ${ONNX_THRESHOLD:0.9}
+    detect-model: ${ONNX_DETECT_MODEL:}
+    detect-threshold: ${ONNX_DETECT_THRESHOLD:0.3}
 
 openai:
   api-key: ${OPENAI_KEY:}
