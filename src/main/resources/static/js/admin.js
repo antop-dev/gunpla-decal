@@ -32,6 +32,7 @@ let editingDecalId  = null; // 수정 모달에서 편집 중인 데칼 ID
 let pendingCandidate = null; // 데칼 등록 모달에서 수정 중인 후보 (저장하지 않고 후보에만 반영)
 let candidates      = [];   // '찾기'로 찾은 데칼 위치 후보 [{page, x, y, number, shape, color}] — number: undefined=인식 중, null=인식 실패 / shape: null=인식 실패 / color: 직접 수정한 경우만
 let candidateSaving = false; // '수락' 저장 요청 진행 중 (연타로 인한 중복 저장 방지)
+let candidateFinding = false; // '찾기' 요청 진행 중
 
 // 데칼 인식용 크롭 반경(pt)·출력 해상도(px) — 서버가 예전에 scale=3.0 렌더 기준으로 쓰던
 // crop 반경(20~25px)을 pt로 환산한 값(20/3≈7, 25/3≈9)이라 인식 품질이 기존과 비슷하다.
@@ -61,7 +62,7 @@ const tooltip = document.getElementById('marker-tooltip');
 container.addEventListener('mousedown', e => {
   if (e.button !== 0) return;
   if (e.target.closest('.decal-marker') || e.target.closest('.decal-candidate') || e.target.closest('#marker-tooltip')) return;
-  if (e.target.closest('#zoom-overlay')) return;
+  if (e.target.closest('#zoom-overlay, #pdf-title')) return;
   if (!document.getElementById('decal-modal').classList.contains('hidden')) return;
   if (!document.getElementById('edit-modal').classList.contains('hidden')) return;
   mouseDown = true;
@@ -95,7 +96,7 @@ window.addEventListener('mouseup', e => {
       && !e.target.closest('.decal-marker')
       && !e.target.closest('.decal-candidate')
       && !e.target.closest('#marker-tooltip')
-      && !e.target.closest('#zoom-overlay')) {
+      && !e.target.closest('#zoom-overlay, #pdf-title')) {
     // 클릭 좌표를 PDF 캔버스 기준 백분율(%)로 변환
     const rect = pdfScroll.getBoundingClientRect();
     const contentX = e.clientX - rect.left + pdfScroll.scrollLeft;
@@ -647,13 +648,32 @@ function pageCandidates() {
 }
 
 // 수락: 인식 중인 후보가 없고 번호를 찾은 후보가 하나 이상일 때 / 거절: 후보가 하나 이상일 때
+// 찾기·저장 중에는 둘 다 비활성화. '찾기'는 현재 페이지에 후보가 남아 있으면 숨긴다
 function updateCandidateButtons() {
   const acceptBtn = document.getElementById('cand-accept-btn');
   const rejectBtn = document.getElementById('cand-reject-btn');
   if (!acceptBtn || !rejectBtn) return;
+  const busy = candidateSaving || candidateFinding;
   const list = pageCandidates();
-  acceptBtn.disabled = candidateSaving || list.some(c => c.number === undefined) || !list.some(c => c.number);
-  rejectBtn.disabled = candidateSaving || !list.length;
+  document.getElementById('find-all-btn').hidden = list.length > 0;
+  acceptBtn.disabled = busy || list.some(c => c.number === undefined) || !list.some(c => c.number);
+  rejectBtn.disabled = busy || !list.length;
+}
+
+// '찾기' 버튼 아래(rect: 버튼 위치)에 결과 툴팁을 잠깐 띄운다 (ok: 녹색 / 아니면 빨간색).
+// 후보를 찾으면 버튼이 숨겨지므로 위치는 찾기 시작 시점에 잰다
+function showFindTip(rect, message, ok) {
+  document.querySelector('.find-tip')?.remove();
+  const tip = document.createElement('div');
+  tip.className = `find-tip ${ok ? 'ok' : 'fail'}`;
+  tip.textContent = message;
+  tip.style.left = rect.left + 'px';
+  tip.style.top  = (rect.bottom + 8) + 'px';
+  document.body.appendChild(tip);
+  setTimeout(() => {
+    tip.style.opacity = '0';
+    setTimeout(() => tip.remove(), 500);
+  }, 2500);
 }
 
 // 두 위치가 같은 데칼을 가리킬 만큼 가까운지 (페이지 짧은 변의 1.2% — 약 9pt 이내)
@@ -726,11 +746,14 @@ async function capturePage() {
 document.getElementById('find-all-btn')?.addEventListener('click', async e => {
   if (!currentManual || !currentPdfPage) return;
   const btn = e.currentTarget;
-  const icon = btn.querySelector('i');
+  const btnRect = btn.getBoundingClientRect();
+  const loading = document.getElementById('find-loading');
   const manualId = currentManual.id;
   const page = currentPage;
   btn.disabled = true;
-  icon.className = 'fas fa-spinner fa-spin';
+  loading.style.display = 'flex';
+  candidateFinding = true;
+  updateCandidateButtons();
   try {
     const image = await capturePage();
     const res = await fetch(`/api/admin/manuals/${manualId}/detect-decals`, {
@@ -739,7 +762,7 @@ document.getElementById('find-all-btn')?.addEventListener('click', async e => {
       body: JSON.stringify({ image }),
     });
     if (!res.ok) {
-      showToast('데칼 위치 찾기에 실패했습니다.');
+      showFindTip(btnRect, '데칼 위치 찾기에 실패했습니다.', false);
       return;
     }
     const found = await res.json();
@@ -750,13 +773,16 @@ document.getElementById('find-all-btn')?.addEventListener('click', async e => {
     const fresh = found.filter(f => !pageDecals.some(d => isNearDecal(f, d))).map(f => ({ page, x: f.x, y: f.y, number: undefined, shape: null }));
     candidates = candidates.filter(c => c.page !== page).concat(fresh);
     renderOverlay();
-    showToast(`${page}페이지에서 새 후보 ${fresh.length}개를 찾았습니다.`);
+    if (fresh.length) showFindTip(btnRect, `${page}페이지에서 새 후보 ${fresh.length}개를 찾았습니다.`, true);
+    else showFindTip(btnRect, `${page}페이지에서 새 후보를 찾지 못했습니다.`, false);
     recognizeCandidates(fresh);
   } catch {
-    showToast('데칼 위치 찾기에 실패했습니다.');
+    showFindTip(btnRect, '데칼 위치 찾기에 실패했습니다.', false);
   } finally {
     btn.disabled = false;
-    icon.className = 'fas fa-wand-magic-sparkles';
+    loading.style.display = '';
+    candidateFinding = false;
+    updateCandidateButtons();
   }
 });
 

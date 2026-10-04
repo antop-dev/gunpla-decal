@@ -35,6 +35,15 @@ body { height: 100vh; overflow: hidden; min-width: 1000px; }
   color: #fff; font-size: 12px; font-weight: 700; white-space: nowrap;
 }
 
+/* 관리자 페이지: 줌 툴바는 상단 헤더에, 타이틀은 PDF 왼쪽 위에 띄운다 */
+.page-admin #zoom-overlay { position: static; background: none; padding: 0; }
+.page-admin #pdf-title {
+  position: absolute; top: 8px; left: 8px; z-index: 20;
+  background: rgba(0,0,0,0.6); padding: 5px 10px;
+  border-radius: 8px; user-select: none;
+}
+.page-admin #pdf-title:empty { display: none; }
+
 /* 줌 비율 텍스트 */
 #zoom-label { color: #fff; font-size: 12px; font-weight: 700; min-width: 36px; text-align: right; }
 /* 줌 레이블·슬라이더 사이 구분선 */
@@ -113,9 +122,25 @@ body { height: 100vh; overflow: hidden; min-width: 1000px; }
   color: rgba(255,255,255,0.6); font-size: 12px; cursor: pointer; line-height: 1;
 }
 #find-all-btn:hover, .cand-btn:hover { color: #fff; }
-#cand-accept-btn:hover { color: #4ade80; }
-#cand-reject-btn:hover { color: #f87171; }
+#cand-accept-btn:not(:disabled):hover { color: #4ade80; }
+#cand-reject-btn:not(:disabled):hover { color: #f87171; }
+/* '찾기' 결과 툴팁: 후보를 찾으면 녹색, 못 찾거나 실패하면 빨간색 */
+.find-tip {
+  position: fixed; z-index: 9999; padding: 5px 10px; border-radius: 6px;
+  color: #fff; font-size: 12px; white-space: nowrap; pointer-events: none;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3); transition: opacity 0.5s;
+}
+.find-tip.ok   { background: #16a34a; }
+.find-tip.fail { background: #dc2626; }
 #find-all-btn:disabled, .cand-btn:disabled { color: rgba(255,255,255,0.35); cursor: default; }
+#find-all-btn[hidden] { display: none; }
+/* '찾기' 진행 중 PDF 영역을 덮는 오버레이 */
+#find-loading {
+  position: absolute; inset: 0; z-index: 25;
+  display: none; flex-direction: column; align-items: center; justify-content: center; gap: 10px;
+  background: rgba(0,0,0,0.45); color: #fff; font-size: 13px;
+}
+#find-loading i { font-size: 32px; }
 
 /* ── PDF 컨테이너 커서 ── */
 /* body에 page-viewer 또는 page-admin 클래스로 페이지 구분 */

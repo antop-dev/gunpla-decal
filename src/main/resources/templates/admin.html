@@ -92,7 +92,33 @@
 
   <!-- 헤더 -->
   <div class="flex items-center gap-2 px-2 bg-gray-800 border-b border-gray-700 flex-shrink-0" style="height:36px;">
-    <span id="pdf-title"></span>
+    <div id="zoom-overlay">
+      <span id="zoom-label"></span>
+      <input id="zoom-slider" type="range" min="10" max="500" step="1" value="100" aria-label="확대/축소">
+      <button id="fit-width-btn" title="가로 맞춤">↔︎ 가로</button>
+      <button id="fit-height-btn" title="세로 맞춤">↕︎ 세로</button>
+      <div class="zoom-divider"></div>
+      <label id="marker-toggle" title="마커 보이기/숨기기">
+        <input type="checkbox" id="marker-visible" checked>
+        <i class="fas fa-location-dot"></i>
+        <span>마커</span>
+      </label>
+      <th:block th:if="${hasOnnxDetect}">
+        <div class="zoom-divider"></div>
+        <button id="find-all-btn" title="현재 페이지에서 데칼 위치 찾기">
+          <i class="fas fa-wand-magic-sparkles"></i>
+          <span>찾기</span>
+        </button>
+        <button id="cand-accept-btn" class="cand-btn" title="번호를 찾은 후보를 모두 저장" disabled>
+          <i class="fas fa-check"></i>
+          <span>수락</span>
+        </button>
+        <button id="cand-reject-btn" class="cand-btn" title="남은 후보를 모두 제거" disabled>
+          <i class="fas fa-xmark"></i>
+          <span>거절</span>
+        </button>
+      </th:block>
+    </div>
     <button id="btn-page-delete" disabled
       class="ml-auto flex items-center gap-1.5 h-7 px-2.5 rounded bg-red-600 hover:bg-red-500 text-white text-xs disabled:bg-gray-700 disabled:text-gray-500 disabled:cursor-not-allowed"
       title="선택한 페이지 삭제">
@@ -124,32 +150,10 @@
         <div id="decal-overlay"></div>
       </div>
     </div>
-    <div id="zoom-overlay">
-      <span id="zoom-label"></span>
-      <input id="zoom-slider" type="range" min="10" max="500" step="1" value="100" aria-label="확대/축소">
-      <button id="fit-width-btn" title="가로 맞춤">↔︎ 가로</button>
-      <button id="fit-height-btn" title="세로 맞춤">↕︎ 세로</button>
-      <div class="zoom-divider"></div>
-      <label id="marker-toggle" title="마커 보이기/숨기기">
-        <input type="checkbox" id="marker-visible" checked>
-        <i class="fas fa-location-dot"></i>
-        <span>마커</span>
-      </label>
-      <th:block th:if="${hasOnnxDetect}">
-        <div class="zoom-divider"></div>
-        <button id="find-all-btn" title="현재 페이지에서 데칼 위치 찾기">
-          <i class="fas fa-wand-magic-sparkles"></i>
-          <span>찾기</span>
-        </button>
-        <button id="cand-accept-btn" class="cand-btn" title="번호를 찾은 후보를 모두 저장" disabled>
-          <i class="fas fa-check"></i>
-          <span>수락</span>
-        </button>
-        <button id="cand-reject-btn" class="cand-btn" title="남은 후보를 모두 제거" disabled>
-          <i class="fas fa-xmark"></i>
-          <span>거절</span>
-        </button>
-      </th:block>
+    <span id="pdf-title"></span>
+    <div id="find-loading">
+      <i class="fas fa-spinner fa-spin"></i>
+      <span>데칼 찾는 중…</span>
     </div>
     <div id="marker-tooltip">
       <button id="tt-edit"   title="번호 수정"><i class="fas fa-pen"></i></button>
