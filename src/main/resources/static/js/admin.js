@@ -29,7 +29,8 @@ let markersVisible  = true;  // 마커 보이기/숨기기 상태
 let tooltipDecalId  = null; // 현재 툴팁이 표시된 데칼 ID
 let pendingPos      = null; // 데칼 등록 모달에서 사용할 클릭 위치 {x, y, page}
 let editingDecalId  = null; // 수정 모달에서 편집 중인 데칼 ID
-let candidates      = [];   // '찾기'로 찾은 데칼 위치 후보 [{page, x, y, number, shape}] — number: undefined=인식 중, null=인식 실패 / shape: null=인식 실패
+let pendingCandidate = null; // 데칼 등록 모달에서 수정 중인 후보 (저장하지 않고 후보에만 반영)
+let candidates      = [];   // '찾기'로 찾은 데칼 위치 후보 [{page, x, y, number, shape, color}] — number: undefined=인식 중, null=인식 실패 / shape: null=인식 실패 / color: 직접 수정한 경우만
 let candidateSaving = false; // '수락' 저장 요청 진행 중 (연타로 인한 중복 저장 방지)
 
 // 데칼 인식용 크롭 반경(pt)·출력 해상도(px) — 서버가 예전에 scale=3.0 렌더 기준으로 쓰던
@@ -611,7 +612,10 @@ function renderOverlay() {
     const label = c.number === undefined ? '<i class="fas fa-spinner fa-spin"></i>'
                 : c.number === null      ? '?'
                 : esc(c.number.slice(0, 4));
-    el.innerHTML = `<div class="cand-frame ${frameClass}"></div><span class="cand-label">${label}</span>`;
+    // 번호는 인쇄된 번호를 가리지 않도록 찾은 위치에서 꺾인 주황 선(45도 → 오른쪽) 끝에 띄운다
+    el.innerHTML = `<div class="cand-line"></div><div class="cand-line-h"></div>`
+                 + `<div class="cand-box"><div class="cand-frame ${frameClass}"></div><span class="cand-label">${label}</span></div>`;
+    const box = el.querySelector('.cand-box');
     // 마우스를 올리면 나타나는 × 버튼: 이 후보만 제거
     const remove = document.createElement('button');
     remove.className = 'cand-remove';
@@ -622,13 +626,12 @@ function renderOverlay() {
       candidates = candidates.filter(x => x !== c);
       renderOverlay();
     });
-    el.appendChild(remove);
-    // 후보 클릭: 그 위치로 등록 모달을 열고 인식한 번호를 미리 채운다
-    el.addEventListener('click', e => {
+    box.appendChild(remove);
+    // 후보 클릭: 등록 모달을 열어 번호·모양을 고친다. 바로 저장하지 않고 후보에만 반영한다
+    box.addEventListener('click', e => {
       e.stopPropagation();
-      openDecalModal(c.x, c.y, e.clientX, e.clientY);
-      if (c.number) document.getElementById('inp-decal-num').value = c.number;
-      if (c.shape) checkDecalShape(c.shape);
+      if (c.number === undefined) return;
+      openDecalModal(c.x, c.y, e.clientX, e.clientY, c);
     });
     overlay.appendChild(el);
   });
@@ -773,7 +776,7 @@ document.getElementById('cand-accept-btn')?.addEventListener('click', async () =
       const res = await fetch(`/api/admin/manuals/${manualId}/decals`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ pageNumber: c.page, decalNumber: c.number, x: c.x, y: c.y, color, shape: c.shape ?? shape }),
+        body: JSON.stringify({ pageNumber: c.page, decalNumber: c.number, x: c.x, y: c.y, color: c.color ?? color, shape: c.shape ?? shape }),
       });
       if (!res.ok) continue;
       if (currentManual?.id !== manualId) return;
@@ -1372,18 +1375,21 @@ document.addEventListener('mousedown', e => {
 
 /* ──────────── 데칼 등록 모달 ──────────── */
 
-function openDecalModal(x, y, clientX, clientY) {
+// candidate 를 넘기면 후보 수정: 후보 값을 채우고, 저장 시 서버에 저장하지 않고 후보에만 반영한다
+function openDecalModal(x, y, clientX, clientY, candidate = null) {
   pendingPos = { x, y, page: currentPage };
-  document.getElementById('inp-decal-num').value   = lastDecalStyle.num;
-  const dc = lastDecalStyle.color.startsWith('#') ? lastDecalStyle.color : '#ffffff';
+  pendingCandidate = candidate;
+  document.getElementById('inp-decal-num').value   = candidate ? (candidate.number ?? '') : lastDecalStyle.num;
+  const color = candidate?.color ?? lastDecalStyle.color;
+  const dc = color.startsWith('#') ? color : '#ffffff';
   document.getElementById('inp-decal-hex').value   = dc.slice(1).toUpperCase();
   document.getElementById('inp-decal-color').value = dc;
   document.getElementById('inp-decal-color').dispatchEvent(new Event('input'));
   const shapeIdMap = { SQUARE: 'inp-decal-shape-square', DIAMOND: 'inp-decal-shape-diamond' };
-  document.getElementById(shapeIdMap[lastDecalStyle.shape] ?? 'inp-decal-shape-circle').checked = true;
+  document.getElementById(shapeIdMap[candidate?.shape ?? lastDecalStyle.shape] ?? 'inp-decal-shape-circle').checked = true;
   const btnOk = document.getElementById('btn-decal-ok');
   btnOk.disabled = false;
-  btnOk.innerHTML = '<i class="fas fa-check text-xs"></i> 저장';
+  btnOk.innerHTML = `<i class="fas fa-check text-xs"></i> ${candidate ? '적용' : '저장'}`;
   const modal = document.getElementById('decal-modal');
   modal.classList.remove('hidden');
   const W = 240, H = 190;
@@ -1398,7 +1404,8 @@ function openDecalModal(x, y, clientX, clientY) {
   modal.style.top  = top  + 'px';
   const onnxBtn = document.getElementById('btn-onnx-decal');
   resetOnnxBtn();
-  if (window.onnxAvailable) doOnnxRecognize(onnxBtn, currentPage, x, y);
+  // 후보는 이미 인식을 마쳤으므로 다시 인식하지 않는다
+  if (window.onnxAvailable && !candidate) doOnnxRecognize(onnxBtn, currentPage, x, y);
   setTimeout(() => { const el = document.getElementById('inp-decal-num'); el.focus(); el.select(); }, 50);
 }
 
@@ -1421,6 +1428,13 @@ async function saveNewDecal() {
   const hexVal = document.getElementById('inp-decal-hex').value.replace(/[^0-9a-fA-F]/g, '');
   const color  = '#' + (hexVal.length === 6 ? hexVal.toLowerCase() : 'ffffff');
   const shape = document.querySelector('input[name="decal-shape"]:checked')?.value ?? 'CIRCLE';
+  // 후보 수정: 저장하지 않고 후보 상태로 남긴다 ('수락'으로 저장)
+  if (pendingCandidate) {
+    Object.assign(pendingCandidate, { number: num, shape, color });
+    cancelDecalModal();
+    renderOverlay();
+    return;
+  }
   const btn = document.getElementById('btn-decal-ok');
   btn.disabled = true;
   btn.innerHTML = '<i class="fas fa-spinner fa-spin text-xs"></i> 저장';
@@ -1448,6 +1462,7 @@ async function saveNewDecal() {
 
 function cancelDecalModal() {
   pendingPos = null;
+  pendingCandidate = null;
   closeJpPicker();
   closeColorPicker();
   hideAiTip();
