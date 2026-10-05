@@ -108,17 +108,14 @@ class AdminService(
         return summary
     }
 
-    /** 데칼 등록 (PDF 페이지 내 좌표 지정) */
-    fun addDecal(
+    /** 데칼 여러 개 등록 (PDF 페이지 내 좌표 지정) */
+    fun addDecals(
         manualId: ManualId,
-        request: DecalCreateRequestDto,
-    ): DecalItemDto = decalService.addDecal(manualId, request)
+        requests: List<DecalCreateRequestDto>,
+    ): List<DecalItemDto> = decalService.addDecals(manualId, requests)
 
-    /** 데칼 정보 수정 (번호·좌표·색상) */
-    fun updateDecal(
-        decalId: Long,
-        request: DecalUpdateRequestDto,
-    ): DecalItemDto = decalService.updateDecal(decalId, request)
+    /** 데칼 여러 개 정보 수정 (번호·색상·도형) */
+    fun updateDecals(requests: List<DecalUpdateRequestDto>): List<DecalItemDto> = decalService.updateDecals(requests)
 
     /** 데칼 삭제 */
     fun deleteDecal(decalId: Long) {

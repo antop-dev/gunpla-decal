@@ -4,6 +4,8 @@ import ai.antop.gunpla.app.domain.DecalShape
 
 /** 데칼 수정 요청 (null 필드는 변경하지 않음) */
 data class DecalUpdateRequestDto(
+    /** 수정할 데칼 ID */
+    val id: Long,
     /** PDF 페이지 번호 (null이면 변경하지 않음) */
     val page: Int,
     /** 데칼 식별 번호 문자열 (null이면 변경하지 않음) */

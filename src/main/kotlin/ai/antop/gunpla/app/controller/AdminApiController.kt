@@ -127,20 +127,19 @@ class AdminApiController(
         @RequestBody request: ManualPageDeleteRequestDto,
     ): ManualSummaryDto = adminService.deleteManualPages(manualId, request.pages)
 
-    /** 데칼 등록 (PDF 페이지 내 좌표 지정) */
+    /** 데칼 여러 개 등록 (PDF 페이지 내 좌표 지정). 요청 순서대로 등록된 데칼을 반환한다 */
     @PostMapping("/manuals/{manualId:[0-9A-Za-z]+}/decals")
     @ResponseStatus(HttpStatus.CREATED)
-    fun addDecal(
+    fun addDecals(
         @PathVariable manualId: ManualId,
-        @RequestBody request: DecalCreateRequestDto,
-    ): DecalItemDto = adminService.addDecal(manualId, request)
+        @RequestBody requests: List<DecalCreateRequestDto>,
+    ): List<DecalItemDto> = adminService.addDecals(manualId, requests)
 
-    /** 데칼 정보 수정 (번호·좌표·색상) */
-    @PutMapping("/decals/{decalId}")
-    fun updateDecal(
-        @PathVariable decalId: Long,
-        @RequestBody request: DecalUpdateRequestDto,
-    ): DecalItemDto = adminService.updateDecal(decalId, request)
+    /** 데칼 여러 개 정보 수정 (번호·색상·도형). 요청 순서대로 수정된 데칼을 반환한다 */
+    @PutMapping("/decals")
+    fun updateDecals(
+        @RequestBody requests: List<DecalUpdateRequestDto>,
+    ): List<DecalItemDto> = adminService.updateDecals(requests)
 
     /** 데칼 삭제 */
     @DeleteMapping("/decals/{decalId}")

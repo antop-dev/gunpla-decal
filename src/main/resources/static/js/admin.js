@@ -648,7 +648,7 @@ function pageCandidates() {
 }
 
 // 수락: 인식 중인 후보가 없고 번호를 찾은 후보가 하나 이상일 때 / 거절: 후보가 하나 이상일 때
-// 찾기·저장 중에는 둘 다 비활성화. '찾기'는 현재 페이지에 후보가 남아 있으면 숨긴다
+// 찾기·저장 중에는 둘 다 비활성화. 현재 페이지에 후보가 있으면 수락·거절만, 없으면 '찾기'만 보인다
 function updateCandidateButtons() {
   const acceptBtn = document.getElementById('cand-accept-btn');
   const rejectBtn = document.getElementById('cand-reject-btn');
@@ -656,6 +656,7 @@ function updateCandidateButtons() {
   const busy = candidateSaving || candidateFinding;
   const list = pageCandidates();
   document.getElementById('find-all-btn').hidden = list.length > 0;
+  acceptBtn.hidden = rejectBtn.hidden = !list.length;
   acceptBtn.disabled = busy || list.some(c => c.number === undefined) || !list.some(c => c.number);
   rejectBtn.disabled = busy || !list.length;
 }
@@ -787,7 +788,7 @@ document.getElementById('find-all-btn')?.addEventListener('click', async e => {
 });
 
 // 수락: 번호를 찾은 후보만 저장. 도형은 인식한 모양(못 찾으면 마지막으로 사용한 도형), 색상은 마지막으로 사용한 색상.
-// 번호를 못 찾은 후보는 그대로 남긴다
+// 번호를 못 찾은 후보는 그대로 남긴다. 한 번의 요청으로 모두 저장한다
 document.getElementById('cand-accept-btn')?.addEventListener('click', async () => {
   if (candidateSaving || !currentManual) return;
   const list = pageCandidates().filter(c => c.number);
@@ -796,22 +797,21 @@ document.getElementById('cand-accept-btn')?.addEventListener('click', async () =
   updateCandidateButtons();
   const manualId = currentManual.id;
   const { color, shape } = lastDecalStyle;
-  let saved = 0;
   try {
-    for (const c of list) {
-      const res = await fetch(`/api/admin/manuals/${manualId}/decals`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ pageNumber: c.page, decalNumber: c.number, x: c.x, y: c.y, color: c.color ?? color, shape: c.shape ?? shape }),
-      });
-      if (!res.ok) continue;
-      if (currentManual?.id !== manualId) return;
-      allDecals.push(await res.json());
-      candidates = candidates.filter(x => x !== c);
-      saved++;
+    const res = await fetch(`/api/admin/manuals/${manualId}/decals`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(list.map(c => ({ pageNumber: c.page, decalNumber: c.number, x: c.x, y: c.y, color: c.color ?? color, shape: c.shape ?? shape }))),
+    });
+    if (!res.ok) {
+      showToast('후보 저장에 실패했습니다.');
+      return;
     }
-    if (saved) await autoUnpublish();
-    if (saved < list.length) showToast(`${list.length}개 중 ${list.length - saved}개를 저장하지 못했습니다.`);
+    const saved = await res.json();
+    if (currentManual?.id !== manualId) return;
+    allDecals.push(...saved);
+    candidates = candidates.filter(c => !list.includes(c));
+    await autoUnpublish();
   } catch {
     showToast('후보 저장 중 오류가 발생했습니다.');
   } finally {
@@ -1411,8 +1411,8 @@ function openDecalModal(x, y, clientX, clientY, candidate = null) {
   document.getElementById('inp-decal-hex').value   = dc.slice(1).toUpperCase();
   document.getElementById('inp-decal-color').value = dc;
   document.getElementById('inp-decal-color').dispatchEvent(new Event('input'));
-  const shapeIdMap = { SQUARE: 'inp-decal-shape-square', DIAMOND: 'inp-decal-shape-diamond' };
-  document.getElementById(shapeIdMap[candidate?.shape ?? lastDecalStyle.shape] ?? 'inp-decal-shape-circle').checked = true;
+  // 모양을 모르면 직전에 선택돼 있던 모양을 그대로 둔다 (ONNX 인식에 성공하면 그 모양으로 바뀐다)
+  if (candidate?.shape) checkDecalShape(candidate.shape);
   const btnOk = document.getElementById('btn-decal-ok');
   btnOk.disabled = false;
   btnOk.innerHTML = `<i class="fas fa-check text-xs"></i> ${candidate ? '적용' : '저장'}`;
@@ -1468,10 +1468,10 @@ async function saveNewDecal() {
     const res = await fetch(`/api/admin/manuals/${currentManual.id}/decals`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ pageNumber: pendingPos.page, decalNumber: num, x: pendingPos.x, y: pendingPos.y, color, shape }),
+      body: JSON.stringify([{ pageNumber: pendingPos.page, decalNumber: num, x: pendingPos.x, y: pendingPos.y, color, shape }]),
     });
     if (res.ok) {
-      allDecals.push(await res.json());
+      allDecals.push(...await res.json());
       lastDecalStyle = { color, shape, num };
       await autoUnpublish();
       cancelDecalModal();
@@ -1554,13 +1554,13 @@ async function saveEditDecal() {
   btn.disabled = true;
   btn.innerHTML = '<i class="fas fa-spinner fa-spin text-xs"></i> 저장';
   try {
-    const res = await fetch(`/api/admin/decals/${editingDecalId}`, {
+    const res = await fetch('/api/admin/decals', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ decalNumber: num, color, shape }),
+      body: JSON.stringify([{ id: editingDecalId, decalNumber: num, color, shape }]),
     });
     if (res.ok) {
-      const updated = await res.json();
+      const [updated] = await res.json();
       allDecals = allDecals.map(d => d.id === updated.id ? updated : d);
       lastDecalStyle = { ...lastDecalStyle, color: updated.color ?? '#ffffff', shape: updated.shape ?? 'CIRCLE' };
       await autoUnpublish();

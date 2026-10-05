@@ -25,50 +25,49 @@ class DecalService(
     fun getDecalsByManualId(manualId: ManualId): List<DecalItemDto> =
         decalRepository.findByManualIdOrderByDecalNumber(manualId.value).map { it.toDto() }
 
-    /** 데칼 등록 */
+    /** 데칼 여러 개 등록. 하나라도 실패하면 모두 롤백된다 */
     @Transactional
-    fun addDecal(
+    fun addDecals(
         manualId: ManualId,
-        request: DecalCreateRequestDto,
-    ): DecalItemDto {
-        val decal =
-            Decal(
-                manualId = manualId.value,
-                pageNumber = request.pageNumber,
-                decalNumber = request.decalNumber,
-                x = request.x,
-                y = request.y,
-                color = request.color,
-                shape = request.shape,
-            )
-        if (request.decalNumber.isJapanese()) {
-            incrementCount(request.decalNumber)
+        requests: List<DecalCreateRequestDto>,
+    ): List<DecalItemDto> =
+        requests.map { request ->
+            val decal =
+                Decal(
+                    manualId = manualId.value,
+                    pageNumber = request.pageNumber,
+                    decalNumber = request.decalNumber,
+                    x = request.x,
+                    y = request.y,
+                    color = request.color,
+                    shape = request.shape,
+                )
+            if (request.decalNumber.isJapanese()) {
+                incrementCount(request.decalNumber)
+            }
+            decalRepository.save(decal).toDto()
         }
-        return decalRepository.save(decal).toDto()
-    }
 
-    /** 데칼 정보 수정 (번호·색상·도형). null 필드는 변경하지 않음 */
+    /** 데칼 여러 개 정보 수정 (번호·색상·도형). 없는 데칼이 있으면 404로 모두 롤백된다 */
     @Transactional
-    fun updateDecal(
-        decalId: Long,
-        request: DecalUpdateRequestDto,
-    ): DecalItemDto {
-        val decal = decalRepository.findByIdOrNull(decalId) ?: throw ResponseStatusException(HttpStatus.NOT_FOUND)
-        val oldNumber = decal.decalNumber
-        val newNumber = request.decalNumber
-        if (oldNumber != newNumber) {
-            if (oldNumber.isJapanese()) {
-                decrementCount(oldNumber)
+    fun updateDecals(requests: List<DecalUpdateRequestDto>): List<DecalItemDto> =
+        requests.map { request ->
+            val decal = getDecalEntity(request.id)
+            val oldNumber = decal.decalNumber
+            val newNumber = request.decalNumber
+            if (oldNumber != newNumber) {
+                if (oldNumber.isJapanese()) {
+                    decrementCount(oldNumber)
+                }
+                if (newNumber.isJapanese()) {
+                    incrementCount(newNumber)
+                }
             }
-            if (newNumber.isJapanese()) {
-                incrementCount(newNumber)
-            }
+            decal.decalNumber = newNumber
+            decal.color = request.color
+            decal.shape = request.shape
+            decal.toDto()
         }
-        decal.decalNumber = newNumber
-        decal.color = request.color
-        decal.shape = request.shape
-        return decal.toDto()
-    }
 
     /** 데칼 삭제 */
     @Transactional

@@ -133,7 +133,7 @@ body { height: 100vh; overflow: hidden; min-width: 1000px; }
 .find-tip.ok   { background: #16a34a; }
 .find-tip.fail { background: #dc2626; }
 #find-all-btn:disabled, .cand-btn:disabled { color: rgba(255,255,255,0.35); cursor: default; }
-#find-all-btn[hidden] { display: none; }
+#find-all-btn[hidden], .cand-btn[hidden] { display: none; }
 /* '찾기' 진행 중 PDF 영역을 덮는 오버레이 */
 #find-loading {
   position: absolute; inset: 0; z-index: 25;
