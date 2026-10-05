@@ -605,7 +605,8 @@ function renderOverlay() {
 
   pageCandidates().forEach(c => {
     const el = document.createElement('div');
-    el.className = 'decal-candidate';
+    // 번호를 찾았으면 found(파랑), 못 찾았으면 missing(빨강), 인식 중이면 기본(회색)
+    el.className = 'decal-candidate' + (c.number ? ' found' : c.number === null ? ' missing' : '');
     el.style.left = c.x + '%';
     el.style.top  = c.y + '%';
     // 테두리는 인식한 모양(모르면 원)으로 그린다. 다이아는 테두리만 돌려 번호는 바로 세운다
@@ -613,7 +614,7 @@ function renderOverlay() {
     const label = c.number === undefined ? '<i class="fas fa-spinner fa-spin"></i>'
                 : c.number === null      ? '?'
                 : esc(c.number.slice(0, 4));
-    // 번호는 인쇄된 번호를 가리지 않도록 찾은 위치에서 꺾인 주황 선(45도 → 오른쪽) 끝에 띄운다
+    // 번호는 인쇄된 번호를 가리지 않도록 찾은 위치에서 꺾인 선(45도 → 오른쪽) 끝에 띄운다
     el.innerHTML = `<div class="cand-line"></div><div class="cand-line-h"></div>`
                  + `<div class="cand-box"><div class="cand-frame ${frameClass}"></div><span class="cand-label">${label}</span></div>`;
     const box = el.querySelector('.cand-box');

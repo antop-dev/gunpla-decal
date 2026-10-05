@@ -163,31 +163,31 @@ body { height: 100vh; overflow: hidden; min-width: 1000px; }
 .page-admin .decal-marker:hover { opacity: 0.85; }
 
 /* 관리자 페이지: '모두 찾기'로 찾은 후보 위치. 번호(cand-box)는 인쇄된 번호를 가리지 않도록
-   찾은 위치에서 오른쪽 위 45도로 올라갔다가 오른쪽으로 꺾이는 주황 선 끝에 띄운다 (클릭하면 수정 모달) */
+   찾은 위치에서 오른쪽 위 45도로 올라갔다가 오른쪽으로 꺾이는 선 끝에 띄운다 (클릭하면 수정 모달) */
 .decal-candidate { position: absolute; width: 0; height: 0; }
 .decal-candidate .cand-line {
   position: absolute; left: 0; top: 0; width: 15px; height: 1px;
-  background: #f59e0b; transform-origin: 0 50%; transform: rotate(-45deg);
+  background: #9ca3af; transform-origin: 0 50%; transform: rotate(-45deg);
 }
 .decal-candidate .cand-line-h {
   position: absolute; left: 11px; top: -11px; width: 10px; height: 1px;
-  background: #f59e0b;
+  background: #9ca3af;
 }
 .decal-candidate .cand-box {
   position: absolute; left: 21px; top: -11px; width: 28px; height: 28px;
   transform: translateY(-50%);
   display: flex; align-items: center; justify-content: center;
-  font-size: 11px; font-weight: 700; color: #b45309;
+  font-size: 11px; font-weight: 700; color: #4b5563;
   cursor: pointer; pointer-events: auto; user-select: none;
 }
 /* 후보 테두리: 인식한 모양(원/네모/다이아)으로 그린다 */
 .decal-candidate .cand-frame {
   position: absolute; inset: 0;
-  border: 2px dashed #f59e0b; background: #fff;
+  border: 2px dashed #9ca3af; background: #fff;
 }
 .decal-candidate .cand-frame.circle  { border-radius: 50%; }
 .decal-candidate .cand-frame.diamond { transform: rotate(45deg); }
-.decal-candidate .cand-box:hover .cand-frame { background: #fef3c7; }
+.decal-candidate .cand-box:hover .cand-frame { background: #f3f4f6; }
 .decal-candidate .cand-label { position: relative; }
 /* 후보에 마우스를 올리면 오른쪽 위에 나타나는 제거 버튼 */
 .decal-candidate .cand-remove {
@@ -197,6 +197,15 @@ body { height: 100vh; overflow: hidden; min-width: 1000px; }
   background: #ef4444; color: #fff; border: none; font-size: 9px; cursor: pointer;
 }
 .decal-candidate .cand-box:hover .cand-remove { display: flex; }
+/* 번호 인식 결과: 찾으면 파란색, 못 찾으면 빨간색 (인식 중에는 회색) */
+.decal-candidate.found .cand-line, .decal-candidate.found .cand-line-h { background: #3b82f6; }
+.decal-candidate.found .cand-frame { border-color: #3b82f6; }
+.decal-candidate.found .cand-box { color: #1d4ed8; }
+.decal-candidate.found .cand-box:hover .cand-frame { background: #dbeafe; }
+.decal-candidate.missing .cand-line, .decal-candidate.missing .cand-line-h { background: #ef4444; }
+.decal-candidate.missing .cand-frame { border-color: #ef4444; }
+.decal-candidate.missing .cand-box { color: #b91c1c; }
+.decal-candidate.missing .cand-box:hover .cand-frame { background: #fee2e2; }
 
 /* 사용자 페이지: 클릭 선택된 데칼 강조 펄스 애니메이션 */
 .decal-marker.highlight { animation: pop 0.7s ease-in-out infinite; }
