@@ -469,6 +469,7 @@ async function openEditor(id) {
     const data = await res.json();
     currentManual = data; allDecals = data.decals; candidates = [];
     updateTabLabel(id, data.productName);
+    renderEditorPublished();
     updatePdfTitle(data);
     lastDecalStyle = { color: '#ffffff', shape: 'CIRCLE', num: '' };
 
@@ -1650,8 +1651,35 @@ async function setPublished(id, published) {
   const res = await fetch(`/api/admin/${id}/published?published=${published}`, { method: 'PATCH' });
   if (!res.ok) return false;
   updateGridRow(id, { published });
+  if (currentManual?.id === id) {
+    currentManual.published = published;
+    renderEditorPublished();
+  }
   return true;
 }
+
+// 편집 화면 툴바의 게시 버튼을 현재 메뉴얼 상태로 표시
+function renderEditorPublished() {
+  const btn = document.getElementById('editor-pub-btn');
+  const on = !!currentManual?.published;
+  btn.classList.toggle('pub-on', on);
+  btn.classList.toggle('pub-off', !on);
+  btn.innerHTML = on ? '<i class="fas fa-eye"></i> 게시' : '<i class="fas fa-eye-slash"></i> 미게시';
+}
+
+// 편집 화면 툴바의 게시 버튼 클릭 토글
+document.getElementById('editor-pub-btn').addEventListener('click', async e => {
+  if (!currentManual) return;
+  const btn = e.currentTarget;
+  btn.disabled = true;
+  try {
+    if (!(await setPublished(currentManual.id, !currentManual.published))) showToast('게시 상태를 변경하지 못했습니다.');
+  } catch {
+    showToast('게시 상태를 변경하지 못했습니다.');
+  } finally {
+    btn.disabled = false;
+  }
+});
 
 // 목록 그리드의 게시 여부 셀 클릭 토글
 async function togglePublishedRow(id) {

@@ -364,6 +364,9 @@ body { height: 100vh; overflow: hidden; min-width: 1000px; }
 }
 .pub-on  { background: rgba(74,222,128,0.15); color: #4ade80; }
 .pub-off { background: rgba(156,163,175,0.15); color: #9ca3af; }
+/* 데칼 편집 툴바의 게시 전환 버튼 */
+#editor-pub-btn { border: none; cursor: pointer; white-space: nowrap; }
+#editor-pub-btn:disabled { opacity: 0.5; cursor: default; }
 
 /* 참조 열 외부 링크 아이콘 */
 .grid-link { color: #60a5fa; font-size: 12px; }
