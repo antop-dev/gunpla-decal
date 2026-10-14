@@ -274,6 +274,7 @@ body { height: 100vh; overflow: hidden; min-width: 1000px; }
   border-radius: 3px; flex-shrink: 0; letter-spacing: 0.02em;
 }
 .grade-HG  { background: #e5e7eb; color: #374151; }
+.grade-RE  { background: #fee2e2; color: #b91c1c; }
 .grade-RG  { background: #dcfce7; color: #15803d; }
 .grade-MG  { background: #dbeafe; color: #1d4ed8; }
 .grade-MGEX { background: #cffafe; color: #0e7490; }
