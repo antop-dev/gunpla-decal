@@ -348,6 +348,15 @@ function renderDecalList() {
     btn.addEventListener('click', () => navigateToDecalByKey(btn.dataset.key)));
   iconEl.querySelectorAll('.decal-icon-btn').forEach(btn =>
     btn.addEventListener('click', () => navigateToDecalByKey(btn.dataset.key)));
+  highlightDecalButtons();
+}
+
+// 현재 하이라이트된 데칼과 같은 번호+색상+도형의 사이드바 버튼에 하이라이트 표시
+function highlightDecalButtons() {
+  const d = allDecals.find(d => d.id === highlightedDecalId);
+  const key = d ? `${d.decalNumber}|${d.color ?? '#ffffff'}|${d.shape ?? 'CIRCLE'}` : null;
+  document.querySelectorAll('#right-sidebar .decal-btn, #right-sidebar .decal-icon-btn').forEach(btn =>
+    btn.classList.toggle('highlight', btn.dataset.key === key));
 }
 
 // 데칼 버튼 클릭 시 해당 번호+색상+도형 그룹을 위치 순으로 순환하며 이동·하이라이트
@@ -369,6 +378,7 @@ async function navigateToDecalByKey(key) {
     overlay.querySelectorAll('.decal-marker').forEach(m => m.classList.remove('highlight'));
     marker.classList.add('highlight');
     highlightedDecalId = decal.id;
+    highlightDecalButtons();
     // 마커가 뷰포트 중앙에 오도록 스크롤
     const targetX = basePdfWidth  * (decal.x / 100) * scale;
     const targetY = basePdfHeight * (decal.y / 100) * scale;
