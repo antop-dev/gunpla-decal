@@ -208,10 +208,21 @@ body { height: 100vh; overflow: hidden; min-width: 1000px; }
 .decal-candidate.missing .cand-box:hover .cand-frame { background: #fee2e2; }
 
 /* 사용자 페이지: 클릭 선택된 데칼 강조 펄스 애니메이션 */
-.decal-marker.highlight { animation: pop 0.7s ease-in-out infinite; }
+/* 데칼(마커) 자체는 그대로 두고 뒤쪽 box-shadow 링/글로우만 펄스한다 */
+.decal-marker.highlight { z-index: 10; animation: pop 0.6s ease-in-out infinite; }
 @keyframes pop {
-  0%,100% { box-shadow: 0 1px 4px rgba(0,0,0,0.4); }
-  50%      { box-shadow: 0 0 0 10px rgba(239,68,68,0.35); }
+  0%,100% {
+    box-shadow: 0 0 0 3px #fff, 0 0 0 6px rgba(239,68,68,0.9), 0 0 8px 6px rgba(239,68,68,0.5);
+  }
+  50% {
+    box-shadow: 0 0 0 3px #fff, 0 0 0 10px rgba(250,204,21,0.95), 0 0 24px 14px rgba(239,68,68,0.7);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .decal-marker.highlight {
+    animation: none;
+    box-shadow: 0 0 0 3px #fff, 0 0 0 7px rgba(239,68,68,0.9);
+  }
 }
 
 /* ── 썸네일 스트립 ── */
